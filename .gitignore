@@ -1,0 +1,6 @@
+.vscode
+__pycache__
+create_db
+db_creation_src/build/
+db_creation_src/json/
+vulndb.db3
