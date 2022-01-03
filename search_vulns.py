@@ -59,7 +59,7 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor):
     # query DB for general CPE-vuln data, potentially with cpe_version_start and cpe_version_end fields
     general_cpe_nvd_data = set()
     query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
-             'is_cpe_version_start_including, with_cpes FROM cve_cpe WHERE cpe LIKE ? OR cpe LIKE ? OR cpe LIKE ?')
+             'is_cpe_version_end_including, with_cpes FROM cve_cpe WHERE cpe LIKE ? OR cpe LIKE ? OR cpe LIKE ?')
 
     for cur_part_idx in range(5, len(cpe_parts)):
         if cpe_parts[cur_part_idx] not in ('*', '-'):
@@ -69,7 +69,7 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor):
 
     if not cpe_version:
         general_query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
-                         'is_cpe_version_start_including, with_cpes FROM cve_cpe WHERE cpe LIKE ?')
+                         'is_cpe_version_end_including, with_cpes FROM cve_cpe WHERE cpe LIKE ?')
         general_vulns = set(db_cursor.execute(general_query, (':'.join(cpe_parts[:5])+':%%', )))
         return general_cpe_nvd_data | general_vulns
 
