@@ -44,18 +44,17 @@ Here are some examples:
   Reference: https://nvd.nist.gov/vuln/detail/CVE-2017-1000368, 2017-06-05
   [...]
   ```
-* Query *Proftpd 1.3.3c* for known vulnerabilities:
+* Query *Moodle 3.4.0* for known vulnerabilities:
   ```bash
-  $ ./search_vulns.py -q 'Proftpd 1.3.3c'
+  $ ./search_vulns.py -q 'Moodle 3.4.0'
 
-  [+] Proftpd 1.3.3c (cpe:2.3:a:proftpd:proftpd:1.3.3:c:*:*:*:*:*:*)
-  CVE-2010-4221 (CVSSv2.0/10.0): Multiple stack-based buffer overflows in the pr_netio_telnet_gets function in netio.c in ProFTPD before 1.3.3c allow remote attackers to execute arbitrary code via vectors involving a TELNET IAC escape character to a (1) FTP or (2) FTPS server.
-  Exploits:  https://www.exploit-db.com/exploits/15449
-             https://www.exploit-db.com/exploits/16851
-             https://www.exploit-db.com/exploits/16878
-  Reference: https://nvd.nist.gov/vuln/detail/CVE-2010-4221, 2010-11-09
-  CVE-2019-12815 (CVSSv3.0/9.8): An arbitrary file copy vulnerability in mod_copy in ProFTPD up to 1.3.5b allows for remote code execution and information disclosure without authentication, a related issue to CVE-2015-3306.
-  Reference: https://nvd.nist.gov/vuln/detail/CVE-2019-12815, 2019-07-19
+  [+] Moodle 3.4.0 (cpe:2.3:a:moodle:moodle:3.4.0:-:*:*:*:*:*:*)
+  CVE-2018-14630 (CVSSv3.0/8.8): moodle before versions 3.5.2, 3.4.5, 3.3.8, 3.1.14 is vulnerable to an XML import of ddwtos could lead to intentional remote code execution. When importing legacy 'drag and drop into text' (ddwtos) type quiz questions, it was possible to inject and execute PHP code from within the imported questions, either intentionally or by importing questions from an untrusted source.
+  Reference: https://nvd.nist.gov/vuln/detail/CVE-2018-14630, 2018-09-17
+  CVE-2018-1133 (CVSSv3.0/8.8): An issue was discovered in Moodle 3.x. A Teacher creating a Calculated question can intentionally cause remote code execution on the server, aka eval injection.
+  Exploits:  https://www.exploit-db.com/exploits/46551
+  Reference: https://nvd.nist.gov/vuln/detail/CVE-2018-1133, 2018-05-25
+  [...]
   ```
 Again, note that when *search_vulns* is initially installed, it takes quite some time to setup the local vulnerability and software database.
 

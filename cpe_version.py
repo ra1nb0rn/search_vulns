@@ -16,6 +16,9 @@ class CPEVersion:
             if char not in cur_char_class:
                 if cur_part:
                     parts.append(cur_part)
+                elif cur_char_class == string.digits and is_leading_zeroes:
+                    parts.append("0")
+
                 cur_part = ''
                 is_leading_zeroes = False
                 if char in string.digits:
@@ -35,12 +38,28 @@ class CPEVersion:
 
         if cur_part:
             parts.append(cur_part)
+        elif cur_char_class == string.digits and is_leading_zeroes:
+            parts.append("0")
 
         return parts
 
     def __eq__(self, other):
         parts, other_parts = self.get_version_parts(), other.get_version_parts()
-        return parts == other_parts
+        if parts == other_parts:
+            return True
+
+        # check for equality if one version has trailing ".0"
+        same_prefix = True
+        for part_idx in range(min(len(parts), len(other_parts))):
+            part, other_part = parts[part_idx], other_parts[part_idx]
+            if part.lower() != other_part.lower():
+                same_prefix = False
+
+        if same_prefix:
+            if len(parts) > len(other_parts) and all(x == "0" for x in parts[part_idx+1:]):
+                return True
+            if len(other_parts) > len(parts) and all(x == "0" for x in other_parts[part_idx+1:]):
+                return True
 
     def __gt__(self, other):
         return not (self <= other)
@@ -95,8 +114,15 @@ class CPEVersion:
                 for i, char in enumerate(other_part):
                     val_part_other += int(char) * 10**(len(other_part)-i)
 
-                if val_part >= val_part_other:
+                if val_part > val_part_other:
                     return False
+                if val_part == val_part_other:
+                    # check for equality and return False in that case
+                    if len(parts) > len(other_parts) and all(x == "0" for x in parts[part_idx+1:]):
+                        return False
+                    if len(other_parts) > len(parts) and all(x == "0" for x in other_parts[part_idx+1:]):
+                        return False
+
                 return True  # if version part in front is smaller, the entire version is already smaller
 
         return True
