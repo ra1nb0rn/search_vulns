@@ -15,9 +15,10 @@ import zipfile
 
 from cpe_search.cpe_search import update as update_cpe
 
-NVD_DATAFEED_DIR = "nvd_data_feeds"
-VULNDB_FILE = "vulndb.db3"
-VULNDB_BACKUP_FILE = "vulndb_bak.db3"
+NVD_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "nvd_data_feeds")
+VULNDB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb.db3")
+VULNDB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb_bak.db3")
+CVE_EDB_MAP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cveid_to_edbid.json")
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 QUIET = False
@@ -27,13 +28,11 @@ def update_vuln_db():
 
     global NVD_UPDATE_SUCCESS
 
-    full_edbid_update = True
     if os.path.isfile(VULNDB_FILE):
         shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
-        full_edbid_update = False
 
     # start CVE ID <--> EDB ID mapping creation in background thread
-    cve_edb_map_thread = threading.Thread(target=create_cveid_edbid_mapping, args=(full_edbid_update, ))
+    cve_edb_map_thread = threading.Thread(target=create_cveid_edbid_mapping)
     cve_edb_map_thread.start()
 
     # download NVD datafeeds from https://nvd.nist.gov/vuln/data-feeds
@@ -153,25 +152,46 @@ def get_all_edbids():
     return re.findall(r"^(\d+),.*$", files_exploits, re.MULTILINE)
 
 
-def create_cveid_edbid_mapping(full=True):
-    """ Create a CVE ID <--> EDB ID mapping and store in local vuln DB """
+def create_cveid_edbid_mapping():
+    """ Create a CVE ID --> EDB ID mapping and store in local vuln DB """
 
-    # get all existing EDB IDs
-    all_edbids = set(get_all_edbids())
-    if full:
-        # if a full DB installation is done, build CVE ID <--> EDB ID mapping from scratch
-        # use as base the mapping data from andreafioraldi's cve_searchsploit as base
+    # get all unknown EDB IDs
+    all_edbids, edbids_no_cveid = set(get_all_edbids()), set()
+    if os.path.isfile(CVE_EDB_MAP_FILE):
+        with open(CVE_EDB_MAP_FILE) as f:
+            cve_edb_map = json.load(f)
+        mapped_edbids = set()
+        edbids_no_cveid = set(cve_edb_map["N/A"])
+        for ebdids in cve_edb_map.values():
+            mapped_edbids |= set(ebdids)
+        remaining_edbids = all_edbids - mapped_edbids
+    elif os.path.isfile(VULNDB_BACKUP_FILE):
+        # if the DB is updated and previously built map is not available, build
+        # incremental CVE ID --> EDB ID mapping based on previous version of DB
+        cve_edb_map = recover_map_data_from_db()
+        mapped_edbids = set()
+        for edbids in cve_edb_map.values():
+            mapped_edbids |= set(edbids)
+        gh_map_edb_cve_resp = requests.get("https://raw.githubusercontent.com/andreafioraldi/cve_searchsploit/master/cve_searchsploit/exploitdb_mapping.json", headers=REQUEST_HEADERS)
+        edb_cve_map = json.loads(gh_map_edb_cve_resp.text)
+        edbids_no_cveid = set()
+        for edbid, cveids in edb_cve_map.items():
+            if not cveids:
+                edbids_no_cveid.add(edbid)
+        remaining_edbids = all_edbids - mapped_edbids - edbids_no_cveid
+    else:
+        # if a full DB installation is done, build CVE ID --> EDB ID mapping from scratch
+        # use the mapping data from andreafioraldi's cve_searchsploit as base
         gh_map_cve_edb_resp = requests.get("https://raw.githubusercontent.com/andreafioraldi/cve_searchsploit/master/cve_searchsploit/exploitdb_mapping_cve.json", headers=REQUEST_HEADERS)
         cve_edb_map = json.loads(gh_map_cve_edb_resp.text)
         gh_map_edb_cve_resp = requests.get("https://raw.githubusercontent.com/andreafioraldi/cve_searchsploit/master/cve_searchsploit/exploitdb_mapping.json", headers=REQUEST_HEADERS)
         edb_cve_map = json.loads(gh_map_edb_cve_resp.text)
+        edbids_no_cveid = set()
+        for edbid, cveids in edb_cve_map.items():
+            if not cveids:
+                edbids_no_cveid.add(edbid)
         gh_captured_edbids = set(edb_cve_map.keys())
         remaining_edbids = all_edbids - gh_captured_edbids
-    else:
-        # if the DB is only updated, build incremental
-        # CVE ID <--> EDB ID mapping based on previous one
-        cve_edb_map, edb_cve_map = recover_map_data_from_db()
-        remaining_edbids = all_edbids - set(edb_cve_map.keys())
 
     # manually crawl the mappings not yet created
     cveid_expr = re.compile(r"https://nvd.nist.gov/vuln/detail/(CVE-\d\d\d\d-\d+)")
@@ -192,45 +212,38 @@ def create_cveid_edbid_mapping(full=True):
         exploit_page_resp = requests.get("https://www.exploit-db.com/exploits/%s" % edbid, headers=REQUEST_HEADERS, timeout=10)
         cveids = cveid_expr.findall(exploit_page_resp.text)
 
-        if edbid not in edb_cve_map:
-            edb_cve_map[edbid] = cveids
-        else:
-            edb_cve_map[edbid] += cveids
+        if not cveids:
+            edbids_no_cveid.add(edbid)
 
         for cveid in cveids:
             if cveid not in cve_edb_map:
                 cve_edb_map[cveid] = []
             cve_edb_map[cveid].append(edbid)
 
+    cve_edb_map["N/A"] = list(edbids_no_cveid)  # store all EDBIDs without CVE
+    with open(CVE_EDB_MAP_FILE, "w") as f:
+        f.write(json.dumps(cve_edb_map))
+
     while NVD_UPDATE_SUCCESS is None:
         time.sleep(1)
 
     if NVD_UPDATE_SUCCESS:
-        fill_database_with_mapinfo(cve_edb_map, edb_cve_map)
+        fill_database_with_mapinfo(cve_edb_map)
 
 
-def fill_database_with_mapinfo(cve_edb_map, edb_cve_map):
+def fill_database_with_mapinfo(cve_edb_map):
     """ Put the given mapping data into the database specified by the given cursor """
 
     db_conn = sqlite3.connect(VULNDB_FILE)
     db_cursor = db_conn.cursor()
 
-    # 1. put cve_id --> edb_ids mapping info into database
     update_statement = "UPDATE cve SET edb_ids=? WHERE cve_id=?"
     for cveid, edbids in cve_edb_map.items():
+        if cveid == "N/A":  # skip the fake item holding EDBIDs without CVEID
+            continue
+
         edbids = sorted(set(edbids), key=lambda eid: int(eid))
         db_cursor.execute(update_statement, (",".join(edbids), cveid))
-
-    # 2. put edb_id --> cve_ids mapping info into database
-    db_cursor.execute("CREATE TABLE edbid_cveid_map (edb_id TEXT PRIMARY KEY," +
-                      "cve_ids TEXT DEFAULT \"\");")
-    for edb_id in edb_cve_map.keys():
-        db_cursor.execute("INSERT INTO edbid_cveid_map VALUES (?, ?)", (edb_id, ""))
-
-    update_statement = "UPDATE edbid_cveid_map SET cve_ids=? WHERE edb_id=?"
-    for edbid, cveids in edb_cve_map.items():
-        cveids = set(cveids)
-        db_cursor.execute(update_statement, (",".join(cveids), edbid))
 
     db_conn.commit()
     db_conn.close()
@@ -250,22 +263,14 @@ def recover_map_data_from_db():
         if edb_ids:
             cve_edb_map[cve_id] = edb_ids.split(",")
 
-    # recover EDB ID --> CVE ID data
-    db_cursor.execute("SELECT edb_id, cve_ids FROM edbid_cveid_map")
-    map_data = db_cursor.fetchall()
-    edb_cve_map = {}
-    for edb_id, cve_ids in map_data:
-        if cve_ids:
-            edb_cve_map[edb_id] = cve_ids.split(",")
-        else:
-            edb_cve_map[edb_id] = ""
-
     db_conn.close()
-    return cve_edb_map, edb_cve_map
+    return cve_edb_map
 
 
 def run():
+    print("[+] Updating stored software information")
     update_cpe("2.3")
+    print("[+] Updating vulnerability database")
     error = update_vuln_db()
     if error:
         print(error)
