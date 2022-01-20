@@ -10,3 +10,25 @@ jobs:
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata locales git build-essential gcc
           sudo ./install.sh
+      - name: Set variables
+        run: |
+          VER=$(cat version.txt)
+          echo "VERSION=$VER" >> $GITHUB_ENV
+          DATE1=$(date '+%Y%m%d')
+          echo "DATE_STR1=$DATE1" >> $GITHUB_ENV
+          DATE2=$(date '+%F')
+          echo "DATE_STR2=$DATE2" >> $GITHUB_ENV
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: v${{ env.VERSION }}-${{ env.DATE_STR1 }}
+          name: Version ${{ env.VERSION }} (${{ env.DATE_STR2 }})
+          body: |
+            Update artifacts
+          files: |
+            vulndb.db3
+            cveid_to_edbid.json
+            cpe_search/cpe-search-dictionary_v2.3.json
+          draft: false
+          prerelease: false
