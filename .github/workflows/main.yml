@@ -14,7 +14,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata locales git build-essential gcc
-          sudo ./install.sh
+          sudo ./install.sh --full
       - name: Set variables
         run: |
           VER=$(cat version.txt)
@@ -23,6 +23,10 @@ jobs:
           echo "DATE_STR1=$DATE1" >> $GITHUB_ENV
           DATE2=$(date '+%F')
           echo "DATE_STR2=$DATE2" >> $GITHUB_ENV
+          LATEST_TAG=$(curl -s -I https://github.com/ra1nb0rn/search_vulns/releases/latest | grep -i 'Location:' | tr '/' '\n' | tail -n1)
+          echo "LATEST_RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
+          LATEST_VERSION=$(echo $LATEST_TAG | cut -d'-' -f1)
+          echo "LATEST_RELEASE_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:

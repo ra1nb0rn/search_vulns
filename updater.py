@@ -17,8 +17,11 @@ from cpe_search.cpe_search import update as update_cpe
 
 NVD_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "nvd_data_feeds")
 VULNDB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb.db3")
-VULNDB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb_bak.db3")
+VULNDB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb.db3.bak")
+VULNDB_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/vulndb.db3"
 CVE_EDB_MAP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cveid_to_edbid.json")
+CPE_DICT_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary_v2.3.json")
+CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary_v2.3.json"
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 QUIET = False
@@ -267,15 +270,54 @@ def recover_map_data_from_db():
     return cve_edb_map
 
 
-def run():
-    print("[+] Updating stored software information")
-    update_cpe("2.3")
-    print("[+] Updating vulnerability database")
-    error = update_vuln_db()
-    if error:
-        print(error)
-        sys.exit(1)
+def run(full=False):
+    if full:
+        print("[+] Updating stored software information")
+        update_cpe("2.3")
+        print("[+] Updating vulnerability database")
+        error = update_vuln_db()
+        if error:
+            print(error)
+            sys.exit(1)
+    else:
+        print("[+] Downloading latest versions of resources ...")
+        if os.path.isfile(CPE_DICT_FILE):
+            shutil.move(CPE_DICT_FILE, CPE_DICT_FILE+".bak")
+        if os.path.isfile(VULNDB_FILE):
+            shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
+
+        try:
+            quiet_flag = ""
+            if QUIET:
+                quiet_flag = "-q"
+            else:
+                quiet_flag = "-q --show-progress"
+
+            return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(CPE_DICT_ARTIFACT_URL),
+                                          shlex.quote(CPE_DICT_FILE)), shell=True)
+            if return_code != 0:
+                raise(Exception("Could not download latest resource files"))
+            return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(VULNDB_ARTIFACT_URL),
+                                          shlex.quote(VULNDB_FILE)), shell=True)
+            if return_code != 0:
+                raise(Exception("Could not download latest resource files"))
+
+            if os.path.isfile(CPE_DICT_FILE+".bak"):
+                os.remove(CPE_DICT_FILE+".bak")
+            if os.path.isfile(VULNDB_BACKUP_FILE):
+                os.remove(VULNDB_BACKUP_FILE)
+        except Exception as e:
+            print("[!] Encountered an error: %s" % str(e))
+            if os.path.isfile(CPE_DICT_FILE+".bak"):
+                shutil.move(CPE_DICT_FILE+".bak", CPE_DICT_FILE)
+                print("[+] Restored software infos from backup")
+            if os.path.isfile(VULNDB_BACKUP_FILE):
+                shutil.move(VULNDB_BACKUP_FILE, VULNDB_FILE)
+                print("[+] Restored vulnerability infos from backup")
 
 
 if __name__ == "__main__":
-    run()
+    if len(sys.argv) > 1 and sys.argv[1] == "--full":
+        run(True)
+    else:
+        run(False)

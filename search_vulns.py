@@ -295,12 +295,13 @@ def parse_args():
     """Parse command line arguments"""
 
     parser = argparse.ArgumentParser(description="Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)")
-    parser.add_argument("-u", "--update", action="store_true", help="Update the local vulnerability and software database")
+    parser.add_argument("-u", "--update", action="store_true", help="Download the latest version of the the local vulnerability and software database")
+    parser.add_argument("--full-update", action="store_true", help="Build complete update of the local vulnerability and software database")
     parser.add_argument("-o", "--output", type=str, help="File to output found vulnerabilities to (JSON)")
     parser.add_argument("-q", "--query", dest="queries", metavar="QUERY", action="append", help="A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string")
 
     args = parser.parse_args()
-    if not args.update and not args.queries:
+    if not args.update and not args.queries and not args.full_update:
         parser.print_help()
     return args
 
@@ -309,7 +310,9 @@ def main():
     # parse args and run update routine if requested
     args = parse_args()
     if args.update == True:
-        run_updater()
+        run_updater(False)
+    elif args.full_update == True:
+        run_updater(True)
 
     if not args.queries:
         return

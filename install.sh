@@ -1,6 +1,7 @@
 #!/bin/bash
 
 QUIET=0
+FULL_RESOURCE_INSTALL=0
 LINUX_PACKAGE_MANAGER="apt-get"
 
 install_linux_packages() {
@@ -77,7 +78,12 @@ create_vuln_and_software_db() {
     if [ -f nvd_db.db3 ]; then
         rm nvd_db.db3
     fi
-    ./updater.py
+
+    if [ $FULL_RESOURCE_INSTALL != 0 ]; then
+        ./updater.py --full
+    else
+        ./updater.py
+    fi
 
     if [ $? != 0 ]; then
         echo -e "${RED}Could not create vulnerability database"
@@ -107,6 +113,24 @@ RED="\033[1;31m"
 BLUE="\033[1;34m"
 SANE="\033[0m"
 
+# parse arguments if any
+if [ $# -gt 0 ]; then
+    if [ $1 == "-q" ]; then
+        QUIET=1
+    elif [ $1 == "--full" ]; then
+        FULL_RESOURCE_INSTALL=1
+    fi
+
+    if [ $# -gt 1 ]; then
+        if [ $2 == "-q" ]; then
+            QUIET=1
+        elif [ $2 == "--full" ]; then
+            FULL_RESOURCE_INSTALL=1
+        fi
+    fi
+fi
+
+# run script
 printf "${GREEN}[+] Installing ${LINUX_PACKAGE_MANAGER} packages\\n${SANE}"
 install_linux_packages
 printf "${GREEN}[+] Setting up cpe_search tool\\n${SANE}"
@@ -116,4 +140,4 @@ setup_create_db
 printf "${GREEN}[+] Creating vulnerability and software database (this may take some time)\\n${SANE}"
 create_vuln_and_software_db
 
-sudo ln -s "$(pwd -P)/search_vulns.py" /usr/local/bin/search_vulns
+sudo ln -sf "$(pwd -P)/search_vulns.py" /usr/local/bin/search_vulns
