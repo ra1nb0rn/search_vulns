@@ -13,20 +13,21 @@ jobs:
       - name: Install
         run: |
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata locales git build-essential gcc
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata locales git build-essential gcc jq
           sudo ./install.sh --full
       - name: Set variables
         run: |
-          VER=$(cat version.txt)
+          VER="$(cat version.txt)"
           echo "VERSION=$VER" >> $GITHUB_ENV
           DATE1=$(date '+%Y%m%d')
           echo "DATE_STR1=$DATE1" >> $GITHUB_ENV
           DATE2=$(date '+%F')
           echo "DATE_STR2=$DATE2" >> $GITHUB_ENV
-          LATEST_TAG=$(curl -s -I https://github.com/ra1nb0rn/search_vulns/releases/latest | grep -i 'Location:' | tr '/' '\n' | tail -n1)
-          echo "LATEST_RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
-          LATEST_VERSION=$(echo $LATEST_TAG | cut -d'-' -f1)
-          echo "LATEST_RELEASE_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
+          LATEST_REL_URL=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/ra1nb0rn/search_vulns/releases/latest | jq -r '.url')
+          echo "LATEST_RELEASE_URL=$LATEST_REL_URL" >> $GITHUB_ENV
+          LATEST_TAG=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/ra1nb0rn/search_vulns/releases/latest | jq -r '.tag_name')
+          if [ -z "$(echo -n $LATEST_TAG | grep -E '\-\d+')" ]; then LATEST_REL_SOFT="no"; else LATEST_REL_SOFT="yes"; fi
+          echo "IS_LATEST_RELEASE_SOFT=$LATEST_REL_SOFT" >> $GITHUB_ENV
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
@@ -41,3 +42,8 @@ jobs:
             cpe_search/cpe-search-dictionary_v2.3.json
           draft: false
           prerelease: false
+      - name: Delete previous soft release
+        if: "${{ github.event != 'push' && env.IS_LATEST_RELEASE_SOFT == 'yes' }}"
+        run: |
+          curl -X DELETE -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${{ env.LATEST_RELEASE_URL }}"
+          curl -X DELETE -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/ra1nb0rn/search_vulns/git/refs/tags/${{ env.LATEST_RELEASE_TAG }}"
