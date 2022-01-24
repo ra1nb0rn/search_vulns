@@ -13,6 +13,7 @@ from updater import run as run_updater
 
 DATABASE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'vulndb.db3')
 MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
+CPE_SEARCH_THRESHOLD = 0.72
 
 # define ANSI color escape sequences
 # Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
@@ -252,7 +253,7 @@ def print_vulns(vulns):
         printit(print_str)
 
 
-def search_vulns(query, db_cursor=None):
+def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD):
     """Search for known vulnerabilities based on the given query"""
 
     # create DB handle if not given
@@ -268,11 +269,12 @@ def search_vulns(query, db_cursor=None):
     # if given query is not already a CPE, retrieve a CPE that matches the query
     cpe = query
     if not MATCH_CPE_23_RE.match(query):
-        cpe = search_cpes(query, cpe_version="2.3", count=1)
+        cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=software_match_threshold)
         free_cpe_search_memory()
 
-        if not cpe:
-            return {}
+        if not cpe or not cpe[query]:
+            return None
+
         cpe = cpe[query][0][0]
     else:
         matching_cpe = get_valid_cpe(cpe)
@@ -330,10 +332,13 @@ def main():
         # if current query is not already a CPE, retrieve a CPE that matches the query
         cpe = query
         if not MATCH_CPE_23_RE.match(query):
-            cpe = search_cpes(query, cpe_version="2.3", count=1)
+            cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=CPE_SEARCH_THRESHOLD)
             free_cpe_search_memory()
 
-            if not cpe:
+            if not cpe or not cpe[query]:
+                print('Warning: Could not find matching software for query \'%s\'' % query)
+                if len(args.queries) > 1:
+                    print()
                 continue
             cpe = cpe[query][0][0]
         else:
@@ -344,7 +349,7 @@ def main():
         # retrieve known vulns and print
         print()
         printit("[+] %s (%s)" % (query, cpe), color=BRIGHT_BLUE)
-        vulns[query] = search_vulns(cpe, db_cursor)
+        vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD)
         print_vulns(vulns[query])
 
     if args.output:
