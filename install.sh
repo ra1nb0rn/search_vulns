@@ -59,7 +59,6 @@ setup_create_db() {
     cd "../../../"
 
     ## build create_db
-    cd db_creation_src
     rm -rf build
     mkdir -p build
     cd "build"
