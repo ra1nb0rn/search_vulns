@@ -290,7 +290,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         if not cpe or not cpe[query]:
             return None
 
-        cpe = cpe[query][0][0]
+        matching_cpe = cpe[query][0][0]
     else:
         matching_cpe = get_valid_cpe(cpe)
         if matching_cpe:
