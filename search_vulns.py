@@ -231,26 +231,41 @@ def get_valid_cpe(cpe_in):
     return ''
 
 
-def print_vulns(vulns):
+def print_vulns(vulns, to_string=False):
     """Print the supplied vulnerabilities"""
 
+    out_string = ''
     cve_ids_sorted = sorted(list(vulns), key=lambda cve_id: float(vulns[cve_id]["cvss"]), reverse=True)
-
     for cve_id in cve_ids_sorted:
         vuln_node = vulns[cve_id]
         description = vuln_node["description"].replace("\r\n\r\n", "\n").replace("\n\n", "\n").strip()
-        print_str = GREEN + vuln_node["id"] + SANE
-        print_str += " (" + MAGENTA + 'CVSSv' + vuln_node['cvss_ver'] + '/' + str(vuln_node["cvss"]) + SANE + "): %s\n" % description
+
+        if not to_string:
+            print_str = GREEN + vuln_node["id"] + SANE
+            print_str += " (" + MAGENTA + 'CVSSv' + vuln_node['cvss_ver'] + '/' + str(vuln_node["cvss"]) + SANE + "): %s\n" % description
+        else:
+            print_str = vuln_node["id"]
+            print_str += " ("'CVSSv' + vuln_node['cvss_ver'] + '/' + str(vuln_node["cvss"]) + "): %s\n" % description
 
         if "exploits" in vuln_node:
-            print_str += YELLOW + "Exploits:  " + SANE + vuln_node["exploits"][0] + "\n"
+            if not to_string:
+                print_str += YELLOW + "Exploits:  " + SANE + vuln_node["exploits"][0] + "\n"
+            else:
+                print_str += "Exploits:  " + vuln_node["exploits"][0] + "\n"
+
             if len(vuln_node["exploits"]) > 1:
                 for edb_link in vuln_node["exploits"][1:]:
                     print_str += len("Exploits:  ") * " " + edb_link + "\n"
 
         print_str += "Reference: " + vuln_node["href"]
         print_str += ", " + vuln_node["published"].split(" ")[0]
-        printit(print_str)
+        if not to_string:
+            printit(print_str)
+        else:
+            out_string += print_str + '\n'
+
+    if to_string:
+        return out_string
 
 
 def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD):
@@ -299,7 +314,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)")
     parser.add_argument("-u", "--update", action="store_true", help="Download the latest version of the the local vulnerability and software database")
     parser.add_argument("--full-update", action="store_true", help="Build complete update of the local vulnerability and software database")
-    parser.add_argument("-o", "--output", type=str, help="File to output found vulnerabilities to (JSON)")
+    parser.add_argument("-f", "--format", type=str, default="txt", choices={"txt", "json"}, help="Output format, either 'txt' or 'json' (default: 'txt')")
+    parser.add_argument("-o", "--output", type=str, help="File to write output to")
     parser.add_argument("-q", "--query", dest="queries", metavar="QUERY", action="append", help="A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string")
 
     args = parser.parse_args()
@@ -328,6 +344,7 @@ def main():
 
     # retrieve known vulnerabilities for every query and print them
     vulns = {}
+    out_string = ''
     for query in args.queries:
         # if current query is not already a CPE, retrieve a CPE that matches the query
         cpe = query
@@ -347,14 +364,27 @@ def main():
                 cpe = matching_cpe
 
         # retrieve known vulns and print
-        print()
-        printit("[+] %s (%s)" % (query, cpe), color=BRIGHT_BLUE)
-        vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD)
-        print_vulns(vulns[query])
+        if args.format.lower() == 'txt':
+            if not args.output:
+                print()
+                printit('[+] %s (%s)' % (query, cpe), color=BRIGHT_BLUE)
+                vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD)
+                print_vulns(vulns[query])
+            else:
+                out_string += '\n' + '[+] %s (%s)\n' % (query, cpe)
+                vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD)
+                out_string += print_vulns(vulns[query], to_string=True)
+        else:
+            vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD)
 
     if args.output:
         with open(args.output, 'w') as f:
-            f.write(json.dumps(vulns))
+            if args.format.lower() == 'json':
+                f.write(json.dumps(vulns))
+            else:
+                f.write(out_string)
+    elif args.format.lower() == 'json':
+        print(json.dumps(vulns))
 
     db_cursor.close()
 
