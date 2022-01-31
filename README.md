@@ -17,15 +17,18 @@ docker run -it search_vulns
 ## Usage
 *search_vulns*'s usage information is shown in the following:
 ```
-usage: search_vulns.py [-h] [-u] [-o OUTPUT] [-q QUERY]
+usage: search_vulns.py [-h] [-u] [--full-update] [-f {txt,json}] [-o OUTPUT] [-q QUERY]
 
 Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)
 
 optional arguments:
   -h, --help            show this help message and exit
-  -u, --update          Update the local vulnerability and software database
+  -u, --update          Download the latest version of the the local vulnerability and software database
+  --full-update         Build complete update of the local vulnerability and software database
+  -f {txt,json}, --format {txt,json}
+                        Output format, either 'txt' or 'json' (default: 'txt')
   -o OUTPUT, --output OUTPUT
-                        File to output found vulnerabilities to (JSON)
+                        File to write found vulnerabilities to
   -q QUERY, --query QUERY
                         A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string
 ```

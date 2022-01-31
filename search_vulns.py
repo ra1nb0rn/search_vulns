@@ -315,7 +315,7 @@ def parse_args():
     parser.add_argument("-u", "--update", action="store_true", help="Download the latest version of the the local vulnerability and software database")
     parser.add_argument("--full-update", action="store_true", help="Build complete update of the local vulnerability and software database")
     parser.add_argument("-f", "--format", type=str, default="txt", choices={"txt", "json"}, help="Output format, either 'txt' or 'json' (default: 'txt')")
-    parser.add_argument("-o", "--output", type=str, help="File to write output to")
+    parser.add_argument("-o", "--output", type=str, help="File to write found vulnerabilities to")
     parser.add_argument("-q", "--query", dest="queries", metavar="QUERY", action="append", help="A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string")
 
     args = parser.parse_args()
