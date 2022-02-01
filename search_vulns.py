@@ -14,6 +14,7 @@ from updater import run as run_updater
 DATABASE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'vulndb.db3')
 MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
 CPE_SEARCH_THRESHOLD = 0.72
+ALL_CPES = []
 
 # define ANSI color escape sequences
 # Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
@@ -177,13 +178,20 @@ def is_cpe_equal(cpe1, cpe2):
     return True
 
 
-def get_valid_cpe(cpe_in):
+def get_valid_cpe(cpe_in, keep_data_in_memory=False):
     """
     Try to return a valid CPE 2.3 string that exists in the NVD's CPE
     dictionary based on the given, potentially badly formed, CPE string.
     """
 
-    all_cpes = get_all_cpes(version='2.3')
+    global ALL_CPES
+
+    if not ALL_CPES:
+        all_cpes = get_all_cpes(version='2.3')
+        if keep_data_in_memory:
+            ALL_CPES = all_cpes
+    else:
+        all_cpes = ALL_CPES
 
     # if CPE is already in the NVD dictionary
     if cpe_in in all_cpes:
@@ -268,7 +276,7 @@ def print_vulns(vulns, to_string=False):
         return out_string
 
 
-def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD):
+def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False):
     """Search for known vulnerabilities based on the given query"""
 
     # create DB handle if not given
@@ -285,14 +293,15 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     cpe = query
     if not MATCH_CPE_23_RE.match(query):
         cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=software_match_threshold)
-        free_cpe_search_memory()
+        if not keep_data_in_memory:
+            free_cpe_search_memory()
 
         if not cpe or not cpe[query]:
             return None
 
         matching_cpe = cpe[query][0][0]
     else:
-        matching_cpe = get_valid_cpe(cpe)
+        matching_cpe = get_valid_cpe(cpe, keep_data_in_memory=keep_data_in_memory)
         if matching_cpe:
             cpe = matching_cpe
 
