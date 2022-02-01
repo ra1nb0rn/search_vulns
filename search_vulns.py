@@ -353,10 +353,14 @@ def main():
             free_cpe_search_memory()
 
             if not cpe or not cpe[query]:
-                print('Warning: Could not find matching software for query \'%s\'' % query)
-                if len(args.queries) > 1:
-                    print()
+                if args.format.lower() == 'txt':
+                    print('Warning: Could not find matching software for query \'%s\'' % query)
+                    if len(args.queries) > 1:
+                        print()
+                else:
+                    vulns[query] = 'Warning: Could not find matching software for query \'%s\'' % query
                 continue
+
             cpe = cpe[query][0][0]
         else:
             matching_cpe = get_valid_cpe(cpe)
