@@ -61,5 +61,15 @@ Here are some examples:
   ```
 Again, note that when *search_vulns* is initially installed, it takes quite some time to setup the local vulnerability and software database.
 
+## Running a Web Server
+It is also possible to run a web server that provides this tool's functionality to clients over the network. ``web_server.py`` contains a working example using Flask. Depending on your case, you may want to modify the server ip and port at the end of this file. Furthermore, you can use ``gunicorn`` to make the web server more scalable; for example by running:
+```bash
+gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind '0.0.0.0:8000' wsgi:app
+```
+You can read more about choosing good ``gunicorn`` settings for your system [here](https://medium.com/building-the-system/gunicorn-3-means-of-concurrency-efbb547674b7). Note, however, that this tool is quite CPU-intensive, meaning that scalability is somewhat limited. Also note that if you want to run the web server component, you may have to install additional Python packages as they're *not* part of the default requirements:
+```bash
+pip3 install Flask gunicorn gevent
+```
+
 ## License
 *search_vulns* is licensed under the MIT license, see [here](https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE).
