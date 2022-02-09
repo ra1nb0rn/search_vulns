@@ -8,7 +8,7 @@ import sys
 import re
 
 from cpe_version import CPEVersion
-from cpe_search.cpe_search import search_cpes, get_all_cpes, free_memory as free_cpe_search_memory
+from cpe_search.cpe_search import search_cpes, get_all_cpes
 from updater import run as run_updater
 
 DATABASE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'vulndb.db3')
@@ -293,8 +293,6 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     cpe = query
     if not MATCH_CPE_23_RE.match(query):
         cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=software_match_threshold)
-        if not keep_data_in_memory:
-            free_cpe_search_memory()
 
         if not cpe or not cpe[query]:
             return None
@@ -359,7 +357,6 @@ def main():
         cpe = query
         if not MATCH_CPE_23_RE.match(query):
             cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=CPE_SEARCH_THRESHOLD)
-            free_cpe_search_memory()
 
             if not cpe or not cpe[query]:
                 if args.format.lower() == 'txt':
