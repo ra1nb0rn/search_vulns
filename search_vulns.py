@@ -344,10 +344,10 @@ def main():
 
     # get handle for vulnerability database
     db_conn_file = sqlite3.connect(DATABASE_FILE)
-    db_conn_mem = sqlite3.connect(':memory:')
-    db_conn_file.backup(db_conn_mem)
-    db_cursor = db_conn_mem.cursor()
-    # db_cursor = db_conn_file.cursor()
+    # db_conn_mem = sqlite3.connect(':memory:')
+    # db_conn_file.backup(db_conn_mem)
+    # db_cursor = db_conn_mem.cursor()
+    db_cursor = db_conn_file.cursor()
 
     # retrieve known vulnerabilities for every query and print them
     vulns = {}
