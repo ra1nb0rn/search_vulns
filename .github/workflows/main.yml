@@ -40,7 +40,7 @@ jobs:
           files: |
             vulndb.db3
             cveid_to_edbid.json
-            cpe_search/cpe-search-dictionary_v2.3.json
+            cpe_search/cpe-search-dictionary_v2.3.csv
           draft: false
           prerelease: false
       - name: Delete previous soft release
