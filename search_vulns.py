@@ -8,7 +8,7 @@ import sys
 import re
 
 from cpe_version import CPEVersion
-from cpe_search.cpe_search import search_cpes, get_all_cpes
+from cpe_search.cpe_search import search_cpes, match_cpe23_to_cpe23_from_dict
 from updater import run as run_updater
 
 DATABASE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'vulndb.db3')
@@ -165,80 +165,6 @@ def get_vulns(cpe, db_cursor):
     return detailed_vulns
 
 
-def is_cpe_equal(cpe1, cpe2):
-    """Return True if both CPEs are considered equal, False otherwise"""
-
-    if len(cpe1) != len(cpe2):
-        return False
-
-    for i in range(len(cpe1)):
-        if cpe1[i] != cpe2[i]:
-            if not(cpe1[i] in ('*', '-') and cpe2[i] in('*', '-')):
-                return False
-    return True
-
-
-def get_valid_cpe(cpe_in, keep_data_in_memory=False):
-    """
-    Try to return a valid CPE 2.3 string that exists in the NVD's CPE
-    dictionary based on the given, potentially badly formed, CPE string.
-    """
-
-    global ALL_CPES
-
-    if not ALL_CPES:
-        all_cpes = get_all_cpes(version='2.3')
-        if keep_data_in_memory:
-            ALL_CPES = all_cpes
-    else:
-        all_cpes = ALL_CPES
-
-    # if CPE is already in the NVD dictionary
-    if cpe_in in all_cpes:
-        return cpe_in
-
-    # if the given CPE is simply not a full CPE 2.3 string
-    if cpe_in.count(':') < 12:
-        new_cpe = cpe_in
-        if new_cpe.endswith(':'):
-            new_cpe += '*'
-        while new_cpe.count(':') < 12:
-            new_cpe += ':*'
-        for pot_cpe in all_cpes:
-            if new_cpe == pot_cpe:
-                return pot_cpe
-
-    # try to "fix" badly formed CPE strings like
-    # "cpe:2.3:a:proftpd:proftpd:1.3.3c:..." vs. "cpe:2.3:a:proftpd:proftpd:1.3.3:c:..."
-    pre_cpe_in = cpe_in
-    while pre_cpe_in.count(':') > 3:  # break if next cpe part would be vendor part
-        pre_cpe_in = pre_cpe_in[:-1]
-        if pre_cpe_in.endswith(':') or pre_cpe_in.count(':') > 9:  # skip rear parts in fixing process
-            continue
-
-        for pot_cpe in all_cpes:
-            if pre_cpe_in in pot_cpe:
-
-                # stitch together the found prefix and the remaining part of the original CPE
-                if cpe_in[len(pre_cpe_in)] == ':':
-                    cpe_in_add_back = cpe_in[len(pre_cpe_in)+1:]
-                else:
-                    cpe_in_add_back = cpe_in[len(pre_cpe_in):]
-                new_cpe = '%s:%s' % (pre_cpe_in, cpe_in_add_back)
-
-                # get new_cpe to full CPE 2.3 length by adding or removing wildcards
-                while new_cpe.count(':') < 12:
-                    new_cpe += ':*'
-                if new_cpe.count(':') > 12:
-                    new_cpe = new_cpe[:new_cpe.rfind(':')]
-
-                # if a matching CPE was found, return it
-                if is_cpe_equal(new_cpe, pot_cpe):
-                    return pot_cpe
-
-    return ''
-
-
 def print_vulns(vulns, to_string=False):
     """Print the supplied vulnerabilities"""
 
@@ -276,7 +202,7 @@ def print_vulns(vulns, to_string=False):
         return out_string
 
 
-def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False):
+def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, is_good_cpe=False):
     """Search for known vulnerabilities based on the given query"""
 
     # create DB handle if not given
@@ -297,17 +223,14 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         if not cpe or not cpe[query]:
             return None
 
-        matching_cpe = cpe[query][0][0]
-    else:
-        matching_cpe = get_valid_cpe(cpe, keep_data_in_memory=keep_data_in_memory)
-        if matching_cpe:
-            cpe = matching_cpe
+        cpe = cpe[query][0][0]
+    elif not is_good_cpe:
+        pot_matching_cpe = match_cpe23_to_cpe23_from_dict(cpe, keep_data_in_memory=keep_data_in_memory)
+        if pot_matching_cpe:
+            cpe = pot_matching_cpe
 
-    # use the retrieved, or found, CPE to search for known vulnerabilities
-    if matching_cpe:
-        vulns = get_vulns(matching_cpe, db_cursor)
-    else:
-        vulns = get_vulns(cpe, db_cursor)
+    # use the retrieved or gi CPE to search for known vulnerabilities
+    vulns = get_vulns(cpe, db_cursor)
 
     if close_cursor_after:
         db_cursor.close()
@@ -369,7 +292,7 @@ def main():
 
             cpe = cpe[query][0][0]
         else:
-            matching_cpe = get_valid_cpe(cpe)
+            matching_cpe = match_cpe23_to_cpe23_from_dict(cpe)
             if matching_cpe:
                 cpe = matching_cpe
 
@@ -378,14 +301,14 @@ def main():
             if not args.output:
                 print()
                 printit('[+] %s (%s)' % (query, cpe), color=BRIGHT_BLUE)
-                vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD)
+                vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD, False, True)
                 print_vulns(vulns[query])
             else:
                 out_string += '\n' + '[+] %s (%s)\n' % (query, cpe)
-                vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD)
+                vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD, False, True)
                 out_string += print_vulns(vulns[query], to_string=True)
         else:
-            vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD)
+            vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD, False, True)
 
     if args.output:
         with open(args.output, 'w') as f:
