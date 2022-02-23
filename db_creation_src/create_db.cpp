@@ -15,8 +15,6 @@ extern "C" {
 
 using json = nlohmann::json;
 
-// #define IGNORE_VULNERABLE
-
 struct VagueCpeInfo {
     std::string vague_cpe;
     std::string version_start;
@@ -208,9 +206,13 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
                     continue;
                 }
 
-                std::unordered_set<VagueCpeInfo> vulnerable_vague_cpes, vulnerable_with_vague_cpes;
+                std::vector<std::unordered_set<VagueCpeInfo>> all_vulnerable_vague_cpes;
+                std::unordered_set<VagueCpeInfo> vulnerable_with_vague_cpes;
+                std::vector<std::unordered_set<VagueCpeInfo>> all_children_cpes;
 
                 for (auto &children_entry : config_nodes_entry["children"]) {
+                    std::unordered_set<VagueCpeInfo> vulnerable_vague_cpes, children_cpes;
+
                     for (auto &cpe_entry : children_entry["cpe_match"]) {
                         VagueCpeInfo vague_cpe_info = {cpe_entry["cpe23Uri"], "", "", "", ""};
 
@@ -234,118 +236,64 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
 
                         if (cpe_entry["vulnerable"])
                             vulnerable_vague_cpes.emplace(vague_cpe_info);
+
+                        children_cpes.emplace(vague_cpe_info);
+                    }
+                    all_vulnerable_vague_cpes.push_back(vulnerable_vague_cpes);
+                    all_children_cpes.push_back(children_cpes);
+                }
+
+                std::string vulnerable_with_str = "";
+                int cur_vuln_children_group_idx = 0, cur_with_children_group_idx = 0;
+                for (auto &vuln_child_group : all_vulnerable_vague_cpes) {
+                    std::string vulnerable_with_str = "";
+                    cur_with_children_group_idx = 0;
+
+                    for (auto &with_child_group : all_children_cpes) {
+                        if (cur_vuln_children_group_idx == cur_with_children_group_idx) {
+                            cur_with_children_group_idx++;
+                            continue;
+                        }
+
+                        for (auto &vulnerable_with_cpe : with_child_group) {
+                            vulnerable_with_str += vulnerable_with_cpe.vague_cpe + ",";
+                        }
+                        cur_with_children_group_idx++;
+                    }
+
+                    if (vulnerable_with_str != "")
+                        vulnerable_with_str.pop_back();
+
+                    for (auto &vulnerable_cpe : vuln_child_group) {
+                        cve_cpe_query.bind(2, vulnerable_cpe.vague_cpe);
+                        if (vulnerable_cpe.version_start_type == "Including")
+                            cve_cpe_query.bind(4, true);
                         else
-                            vulnerable_with_vague_cpes.emplace(vague_cpe_info);
+                            cve_cpe_query.bind(4, false);
+                        cve_cpe_query.bind(5, vulnerable_cpe.version_end);
+                        if (vulnerable_cpe.version_end_type == "Including")
+                            cve_cpe_query.bind(6, true);
+                        else
+                            cve_cpe_query.bind(6, false);
+                        cve_cpe_query.bind(6, vulnerable_cpe.version_end_type);
+                        cve_cpe_query.bind(7, vulnerable_with_str);
+
+                        try {
+                            cve_cpe_query.exec();
+                        }
+                        catch (SQLite::Exception& e) {
+                            handle_exception(e);
+                        }
+
+                        try {
+                            cve_cpe_query.reset();
+                        }
+                        catch (SQLite::Exception& e) {
+                        }
                     }
+
+                    cur_vuln_children_group_idx++;
                 }
-
-                #ifdef IGNORE_VULNERABLE
-                std::string vulnerable_with_str = "";
-                for (auto &vulnerable_with_cpe : vulnerable_with_vague_cpes) {
-                    vulnerable_with_str += vulnerable_with_cpe.vague_cpe + ",";
-                }
-
-                for (auto &vulnerable_cpe : vulnerable_vague_cpes) {
-                    vulnerable_with_str += vulnerable_cpe.vague_cpe + ",";
-                }
-
-                if (vulnerable_with_str != "")
-                    vulnerable_with_str.pop_back();
-
-                for (auto &vulnerable_with_cpe : vulnerable_with_vague_cpes) {
-                    cve_cpe_query.bind(2, vulnerable_with_cpe.vague_cpe);
-                    cve_cpe_query.bind(3, vulnerable_with_cpe.version_start);
-                    if (vulnerable_with_cpe.version_start_type == "Including")
-                        cve_cpe_query.bind(4, true);
-                    else
-                        cve_cpe_query.bind(4, false);
-                    cve_cpe_query.bind(5, vulnerable_with_cpe.version_end);
-                    if (vulnerable_with_cpe.version_end_type == "Including")
-                        cve_cpe_query.bind(6, true);
-                    else
-                        cve_cpe_query.bind(6, false);
-                    cve_cpe_query.bind(7, vulnerable_with_str);
-
-                    try {
-                        cve_cpe_query.exec();
-                    }
-                    catch (SQLite::Exception& e) {
-                        handle_exception(e);
-                    }
-
-                    try {
-                        cve_cpe_query.reset();
-                    }
-                    catch (SQLite::Exception& e) {
-                    }
-                }
-
-                for (auto &vulnerable_cpe : vulnerable_vague_cpes) {
-                    cve_cpe_query.bind(2, vulnerable_cpe.vague_cpe);
-                    cve_cpe_query.bind(3, vulnerable_cpe.version_start);
-                    if (vulnerable_cpe.version_start_type == "Including")
-                        cve_cpe_query.bind(4, true);
-                    else
-                        cve_cpe_query.bind(4, false);
-                    cve_cpe_query.bind(5, vulnerable_cpe.version_end);
-                    if (vulnerable_cpe.version_end_type == "Including")
-                        cve_cpe_query.bind(6, true);
-                    else
-                        cve_cpe_query.bind(6, false);
-                    cve_cpe_query.bind(7, vulnerable_with_str);
-
-                    try {
-                        cve_cpe_query.exec();
-                    }
-                    catch (SQLite::Exception& e) {
-                        handle_exception(e);
-                    }
-
-                    try {
-                        cve_cpe_query.reset();
-                    }
-                    catch (SQLite::Exception& e) {
-                    }
-                }
-
-                #else
-                std::string vulnerable_with_str = "";
-
-                for (auto &vulnerable_with_cpe : vulnerable_with_vague_cpes) {
-                    vulnerable_with_str += vulnerable_with_cpe.vague_cpe + ",";
-                }
-
-                if (vulnerable_with_str != "")
-                    vulnerable_with_str.pop_back();
-
-                for (auto &vulnerable_cpe : vulnerable_vague_cpes) {
-                    cve_cpe_query.bind(2, vulnerable_cpe.vague_cpe);
-                    if (vulnerable_cpe.version_start_type == "Including")
-                        cve_cpe_query.bind(4, true);
-                    else
-                        cve_cpe_query.bind(4, false);
-                    cve_cpe_query.bind(5, vulnerable_cpe.version_end);
-                    if (vulnerable_cpe.version_end_type == "Including")
-                        cve_cpe_query.bind(6, true);
-                    else
-                        cve_cpe_query.bind(6, false);
-                    cve_cpe_query.bind(6, vulnerable_cpe.version_end_type);
-                    cve_cpe_query.bind(7, vulnerable_with_str);
-
-                    try {
-                        cve_cpe_query.exec();
-                    }
-                    catch (SQLite::Exception& e) {
-                        handle_exception(e);
-                    }
-
-                    try {
-                        cve_cpe_query.reset();
-                    }
-                    catch (SQLite::Exception& e) {
-                    }
-                }
-                #endif
             }
         }
     }
