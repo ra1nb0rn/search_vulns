@@ -70,7 +70,8 @@ class CPEVersion:
     def __lt__(self, other):
         parts, other_parts = self.get_version_parts(), other.get_version_parts()
 
-        for part_idx in range(min(len(parts), len(other_parts))):
+        min_part_count = min(len(parts), len(other_parts))
+        for part_idx in range(min_part_count):
             part, other_part = parts[part_idx], other_parts[part_idx]
             if part_idx < len(parts)-1 and part_idx < len(other_parts)-1:
                 if part.lower() == other_part.lower():
@@ -118,14 +119,19 @@ class CPEVersion:
                     return False
                 if val_part == val_part_other:
                     # check for equality and return False in that case
-                    if len(parts) == len(other_parts):
-                        return False
                     if len(parts) > len(other_parts) and all(x == "0" for x in parts[part_idx+1:]):
                         return False
                     if len(other_parts) > len(parts) and all(x == "0" for x in other_parts[part_idx+1:]):
                         return False
 
+                    # check for greater number of version parts on last iteration and return False in that case
+                    if part_idx > min_part_count-2 and len(parts) >= len(other_parts):
+                        return False
+
                 return True  # if version part in front is smaller, the entire version is already smaller
+
+        if len(other_parts) > len(other_parts):
+            return False
 
         return True
 
