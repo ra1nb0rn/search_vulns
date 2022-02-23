@@ -62,12 +62,26 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor):
     general_cpe_nvd_data = set()
     query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
              'is_cpe_version_end_including, with_cpes FROM cve_cpe WHERE cpe LIKE ? OR cpe LIKE ? OR cpe LIKE ?')
+    get_cpes_query = 'SELECT cpe FROM cve_cpe WHERE cpe LIKE ? AND cve_id = ?'
 
     for cur_part_idx in range(5, len(cpe_parts)):
         if cpe_parts[cur_part_idx] not in ('*', '-'):
             cur_cpe_prefix = ':'.join(cpe_parts[:cur_part_idx])
             cpe_wildcards = ["%s::%%" % cur_cpe_prefix, "%s:-:%%" % cur_cpe_prefix, "%s:*:%%" % cur_cpe_prefix]
             general_cpe_nvd_data |= set(db_cursor.execute(query, cpe_wildcards).fetchall())
+
+            # remove vulns that have a more specific exact CPE, which cur_cpe_prefix is a prefix of
+            found_vulns_cpes = {}
+            remove_vulns = set()
+            for pot_vuln in general_cpe_nvd_data:
+                cve_id, version_start, version_end = pot_vuln[0], pot_vuln[2], pot_vuln[4]
+                if not version_start and not version_end:
+                    if cve_id not in found_vulns_cpes:
+                        vuln_cpes = set(db_cursor.execute(get_cpes_query, (cur_cpe_prefix+':%%', pot_vuln[0])))
+                        found_vulns_cpes[cve_id] = vuln_cpes
+                    if len(found_vulns_cpes[cve_id]) > 1:
+                        remove_vulns.add(pot_vuln)
+            general_cpe_nvd_data -= remove_vulns
 
     if not cpe_version:
         general_query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
@@ -121,8 +135,8 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor):
 def is_cpe_included_after_version(cpe1, cpe2):
     '''Return True if cpe1 is included in cpe2 after the version section'''
 
-    cpe1_remainder_fields = ':'.join(cpe1.split(':')[6:])
-    cpe2_remainder_fields = ':'.join(cpe2.split(':')[6:])
+    cpe1_remainder_fields = cpe1.split(':')[6:]
+    cpe2_remainder_fields = cpe2.split(':')[6:]
 
     for i in range(min(len(cpe1_remainder_fields), len(cpe2_remainder_fields))):
         if cpe1_remainder_fields[i] in ('*', '-'):
@@ -144,10 +158,17 @@ def get_vulns(cpe, db_cursor):
     vulns += get_exact_vuln_matches(cpe, db_cursor)
     vulns += get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor)
 
+    if ':-:' in cpe:
+        # use '-' as wildcard and query for additional exact matches
+        vulns += get_exact_vuln_matches(cpe.replace(':-:', ':*:'), db_cursor)
+
     # retrieve more information about the found vulns, e.g. CVSS scores and possible exploits
     detailed_vulns = {}
     for vuln in vulns:
         cve_id = vuln[0]
+        if cve_id in detailed_vulns:
+            continue
+
         query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score FROM cve WHERE cve_id = ?'
         edb_ids, descr, publ, last_mod, cvss_ver, score = db_cursor.execute(query, (cve_id,)).fetchone()
         detailed_vulns[cve_id] = {"id": cve_id, "description": descr, "published": publ, "modified": last_mod,

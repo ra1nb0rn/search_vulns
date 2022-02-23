@@ -109,15 +109,17 @@ class CPEVersion:
                         return False
             else:
                 for i, char in enumerate(part):
-                    val_part += int(char) * 10**(len(part)-i)
+                    val_part += int(char) * 10**(len(part)-i-1)
 
                 for i, char in enumerate(other_part):
-                    val_part_other += int(char) * 10**(len(other_part)-i)
+                    val_part_other += int(char) * 10**(len(other_part)-i-1)
 
                 if val_part > val_part_other:
                     return False
                 if val_part == val_part_other:
                     # check for equality and return False in that case
+                    if len(parts) == len(other_parts):
+                        return False
                     if len(parts) > len(other_parts) and all(x == "0" for x in parts[part_idx+1:]):
                         return False
                     if len(other_parts) > len(parts) and all(x == "0" for x in other_parts[part_idx+1:]):
