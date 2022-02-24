@@ -340,7 +340,8 @@ def main():
                 vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD, False, True)
                 out_string += print_vulns(vulns[query], to_string=True)
         else:
-            vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD, False, True)
+            cpe_vulns = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD, False, True)
+            vulns[query] = {'cpe': cpe, 'vulns': cpe_vulns}
 
     if args.output:
         with open(args.output, 'w') as f:
