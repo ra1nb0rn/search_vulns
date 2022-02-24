@@ -279,6 +279,7 @@ def parse_args():
     parser.add_argument("-f", "--format", type=str, default="txt", choices={"txt", "json"}, help="Output format, either 'txt' or 'json' (default: 'txt')")
     parser.add_argument("-o", "--output", type=str, help="File to write found vulnerabilities to")
     parser.add_argument("-q", "--query", dest="queries", metavar="QUERY", action="append", help="A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string")
+    parser.add_argument("--cpe-search-threshold", type=float, default=CPE_SEARCH_THRESHOLD, help="Similarity threshold used for retrieving a CPE via the cpe_search tool")
 
     args = parser.parse_args()
     if not args.update and not args.queries and not args.full_update:
@@ -311,13 +312,16 @@ def main():
         # if current query is not already a CPE, retrieve a CPE that matches the query
         cpe = query
         if not MATCH_CPE_23_RE.match(query):
-            cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=CPE_SEARCH_THRESHOLD)
+            cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=args.cpe_search_threshold)
 
             if not cpe or not cpe[query]:
                 if args.format.lower() == 'txt':
-                    print('Warning: Could not find matching software for query \'%s\'' % query)
-                    if len(args.queries) > 1:
-                        print()
+                    if not args.output:
+                        print('Warning: Could not find matching software for query \'%s\'' % query)
+                        if len(args.queries) > 1:
+                            print()
+                    else:
+                        out_string = 'Warning: Could not find matching software for query \'%s\'\n' % query
                 else:
                     vulns[query] = 'Warning: Could not find matching software for query \'%s\'' % query
                 continue
@@ -333,14 +337,14 @@ def main():
             if not args.output:
                 print()
                 printit('[+] %s (%s)' % (query, cpe), color=BRIGHT_BLUE)
-                vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD, False, True)
+                vulns[query] = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, True)
                 print_vulns(vulns[query])
             else:
                 out_string += '\n' + '[+] %s (%s)\n' % (query, cpe)
-                vulns[query] = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD, False, True)
+                vulns[query] = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, True)
                 out_string += print_vulns(vulns[query], to_string=True)
         else:
-            cpe_vulns = search_vulns(cpe, db_cursor, CPE_SEARCH_THRESHOLD, False, True)
+            cpe_vulns = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, True)
             vulns[query] = {'cpe': cpe, 'vulns': cpe_vulns}
 
     if args.output:
