@@ -46,7 +46,7 @@ def get_exact_vuln_matches(cpe, db_cursor):
     return vulns
 
 
-def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor):
+def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_general_cpe_vulns=False):
     """
     Get vulnerability data that is stored in the DB more generally,
     e.g. with version_start and version_end information
@@ -129,6 +129,9 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor):
             elif version_end_incl == False:
                 is_cpe_vuln = cpe_version < CPEVersion(version_end)
         else:
+            # if configured, ignore vulnerabilities that only affect a general CPE
+            if ignore_general_cpe_vulns and all(val in ('*', '-') for val in vuln_cpe.split(':')[5:]):
+                continue
             is_cpe_vuln = is_cpe_included_after_version(cpe, vuln_cpe)
 
         # check that everything after the version field matches in the CPE
@@ -160,14 +163,14 @@ def is_cpe_included_after_version(cpe1, cpe2):
     return True
 
 
-def get_vulns(cpe, db_cursor):
+def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False):
     """Get known vulnerabilities for the given CPE 2.3 string"""
 
     cpe_parts = cpe.split(':')
     vulns = []
 
     vulns += get_exact_vuln_matches(cpe, db_cursor)
-    vulns += get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor)
+    vulns += get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_general_cpe_vulns)
 
     if ':-:' in cpe:
         # use '-' as wildcard and query for additional exact matches
@@ -234,7 +237,7 @@ def print_vulns(vulns, to_string=False):
         return out_string
 
 
-def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, is_good_cpe=False):
+def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, is_good_cpe=False, ignore_general_cpe_vulns=False):
     """Search for known vulnerabilities based on the given query"""
 
     # create DB handle if not given
@@ -262,7 +265,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
             cpe = pot_matching_cpe
 
     # use the retrieved or gi CPE to search for known vulnerabilities
-    vulns = get_vulns(cpe, db_cursor)
+    vulns = get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns)
 
     if close_cursor_after:
         db_cursor.close()
@@ -280,6 +283,7 @@ def parse_args():
     parser.add_argument("-o", "--output", type=str, help="File to write found vulnerabilities to")
     parser.add_argument("-q", "--query", dest="queries", metavar="QUERY", action="append", help="A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string")
     parser.add_argument("--cpe-search-threshold", type=float, default=CPE_SEARCH_THRESHOLD, help="Similarity threshold used for retrieving a CPE via the cpe_search tool")
+    parser.add_argument("--ignore-general-cpe-vulns", action="store_true", help="Ignore vulnerabilities that only affect a general CPE (i.e. without version)")
 
     args = parser.parse_args()
     if not args.update and not args.queries and not args.full_update:
@@ -337,14 +341,14 @@ def main():
             if not args.output:
                 print()
                 printit('[+] %s (%s)' % (query, cpe), color=BRIGHT_BLUE)
-                vulns[query] = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, True)
+                vulns[query] = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns)
                 print_vulns(vulns[query])
             else:
                 out_string += '\n' + '[+] %s (%s)\n' % (query, cpe)
-                vulns[query] = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, True)
+                vulns[query] = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns)
                 out_string += print_vulns(vulns[query], to_string=True)
         else:
-            cpe_vulns = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, True)
+            cpe_vulns = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns)
             vulns[query] = {'cpe': cpe, 'vulns': cpe_vulns}
 
     if args.output:
