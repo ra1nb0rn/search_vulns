@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
+from collections import OrderedDict
 import json
+import os
 import sqlite3
 import sys
 import re
@@ -349,7 +350,11 @@ def main():
                 out_string += print_vulns(vulns[query], to_string=True)
         else:
             cpe_vulns = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns)
-            vulns[query] = {'cpe': cpe, 'vulns': cpe_vulns}
+            cve_ids_sorted = sorted(list(cpe_vulns), key=lambda cve_id: float(cpe_vulns[cve_id]["cvss"]), reverse=True)
+            cpe_vulns_sorted = {}
+            for cve_id in cve_ids_sorted:
+                cpe_vulns_sorted[cve_id] = cpe_vulns[cve_id]
+            vulns[query] = {'cpe': cpe, 'vulns': cpe_vulns_sorted}
 
     if args.output:
         with open(args.output, 'w') as f:
