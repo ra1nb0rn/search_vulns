@@ -39,22 +39,23 @@ http {
         keepalive_timeout 60;
 
         location / {
-        # checks for static file, if not found proxy to app
-        try_files $uri @proxy_to_app;
+            # checks for static file, if not found proxy to app
+            try_files $uri @proxy_to_app;
         }
 
         location @proxy_to_app {
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Host $http_host;
-        # we don't want nginx trying to do something clever with
-        # redirects, we set the Host: header above already.
-        proxy_redirect off;
-        proxy_pass http://search_vulns;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Host $http_host;
+            # we don't want nginx trying to do something clever with
+            # redirects, we set the Host: header above already.
+            proxy_redirect off;
+            proxy_pass http://search_vulns;
 
-        proxy_connect_timeout 300;
-        proxy_send_timeout 300;
-        proxy_read_timeout 300;
-        send_timeout 300;
+            proxy_connect_timeout 300;
+            proxy_send_timeout 300;
+            proxy_read_timeout 300;
+            send_timeout 300;
+        }
     }
 }
