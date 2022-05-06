@@ -62,13 +62,19 @@ Here are some examples:
 Again, note that when *search_vulns* is initially installed, it takes quite some time to setup the local vulnerability and software database.
 
 ## Running a Web Server
-It is also possible to run a web server that provides this tool's functionality to clients over the network. ``web_server.py`` contains a working example using Flask. Depending on your case, you may want to modify the server ip and port at the end of this file. Furthermore, you can use ``gunicorn`` to make the web server more scalable; for example by running:
+It is also possible to run a web server that provides this tool's functionality to clients over the network. ``web_server.py`` contains a working example using Flask. Depending on your environment, you may want to modify the server ip and port at the end of this file. To run a simple Flask web server, just run:
+```bash
+./web_server.py
+```
+Furthermore, you can use ``gunicorn`` to make the web server more scalable; for example by running:
 ```bash
 gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind '0.0.0.0:8000' wsgi:app
 ```
-You can read more about choosing good ``gunicorn`` settings for your system [here](https://medium.com/building-the-system/gunicorn-3-means-of-concurrency-efbb547674b7). Note, however, that this tool is quite CPU-intensive, meaning that scalability is somewhat limited. Also note that if you want to run the web server component, you may have to install additional Python packages as they're *not* part of the default requirements:
+You can read more about choosing good ``gunicorn`` settings for your system [here](https://medium.com/building-the-system/gunicorn-3-means-of-concurrency-efbb547674b7). Note, however, that this tool is quite CPU and memory intensive, meaning that scalability is somewhat limited.
+
+Finally, you can also use Nginx as a reverse proxy. A sample configuration file is provided in [``web_server_files/nginx.conf.sample``](https://github.com/ra1nb0rn/search_vulns/blob/master/web_server_files/nginx.conf.sample). Again, you may have to adjust this to your needs. When using Nginx, make sure you have the app running at the configured endpoint(s). For the sample configuration file, for example, you would have to run something similar to the following:
 ```bash
-pip3 install Flask gunicorn gevent
+gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind 'unix:/tmp/gunicorn.sock' wsgi:app
 ```
 
 ## License

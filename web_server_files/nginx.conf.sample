@@ -1,0 +1,60 @@
+
+worker_processes 3;
+
+user nobody nogroup;
+# 'user nobody nobody;' for systems with 'nobody' as a group instead
+error_log  /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1000; # increase if you have lots of clients
+    accept_mutex on; # set to 'on' if nginx worker_processes > 1
+    # 'use epoll;' to enable for Linux 2.6+
+    # 'use kqueue;' to enable for FreeBSD, OSX
+}
+
+http {
+    # fallback in case we can't determine a type
+    default_type application/octet-stream;
+    access_log /var/log/nginx/access.log combined;
+
+    upstream search_vulns {
+        # fail_timeout=0 means we always retry an upstream even if it failed
+        # to return a good HTTP response
+        least_conn;
+
+        # for UNIX domain socket setups
+        server unix:/tmp/gunicorn.sock fail_timeout=0;
+
+        # for a TCP configuration with load balancing
+        # server 192.168.0.42:8000 fail_timeout=0;
+        # server 192.168.0.142:8000 fail_timeout=0;
+    }
+
+    server {
+        # use 'listen 80 deferred;' for Linux
+        # use 'listen 80 accept_filter=httpready;' for FreeBSD
+        listen 8080;
+
+        keepalive_timeout 60;
+
+        location / {
+        # checks for static file, if not found proxy to app
+        try_files $uri @proxy_to_app;
+        }
+
+        location @proxy_to_app {
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host $http_host;
+        # we don't want nginx trying to do something clever with
+        # redirects, we set the Host: header above already.
+        proxy_redirect off;
+        proxy_pass http://search_vulns;
+
+        proxy_connect_timeout 300;
+        proxy_send_timeout 300;
+        proxy_read_timeout 300;
+        send_timeout 300;
+    }
+}

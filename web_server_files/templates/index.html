@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Style Sheets -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/shards.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+
+<body>
+    <!-- BEGIN HEADER -->
+    <nav
+        class="navbar navbar-expand-lg navbar-light bg-light mb-4 sticky-top justify-content-md-center justify-content-start">
+        <i style="font-size: 1.5rem" class="fa-solid fa-bug my-auto"></i>
+        &nbsp;&nbsp;&nbsp; <a class="navbar-brand" href="/">SearchVulns</a>
+        <div class="navbar-collapse collapse justify-content-between align-items-center w-100" id="collapsingNavbar2">
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="/">Home</a>
+                </li>
+            </ul>
+            <ul class="nav navbar-nav flex-row justify-content-md-center justify-content-start flex-nowrap">
+                <li class="nav-item"><a class="nav-link" href="https://github.com/ra1nb0rn/search_vulns"><i
+                            class="fa-brands fa-github my-auto" style="font-size: 1.45rem"></i></a> </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- BEGIN SearchVulns -->
+    <div class="container-fluid col-12 col-lg-10 px-0 px-lg-auto mx-0 mx-lg-auto" style="min-height: 65vh;">
+        <div class="row px-0 px-lg-2 mx-0 mx-lg-2 justify-content-center align-items-center">
+            <div class="col-4 col-sm-4 col-lg-7 input-group text-center ml-0 pl-0">
+                <span class="input-group-prepend"><span class="input-group-text" style="font-size:1.3rem"><i
+                            class="fa-solid fa-database"></i>
+                    </span></span><input input type="text" class="form-control" name="query" id="query"
+                    placeholder="Enter Software" autofocus>
+            </div>
+            <div class="col-8 col-sm-8 col-lg-5">
+                <div class="row text-center">
+                    <div class="col-4 ml-0 pl-0">
+                        <button type="button" class="btn btn-primary" name="searchVulnsButton" id="searchVulnsButton"
+                            onclick="searchVulns()">Search Vulns</button>
+                    </div>
+                    <div class="col-8 mx-auto border border-info" style="border-radius:.4rem!important;">
+                        <div class="row align-items-center h-100 my-auto">
+                            <div class="col-12">
+                                <div class="col-12 custom-control custom-toggle d-block"><input type="checkbox"
+                                        id="toggleIgnoreGeneralCpeVulns" name="toggleIgnoreGeneralCpeVulns"
+                                        class="custom-control-input" onchange="ignoreGeneralVulnsToggle()"><label
+                                        class="custom-control-label" for="toggleIgnoreGeneralCpeVulns">Don't show
+                                        general vulns</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-4 mb-2 px-0 px-lg-2 mx-0 mx-lg-2 justify-content-center align-items-center">
+            <div class="col-12" id="vulns">
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <!-- JavaScript Dependencies: jQuery, Popper.js, Bootstrap JS, Shards JS -->
+    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/popper.min.js') }}">
+    </script>
+    <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}">
+    </script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/fontawesome.min.js') }}">
+    </script>
+    <script src="{{ url_for('static', filename='js/shards.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/search_vulns.js') }}"></script>
+</body>
+
+</html>
