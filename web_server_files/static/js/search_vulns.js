@@ -116,6 +116,7 @@ function searchVulns() {
     if (ignoreGeneralCpeVulns)
         url_query += "&ignore-general-cpe-vulns=true";
 
+    $("#searchVulnsButton").attr("disabled", true);
     $("#vulns").html('<div class="row mt-3 justify-content-center align-items-center"><h5 class="spinner-border text-primary" style="width: 3rem; height: 3rem"></h5></div>');
     curVulnData = {};
 
@@ -135,6 +136,7 @@ function searchVulns() {
                 vulns_html = "<h5>No data available</h5>";
             }
             $("#vulns").html(vulns_html);
+            $("#searchVulnsButton").removeAttr("disabled");
         },
         error: function (jXHR, textStatus, errorThrown) {
             var errorMsg;
@@ -144,6 +146,7 @@ function searchVulns() {
                 errorMsg = errorThrown;
 
             $("#vulns").html(`<h5 class="text-danger text-center">${errorMsg}</h5>`);
+            $("#searchVulnsButton").removeAttr("disabled");
         }
     })
 }
@@ -162,6 +165,6 @@ function ignoreGeneralVulnsToggle() {
 // enables the user to press return on the query text field to make the query
 $("#query").keypress(function (event) {
     var keycode = (event.keyCode ? event.keyCode : event.which);
-    if (keycode == "13")
+    if (keycode == "13" && $("#searchVulnsButton").attr("disabled") === undefined)
         $("#searchVulnsButton").click();
 });
