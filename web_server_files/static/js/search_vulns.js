@@ -6,6 +6,12 @@ var iconSortDesc = '<i class="fa-solid fa-sort-down"></i>';
 var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
 
 
+function htmlEntities (text) {
+    return text.replace(/[\u00A0-\u9999<>\&"']/g, function(i) {
+        return '&#'+i.charCodeAt(0)+';';
+    });
+}
+
 function createVulnsHtml(sortColumnIdx, asc) {
     var sortIconCVEID = iconUnsorted, sortFunctionCVEID = "reorderVulns(0, false)";
     var sortIconCVSS = iconUnsorted, sortFunctionCVSS = "reorderVulns(1, false)";
@@ -13,7 +19,6 @@ function createVulnsHtml(sortColumnIdx, asc) {
 
     // retrieve and sort vulns
     vulns = Object.values(Object.values(curVulnData)[0]);
-    console.log(curVulnData);
     if (sortColumnIdx == 0) {  // CVE-ID
         if (asc) {
             vulns = vulns.sort(function (vuln1, vuln2) {
@@ -82,7 +87,7 @@ function createVulnsHtml(sortColumnIdx, asc) {
 
     for (var i = 0; i < vulns.length; i++) {
         vulns_html += `<tr>`;
-        vulns_html += `<td class="text-nowrap pr-2"><a href="${vulns[i]["href"]}" target="_blank" style="color: inherit;"><i class="fa-solid fa-up-right-from-square"></i>&nbsp;&nbsp;${vulns[i]["id"]}</td>`;
+        vulns_html += `<td class="text-nowrap pr-2"><a href="${htmlEntities(vulns[i]["href"])}" target="_blank" style="color: inherit;"><i class="fa-solid fa-up-right-from-square"></i>&nbsp;&nbsp;${vulns[i]["id"]}</td>`;
 
         cvss = parseFloat(vulns[i].cvss);
         if (cvss >= 9.0)
@@ -94,12 +99,12 @@ function createVulnsHtml(sortColumnIdx, asc) {
         else if (cvss < 4.0 && cvss >= 0.1)
             vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-low text-center">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
 
-        vulns_html += `<td>${vulns[i]["description"]}</td>`;
+        vulns_html += `<td>${htmlEntities(vulns[i]["description"])}</td>`;
 
         exploits = [];
         if (vulns[i].exploits !== undefined) {
             for (var j = 0; j < vulns[i].exploits.length; j++)
-                exploits.push(`<a href="${vulns[i].exploits[j]}" target="_blank" style="color: inherit;">${vulns[i].exploits[j]}</a>`);
+                exploits.push(`<a href="${vulns[i].exploits[j]}" target="_blank" style="color: inherit;">${htmlEntities(vulns[i].exploits[j])}</a>`);
         }
         vulns_html += `<td class="text-nowrap">${exploits.join("<br>")}</td>`;
 
@@ -127,13 +132,13 @@ function searchVulns() {
             var vulns_html = "";
             if (Object.keys(vulns[query]).length) {
                 if (typeof vulns[query] !== "object")
-                    vulns_html = `<h5 class="text-danger text-center">${vulns[query]}</h5>`;
+                    vulns_html = `<h5 class="text-danger text-center">${htmlEntities(vulns[query])}</h5>`;
                 else {
                     curVulnData = vulns;
                     vulns_html = createVulnsHtml(1, false);
                 }
             } else {
-                vulns_html = "<h5>No data available</h5>";
+                vulns_html = `<h5 class="text-center">No known vulnerabilities could be found for '${htmlEntities(query)}'</h5>`;
             }
             $("#vulns").html(vulns_html);
             $("#searchVulnsButton").removeAttr("disabled");
@@ -145,7 +150,7 @@ function searchVulns() {
             else
                 errorMsg = errorThrown;
 
-            $("#vulns").html(`<h5 class="text-danger text-center">${errorMsg}</h5>`);
+            $("#vulns").html(`<h5 class="text-danger text-center">${htmlEntities(errorMsg)}</h5>`);
             $("#searchVulnsButton").removeAttr("disabled");
         }
     })
