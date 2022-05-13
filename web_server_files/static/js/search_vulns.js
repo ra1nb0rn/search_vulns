@@ -117,10 +117,14 @@ function createVulnsHtml(sortColumnIdx, asc) {
 function searchVulns() {
     var query = $('#query').val();
     var url_query = "query=" + query;
+    var new_url = window.location.pathname + '?query=' + query;
 
-    if (ignoreGeneralCpeVulns)
+    if (ignoreGeneralCpeVulns) {
         url_query += "&ignore-general-cpe-vulns=true";
+        new_url += '&general-vulns=false';
+    }
 
+    history.pushState({}, null, new_url);  // update URL
     $("#searchVulnsButton").attr("disabled", true);
     $("#vulns").html('<div class="row mt-3 justify-content-center align-items-center"><h5 class="spinner-border text-primary" style="width: 3rem; height: 3rem"></h5></div>');
     curVulnData = {};
@@ -167,9 +171,29 @@ function ignoreGeneralVulnsToggle() {
     curVulnData = {};
 }
 
+function init() {
+    if (location.search !== '' && location.search !== '?') {
+        var url = new URL(document.location.href);
+        var params = new URLSearchParams(url.search);
+        var init_query = params.get('query');
+        if (init_query !== null)
+            $('#query').val(htmlEntities(init_query));
+
+        var show_general_vulns = params.get('general-vulns');
+        if (String(show_general_vulns).toLowerCase() === "false")
+            $('#toggleIgnoreGeneralCpeVulns').click();
+
+        if (init_query !== null)
+            $("#searchVulnsButton").click();
+    }
+}
+
 // enables the user to press return on the query text field to make the query
 $("#query").keypress(function (event) {
     var keycode = (event.keyCode ? event.keyCode : event.which);
     if (keycode == "13" && $("#searchVulnsButton").attr("disabled") === undefined)
         $("#searchVulnsButton").click();
 });
+
+// check for existing query in URL
+init();

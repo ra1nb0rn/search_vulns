@@ -3,11 +3,7 @@
 import sqlite3
 import os
 from flask import Flask, request
-from flask import (
-    render_template,
-    render_template_string,
-    send_from_directory,
-)
+from flask import render_template
 
 from search_vulns import search_vulns as search_vulns_call
 
