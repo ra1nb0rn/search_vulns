@@ -197,3 +197,8 @@ $("#query").keypress(function (event) {
 
 // check for existing query in URL
 init();
+
+// activate tooltips
+$(document).ready(function() {
+    $("body").tooltip({ selector: '[data-toggle=tooltip]' });
+});

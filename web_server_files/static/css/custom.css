@@ -67,6 +67,24 @@
     }
 }
 
+/* Custom Tooltip Config /*
+/* Small */
+@media (max-width: 991px) {
+    .tooltip{
+    }
+    .tooltip-inner {
+        max-width: 20rem !important;
+    }
+}
+
+/* Bigger */
+@media (min-width: 992px) {
+    .tooltip{
+    }
+    .tooltip-inner {
+        max-width: 20rem !important;
+    }
+}
 
 /* Misc */
 .bg-darker {
