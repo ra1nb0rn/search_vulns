@@ -116,8 +116,9 @@ function createVulnsHtml(sortColumnIdx, asc) {
 
 function searchVulns() {
     var query = $('#query').val();
-    var url_query = "query=" + query;
-    var new_url = window.location.pathname + '?query=' + query;
+    var queryEnc = encodeURIComponent(query);
+    var url_query = "query=" + queryEnc;
+    var new_url = window.location.pathname + '?query=' + queryEnc;
 
     if (ignoreGeneralCpeVulns) {
         url_query += "&ignore-general-cpe-vulns=true";
