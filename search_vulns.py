@@ -257,6 +257,10 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
 
         if not cpe or not cpe[query]:
             return None
+        else:
+            check_str = cpe[query][0][0][8:]
+            if any(char.isdigit() for char in query) and not any(char.isdigit() for char in check_str):
+                return None
 
         cpe = cpe[query][0][0]
     elif not is_good_cpe:
@@ -318,7 +322,15 @@ def main():
         if not MATCH_CPE_23_RE.match(query):
             cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=args.cpe_search_threshold)
 
+            found_cpe = True
             if not cpe or not cpe[query]:
+                found_cpe = False
+            else:
+                check_str = cpe[query][0][0][8:]
+                if any(char.isdigit() for char in query) and not any(char.isdigit() for char in check_str):
+                    found_cpe = False
+
+            if not found_cpe:
                 if args.format.lower() == 'txt':
                     if not args.output:
                         print('Warning: Could not find matching software for query \'%s\'' % query)
