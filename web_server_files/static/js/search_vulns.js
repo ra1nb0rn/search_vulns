@@ -87,7 +87,7 @@ function createVulnsHtml(sortColumnIdx, asc) {
 
     for (var i = 0; i < vulns.length; i++) {
         vulns_html += `<tr>`;
-        vulns_html += `<td class="text-nowrap pr-2"><a href="${htmlEntities(vulns[i]["href"])}" target="_blank" style="color: inherit;"><i class="fa-solid fa-up-right-from-square"></i>&nbsp;&nbsp;${vulns[i]["id"]}</td>`;
+        vulns_html += `<td class="text-nowrap pr-2"><a href="${htmlEntities(vulns[i]["href"])}" target="_blank" style="color: inherit;">${vulns[i]["id"]}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a></td>`;
 
         cvss = parseFloat(vulns[i].cvss);
         if (cvss >= 9.0)
