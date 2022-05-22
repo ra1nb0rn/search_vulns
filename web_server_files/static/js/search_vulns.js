@@ -159,11 +159,15 @@ function createVulnsMarkDownTable() {
     }
 
     for (var i = 0; i < vulns.length; i++) {
-        vulns_md += `|${vulns[i]["id"].replaceAll('-', '&#8209;')}|${vulns[i]["cvss"]}&nbsp;(v${vulns[i]["cvss_ver"]})|`;
+        vulns_md += `|[${vulns[i]["id"]}](${htmlEntities(vulns[i]["href"])})|${vulns[i]["cvss"]}&nbsp;(v${vulns[i]["cvss_ver"]})|`;
         vulns_md += `${htmlEntities(vulns[i]["description"]).replaceAll('|', '&#124;')}|`;
 
-        if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0)
-            vulns_md += `${vulns[i].exploits.join("<br>")}|`;
+        if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
+            for (var j = 0; j < vulns[i].exploits.length; j++)
+                vulns_md += `[${vulns[i].exploits[j]}](${vulns[i].exploits[j]})<br>`;
+            vulns_md = vulns_md.substring(0, vulns_md.length - 4);  // remove last <br>
+            vulns_md += "|";
+        }
         else if (has_exploits)
             vulns_md += "|";
 
