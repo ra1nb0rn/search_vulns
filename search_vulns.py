@@ -268,13 +268,39 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         if pot_matching_cpe:
             cpe = pot_matching_cpe
 
-    # use the retrieved or gi CPE to search for known vulnerabilities
+    # use the retrieved CPE to search for known vulnerabilities
     vulns = get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns)
 
     if close_cursor_after:
         db_cursor.close()
 
     return vulns
+
+
+def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, is_good_cpe=False, ignore_general_cpe_vulns=False):
+    """Search for known vulnerabilities based on the given query and return them with their CPE"""
+
+    cpe = query
+    if not MATCH_CPE_23_RE.match(query):
+        cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=software_match_threshold, keep_data_in_memory=keep_data_in_memory)
+
+        if not cpe or not cpe[query]:
+            return None
+        else:
+            check_str = cpe[query][0][0][8:]
+            if any(char.isdigit() for char in query) and not any(char.isdigit() for char in check_str):
+                return None
+
+        cpe = cpe[query][0][0]
+    elif not is_good_cpe:
+        pot_matching_cpe = match_cpe23_to_cpe23_from_dict(cpe, keep_data_in_memory=keep_data_in_memory)
+        if pot_matching_cpe:
+            cpe = pot_matching_cpe
+        else:
+            return None
+
+    vulns = search_vulns(cpe, db_cursor, software_match_threshold, keep_data_in_memory, True, ignore_general_cpe_vulns)
+    return {query: {'cpe': cpe, 'vulns': vulns}}
 
 
 def parse_args():

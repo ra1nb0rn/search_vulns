@@ -5,7 +5,7 @@ import os
 from flask import Flask, request
 from flask import render_template
 
-from search_vulns import search_vulns as search_vulns_call
+from search_vulns import search_vulns_return_cpe as search_vulns_call
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))
@@ -31,17 +31,18 @@ def search_vulns():
         ignore_general_cpe_vulns = False
 
     if url_query_string in RESULTS_CACHE:
-        return {query: RESULTS_CACHE[url_query_string]}
+        return RESULTS_CACHE[url_query_string]
 
     conn = sqlite3.connect(DB_URI, uri=True)
     db_cursor = conn.cursor()
     vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns)
+
     if vulns is None:
-        RESULTS_CACHE[url_query_string] = 'Warning: Could not find matching software for query \'%s\'' % query
+        RESULTS_CACHE[url_query_string] = {query: 'Warning: Could not find matching software for query \'%s\'' % query}
         return {query: 'Warning: Could not find matching software for query \'%s\'' % query}
     else:
         RESULTS_CACHE[url_query_string] = vulns
-        return {query: vulns}
+        return vulns
 
 @app.route("/")
 @app.route("/index")

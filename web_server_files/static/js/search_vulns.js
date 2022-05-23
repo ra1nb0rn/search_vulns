@@ -14,7 +14,7 @@ function htmlEntities(text) {
 }
 
 function getCurrentVulnsSorted() {
-    var vulns = Object.values(Object.values(curVulnData)[0]);
+    var vulns = Object.values(curVulnData);
     if (curSortColIdx == 0) {  // CVE-ID
         if (curSortColAsc) {
             return vulns.sort(function (vuln1, vuln2) {
@@ -122,14 +122,12 @@ function createVulnsHtml() {
             vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-low text-center">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
 
         vulns_html += `<td>${htmlEntities(vulns[i]["description"])}</td>`;
-
         exploits = [];
         if (vulns[i].exploits !== undefined) {
             for (var j = 0; j < vulns[i].exploits.length; j++)
                 exploits.push(`<a href="${vulns[i].exploits[j]}" target="_blank" style="color: inherit;">${htmlEntities(vulns[i].exploits[j])}</a>`);
         }
         vulns_html += `<td class="text-nowrap">${exploits.join("<br>")}</td>`;
-
         vulns_html += "</tr>"
     }
     vulns_html += "</tbody></table>";
@@ -232,17 +230,20 @@ function searchVulns() {
         data: url_query,
         success: function (vulns) {
             var vulns_html = "";
-            if (Object.keys(vulns[query]).length) {
-                if (typeof vulns[query] !== "object")
-                    vulns_html = `<h5 class="text-danger text-center">${htmlEntities(vulns[query])}</h5>`;
-                else {
-                    curVulnData = vulns;
+            if (typeof vulns[query] !== "object")
+                vulns_html = `<h5 class="text-danger text-center">${htmlEntities(vulns[query])}</h5>`;
+            else {
+                cpe = vulns[query]['cpe'];
+                curVulnData = vulns[query]['vulns'];
+                if (Object.keys(curVulnData).length > 0) {
                     vulns_html = createVulnsHtml(1, false);
+                    vulns_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div>` + vulns_html;
                     vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
                     vulns_html += showAsButtonsHTML;
                 }
-            } else {
-                vulns_html = `<h5 class="text-center">No known vulnerabilities could be found for '${htmlEntities(query)}'</h5>`;
+                else {
+                    vulns_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div><br><h5 class="text-center">No known vulnerabilities could be found.</h5>`;
+                }
             }
             $("#vulns").html(vulns_html);
             $("#searchVulnsButton").removeAttr("disabled");
