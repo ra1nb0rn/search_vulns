@@ -96,8 +96,8 @@ function createVulnsHtml() {
         }
     }
 
-    vulns_html = '<table class="table table-sm table-rounded table-striped">';
-    vulns_html += '<thead class="bg-darker">';
+    vulns_html = '<table class="table table-sm table-rounded table-borderless">';
+    vulns_html += '<thead>';
     vulns_html += '<tr>'
     vulns_html += `<th onclick="${sortFunctionCVEID}" style="white-space: nowrap;">CVE-ID&nbsp;&nbsp;${sortIconCVEID}</th>`;
     vulns_html += `<th onclick="${sortFunctionCVSS}" style="white-space: nowrap;">CVSS&nbsp;&nbsp;${sortIconCVSS}</th>`;
@@ -105,7 +105,6 @@ function createVulnsHtml() {
     vulns_html += `<th onclick="${sortFunctionExploits}" style="white-space: nowrap;">Exploit&nbsp;&nbsp;${sortIconExploits}</th>`;
     vulns_html += "</tr></thead>";
     vulns_html += "<tbody>";
-    vulns_html += "<tr></<tr>";  // make striping start with white
     var exploits, cvss;
 
     for (var i = 0; i < vulns.length; i++) {

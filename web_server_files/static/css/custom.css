@@ -31,30 +31,32 @@
 }
 
 
-/* Rounded table, from: https://gist.github.com/farhang/99a9128fbd3c5a9e9ea5c1b054b59d94 */
-.table-rounded thead th {
-    border: none;
+/* Rounded table */
+.table-rounded thead tr th {
+    background-color: #d7d4d4 !important;
 }
 
-.table-rounded thead th:first-child {
+.table-rounded tr:nth-child(even) td {
+    background-color: rgba(0,0,0,.05) !important;
+}
+
+.table-rounded thead tr th:first-child {
     border-radius: 0.8rem 0 0 0;
-    background-color: #d7d4d4 !important;
 }
 
-.table-rounded thead th:last-child {
+.table-rounded thead tr {
+    border-radius: 0.8rem 0 0 0.8rem;
+}
+
+.table-rounded thead tr th:last-child {
     border-radius: 0 0.8rem 0 0;
-    background-color: #d7d4d4 !important;
 }
 
-.table-rounded tbody td {
-    border: none;
-}
-
-.table-rounded tbody tr:last-child td:first-child {
+.table-rounded tr:last-child td:first-child {
     border-radius: 0 0 0 0.8rem;
 }
 
-.table-rounded tbody tr:last-child td:last-child {
+.table-rounded tr:last-child td:last-child {
     border-radius: 0 0 0.8rem 0;
 }
 
