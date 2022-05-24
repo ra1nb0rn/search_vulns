@@ -277,30 +277,35 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     return vulns
 
 
-def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, is_good_cpe=False, ignore_general_cpe_vulns=False):
+def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, is_good_cpe=False, zero_extend_versions=False, ignore_general_cpe_vulns=False):
     """Search for known vulnerabilities based on the given query and return them with their CPE"""
 
-    cpe = query
+    cpe, pot_cpes = query, []
     if not MATCH_CPE_23_RE.match(query):
-        cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=software_match_threshold, keep_data_in_memory=keep_data_in_memory)
+        cpes = search_cpes(query, cpe_version="2.3", count=6, threshold=0.5, zero_extend_versions=zero_extend_versions, keep_data_in_memory=keep_data_in_memory)
 
-        if not cpe or not cpe[query]:
-            return None
-        else:
-            check_str = cpe[query][0][0][8:]
-            if any(char.isdigit() for char in query) and not any(char.isdigit() for char in check_str):
-                return None
+        if not cpes or not cpes[query]:
+            return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
 
-        cpe = cpe[query][0][0]
+        if cpes[query][0][1] < software_match_threshold:
+            return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
+
+        # ensure that CPE has a number if query has a number
+        check_str = cpes[query][0][0][8:]
+        if any(char.isdigit() for char in query) and not any(char.isdigit() for char in check_str):
+            return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
+
+        pot_cpes = cpes[query]
+        cpe = cpes[query][0][0]
     elif not is_good_cpe:
         pot_matching_cpe = match_cpe23_to_cpe23_from_dict(cpe, keep_data_in_memory=keep_data_in_memory)
         if pot_matching_cpe:
             cpe = pot_matching_cpe
         else:
-            return None
+            return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
 
     vulns = search_vulns(cpe, db_cursor, software_match_threshold, keep_data_in_memory, True, ignore_general_cpe_vulns)
-    return {query: {'cpe': cpe, 'vulns': vulns}}
+    return {query: {'cpe': cpe, 'vulns': vulns, 'pot_cpes': pot_cpes}}
 
 
 def parse_args():

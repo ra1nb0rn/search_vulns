@@ -35,11 +35,11 @@ def search_vulns():
 
     conn = sqlite3.connect(DB_URI, uri=True)
     db_cursor = conn.cursor()
-    vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns)
+    vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, zero_extend_versions=True)
 
     if vulns is None:
-        RESULTS_CACHE[url_query_string] = {query: 'Warning: Could not find matching software for query \'%s\'' % query}
-        return {query: 'Warning: Could not find matching software for query \'%s\'' % query}
+        RESULTS_CACHE[url_query_string] = {}
+        return {}
     else:
         RESULTS_CACHE[url_query_string] = vulns
         return vulns

@@ -231,18 +231,35 @@ function searchVulns() {
         success: function (vulns) {
             var vulns_html = "";
             if (typeof vulns[query] !== "object")
-                vulns_html = `<h5 class="text-danger text-center">${htmlEntities(vulns[query])}</h5>`;
+                vulns_html = `<h5 class="text-danger text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
             else {
                 cpe = vulns[query]['cpe'];
-                curVulnData = vulns[query]['vulns'];
-                if (Object.keys(curVulnData).length > 0) {
-                    vulns_html = createVulnsHtml(1, false);
-                    vulns_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div>` + vulns_html;
-                    vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-                    vulns_html += showAsButtonsHTML;
+                var alt_queries_start_idx = 1;
+                if (cpe != undefined) {
+                    curVulnData = vulns[query]['vulns'];
+                    if (Object.keys(curVulnData).length > 0) {
+                        vulns_html = createVulnsHtml(1, false);
+                        vulns_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div>` + vulns_html;
+                        vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
+                        vulns_html += showAsButtonsHTML;
+                    }
+                    else {
+                        vulns_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div><br><h5 class="text-center">No known vulnerabilities could be found.</h5>`;
+                    }
                 }
                 else {
-                    vulns_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div><br><h5 class="text-center">No known vulnerabilities could be found.</h5>`;
+                    alt_queries_start_idx = 0;
+                    vulns_html = `<h5 class="text-danger text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
+                }
+
+                if (vulns[query].hasOwnProperty('pot_cpes') && vulns[query]["pot_cpes"].length > 0 + alt_queries_start_idx) {
+                    vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
+                    vulns_html += `<div class="row mx-2"><div class="col"><h5>Alternative queries:</h5></div></div>`;
+                    vulns_html += `<div class="row mx-2"><div class="col"><ul>`;
+                    for (var i = alt_queries_start_idx; i < vulns[query]["pot_cpes"].length; i++) {
+                        vulns_html += `<li><a href="/?query=${htmlEntities(vulns[query]["pot_cpes"][i][0])}">${htmlEntities(vulns[query]["pot_cpes"][i][0])}</a></li>`
+                    }
+                    vulns_html += `</ul></div></div>`;
                 }
             }
             $("#vulns").html(vulns_html);
