@@ -254,7 +254,7 @@ function searchVulns() {
 
                 if (vulns[query].hasOwnProperty('pot_cpes') && vulns[query]["pot_cpes"].length > 0 + alt_queries_start_idx) {
                     vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-                    vulns_html += `<div class="row mx-2"><div class="col"><h5>Alternative queries:</h5></div></div>`;
+                    vulns_html += `<div class="row mx-2"><div class="col"><h5>Related queries:</h5></div></div>`;
                     vulns_html += `<div class="row mx-2"><div class="col"><ul>`;
                     for (var i = alt_queries_start_idx; i < vulns[query]["pot_cpes"].length; i++) {
                         vulns_html += `<li><a href="/?query=${htmlEntities(vulns[query]["pot_cpes"][i][0])}">${htmlEntities(vulns[query]["pot_cpes"][i][0])}</a></li>`

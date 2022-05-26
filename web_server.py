@@ -35,7 +35,7 @@ def search_vulns():
 
     conn = sqlite3.connect(DB_URI, uri=True)
     db_cursor = conn.cursor()
-    vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, zero_extend_versions=True)
+    vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, zero_extend_versions=True, is_good_cpe=True)
 
     if vulns is None:
         RESULTS_CACHE[url_query_string] = {}
