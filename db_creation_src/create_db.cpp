@@ -8,12 +8,14 @@
 #include <cstdlib>
 #include <climits>
 #include <unordered_set>
+#include <unordered_map>
 
 extern "C" {
     #include "dirent.h"
 }
 
 using json = nlohmann::json;
+static int nvd_exploit_ref_id = 0;
 
 struct VagueCpeInfo {
     std::string vague_cpe;
@@ -59,14 +61,18 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
     SQLite::Transaction transaction(db);
     SQLite::Statement cve_query(db, "INSERT INTO cve VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     SQLite::Statement cve_cpe_query(db, "INSERT INTO cve_cpe VALUES (?, ?, ?, ?, ?, ?, ?)");
+    SQLite::Statement add_exploit_ref_query(db, "INSERT INTO nvd_exploits_refs VALUES (?, ?)");
+    SQLite::Statement add_cveid_exploit_ref_query(db, "INSERT INTO cve_nvd_exploits_refs VALUES (?, ?)");
 
     // read a JSON file
     std::ifstream input_file(filepath);
     json j;
     input_file >> j;
 
-    json impact_entry;
-    std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity, cvss_version, descr_line;
+    json impact_entry, references_entry;
+    std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity, cvss_version, descr_line, ref_url;
+    std::unordered_map<std::string, int> nvd_exploits_refs;
+    std::unordered_map<std::string, std::unordered_set<int>> cveid_exploits_map;
     bool vulnerable;
     double base_score;
 
@@ -112,6 +118,28 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
         std::replace(last_modified.begin(), last_modified.end(), 'T', ' ');
         std::replace(last_modified.begin(), last_modified.end(), 'Z', ':');
         last_modified += "00";
+
+        references_entry = cve_entry["cve"]["references"];
+        if (references_entry.find("reference_data") != references_entry.end()) {
+            for (auto &ref_entry : references_entry["reference_data"]) {
+                ref_url = ref_entry["url"];
+                if (ref_entry.find("tags") != ref_entry.end()) {
+                    for (auto &tag : ref_entry["tags"]) {
+                        if (tag == "Exploit" || tag == "exploit") {
+                            if (nvd_exploits_refs.find(ref_url) == nvd_exploits_refs.end()) {
+                                nvd_exploits_refs[ref_url] = nvd_exploit_ref_id;
+                                nvd_exploit_ref_id++;
+                            }
+                            if (cveid_exploits_map.find(cve_id) == cveid_exploits_map.end()) {
+                                std::unordered_set<int> exploit_refs;
+                                cveid_exploits_map[cve_id] = exploit_refs;
+                            }
+                            cveid_exploits_map[cve_id].emplace(nvd_exploits_refs[ref_url]);
+                        }
+                    }
+                }
+            }
+        }
 
         cve_query.bind(1, cve_id);
         cve_query.bind(2, description);
@@ -207,7 +235,6 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
                 }
 
                 std::vector<std::unordered_set<VagueCpeInfo>> all_vulnerable_vague_cpes;
-                std::unordered_set<VagueCpeInfo> vulnerable_with_vague_cpes;
                 std::vector<std::unordered_set<VagueCpeInfo>> all_children_cpes;
 
                 for (auto &children_entry : config_nodes_entry["children"]) {
@@ -298,6 +325,24 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
         }
     }
 
+    // Put exploit references into DB
+    for (auto &exploit : nvd_exploits_refs) {
+        add_exploit_ref_query.bind(1, exploit.second);
+        add_exploit_ref_query.bind(2, exploit.first);
+        add_exploit_ref_query.exec();
+        add_exploit_ref_query.reset();
+    }
+
+    // Put CVEs to NVD exploit refs into DB
+    for (auto &mapping_entry : cveid_exploits_map) {
+        for (auto &ref_id : mapping_entry.second) {
+            add_cveid_exploit_ref_query.bind(1, mapping_entry.first);
+            add_cveid_exploit_ref_query.bind(2, ref_id);
+            add_cveid_exploit_ref_query.exec();
+            add_cveid_exploit_ref_query.reset();
+        }
+    }
+
     // Commit transaction
     transaction.commit();
     return 1;
@@ -327,12 +372,17 @@ int main(int argc, char *argv[]) {
 
         db.exec("DROP TABLE IF EXISTS cve");
         db.exec("DROP TABLE IF EXISTS cve_cpe");
+        db.exec("DROP TABLE IF EXISTS nvd_exploits_refs");
+        db.exec("DROP TABLE IF EXISTS cve_nvd_exploits_refs");
 
         db.exec("CREATE TABLE cve (cve_id VARCHAR(25), description TEXT, edb_ids TEXT, published DATETIME, last_modified DATETIME, \
             cvss_version CHAR(3), base_score CHAR(3), vector VARCHAR(60), severity VARCHAR(15), PRIMARY KEY(cve_id))");
         db.exec("CREATE TABLE cve_cpe (cve_id VARCHAR(25), cpe TEXT, cpe_version_start VARCHAR(255), is_cpe_version_start_including BOOL, \
             cpe_version_end VARCHAR(255), is_cpe_version_end_including BOOL, with_cpes TEXT, PRIMARY KEY(cve_id, cpe, cpe_version_start, \
             is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including, with_cpes))");
+        db.exec("CREATE TABLE nvd_exploits_refs (ref_id INTEGER, exploit_ref text, PRIMARY KEY (ref_id))");
+        db.exec("CREATE TABLE cve_nvd_exploits_refs (cve_id VARCHAR(25), ref_id INTEGER, PRIMARY KEY (cve_id, ref_id))");
+
 
         DIR *dir;
         struct dirent *ent;
