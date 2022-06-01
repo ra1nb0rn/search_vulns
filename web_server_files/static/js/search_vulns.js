@@ -1,5 +1,6 @@
 
 var curVulnData = {};
+var exploit_url_show_max_length = 55, exploit_url_show_max_length_md = 42;
 var ignoreGeneralCpeVulns = false;
 var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
 var iconSortDesc = '<i class="fa-solid fa-sort-down"></i>';
@@ -102,10 +103,10 @@ function createVulnsHtml() {
     vulns_html += `<th onclick="${sortFunctionCVEID}" style="white-space: nowrap;">CVE-ID&nbsp;&nbsp;${sortIconCVEID}</th>`;
     vulns_html += `<th onclick="${sortFunctionCVSS}" style="white-space: nowrap;">CVSS&nbsp;&nbsp;${sortIconCVSS}</th>`;
     vulns_html += '<th>Description</th>'
-    vulns_html += `<th onclick="${sortFunctionExploits}" style="white-space: nowrap;">Exploit&nbsp;&nbsp;${sortIconExploits}</th>`;
+    vulns_html += `<th onclick="${sortFunctionExploits}" style="white-space: nowrap;">Exploits&nbsp;&nbsp;${sortIconExploits}</th>`;
     vulns_html += "</tr></thead>";
     vulns_html += "<tbody>";
-    var exploits, cvss;
+    var exploits, cvss, exploit_url_show;
 
     for (var i = 0; i < vulns.length; i++) {
         vulns_html += `<tr>`;
@@ -124,8 +125,13 @@ function createVulnsHtml() {
         vulns_html += `<td>${htmlEntities(vulns[i]["description"])}</td>`;
         exploits = [];
         if (vulns[i].exploits !== undefined) {
-            for (var j = 0; j < vulns[i].exploits.length; j++)
-                exploits.push(`<a href="${vulns[i].exploits[j]}" target="_blank" style="color: inherit;">${htmlEntities(vulns[i].exploits[j])}</a>`);
+            for (var j = 0; j < vulns[i].exploits.length; j++) {
+                exploit_url_show = vulns[i].exploits[j];
+                if (exploit_url_show.length > exploit_url_show_max_length) {
+                    exploit_url_show = exploit_url_show.substring(0, exploit_url_show_max_length - 2) + '...';
+                }
+                exploits.push(`<a href="${vulns[i].exploits[j].replace('"', '&quot;')}" target="_blank" style="color: inherit;">${htmlEntities(exploit_url_show)}</a>`);
+            }
         }
         vulns_html += `<td class="text-nowrap">${exploits.join("<br>")}</td>`;
         vulns_html += "</tr>"
@@ -138,6 +144,7 @@ function createVulnsMarkDownTable() {
     var vulns = getCurrentVulnsSorted();
     var vulns_md = "";
     var has_exploits = false;
+    var exploit_url_show;
 
     for (var i = 0; i < vulns.length; i++) {
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
@@ -160,8 +167,13 @@ function createVulnsMarkDownTable() {
         vulns_md += `${htmlEntities(vulns[i]["description"]).replaceAll('|', '&#124;')}|`;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
-            for (var j = 0; j < vulns[i].exploits.length; j++)
-                vulns_md += `[${vulns[i].exploits[j]}](${vulns[i].exploits[j]})<br>`;
+            for (var j = 0; j < vulns[i].exploits.length; j++) {
+                exploit_url_show = vulns[i].exploits[j];
+                if (exploit_url_show.length > exploit_url_show_max_length_md) {
+                    exploit_url_show = exploit_url_show.substring(0, exploit_url_show_max_length_md - 2) + '...';
+                }
+                vulns_md += `[${htmlEntities(exploit_url_show)}](${vulns[i].exploits[j]})<br>`;
+            }
             vulns_md = vulns_md.substring(0, vulns_md.length - 4);  // remove last <br>
             vulns_md += "|";
         }
