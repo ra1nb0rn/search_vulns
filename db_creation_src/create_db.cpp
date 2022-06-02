@@ -224,13 +224,15 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
                 }
             }
             // otherwise if CPE data with version start and end is available
-            else if (config_nodes_entry.find("children") != config_nodes_entry.end()) {
+            else if (config_nodes_entry.find("children") != config_nodes_entry.end() &&
+                    !config_nodes_entry["children"].empty()) {
+
                 if (config_nodes_entry.find("operator") == config_nodes_entry.end()) {
-                    std::cerr << "Cannot parse CVE " << cve_id << " properly. Needs fixing!" << std::endl;
+                    std::cerr << "Cannot parse CVE " << cve_id << " properly. No operator." << std::endl;
                     continue;
                 }
-                else if (config_nodes_entry["operator"] != "AND") {
-                    std::cerr << "Cannot parse CVE " << cve_id << " properly. Needs fixing!" << std::endl;
+                else if (config_nodes_entry["operator"] != "AND" && config_nodes_entry["operator"] != "OR") {
+                    std::cerr << "Cannot parse CVE " << cve_id << " properly. Unknown operator." << std::endl;
                     continue;
                 }
 
