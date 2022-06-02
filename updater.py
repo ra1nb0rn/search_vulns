@@ -212,7 +212,7 @@ def create_cveid_edbid_mapping():
         elif (NVD_UPDATE_SUCCESS is not None) and (not NVD_UPDATE_SUCCESS):
             return
 
-        exploit_page_resp = requests.get("https://www.exploit-db.com/exploits/%s" % edbid, headers=REQUEST_HEADERS, timeout=10)
+        exploit_page_resp = requests.get("https://www.exploit-db.com/exploits/%s" % edbid, headers=REQUEST_HEADERS, timeout=30)
         cveids = cveid_expr.findall(exploit_page_resp.text)
 
         if not cveids:
