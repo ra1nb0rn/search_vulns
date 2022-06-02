@@ -301,7 +301,7 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
 
         if cpes[query][0][1] < software_match_threshold:
-            # try to create a valid CPE from the query, e.g. in case the queried software is too rcent
+            # try to create a valid CPE from the query, e.g. in case the queried software is too recent
             new_cpe = create_cpe_from_base_cpe_and_query(cpes[query][0][0], query)
             if new_cpe:
                 cpes[query].insert(0, (new_cpe, -1))

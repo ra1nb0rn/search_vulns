@@ -1,17 +1,26 @@
 
 var curVulnData = {};
 var exploit_url_show_max_length = 55, exploit_url_show_max_length_md = 42;
-var ignoreGeneralCpeVulns = false;
+var ignoreGeneralCpeVulns = false, onlyShowEDBExploits = false;
 var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
 var iconSortDesc = '<i class="fa-solid fa-sort-down"></i>';
 var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
 var curSortColIdx = 1, curSortColAsc = false;
-var showAsButtonsHTML = `<div class="row mt-3 justify-content-center align-items-center"><div class="col-6 text-center justify-content-center align-items-center"><button type="button" class="btn btn-info" name="copyCSVButton" id="copyCSVButton" onclick="copyToClipboardCSV()"><i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (CSV)</button></div><div class="col-6 text-center justify-content-center align-items-center"><button type="button" class="btn btn-info" name="copyMarkdownTableButton" id="copyMarkdownTableButton" onclick="copyToClipboardMarkdownTable()"><i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (Markdown Table)</button></div></div>`;
+var copyButtonsHTML = `<div class="row mt-3 justify-content-center align-items-center"><div class="col-6 text-center justify-content-center align-items-center"><button type="button" class="btn btn-info" name="copyCSVButton" id="copyCSVButton" onclick="copyToClipboardCSV()"><i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (CSV)</button></div><div class="col-6 text-center justify-content-center align-items-center"><button type="button" class="btn btn-info" name="copyMarkdownTableButton" id="copyMarkdownTableButton" onclick="copyToClipboardMarkdownTable()"><i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (Markdown Table)</button></div></div>`;
 
 function htmlEntities(text) {
     return text.replace(/[\u00A0-\u9999<>\&"']/g, function (i) {
         return '&#' + i.charCodeAt(0) + ';';
     });
+}
+
+function reduceToEDBUrls(allUrls) {
+    var edb_urls = [];
+    for (var i = 0; i < allUrls.length; i++) {
+        if (allUrls[i].startsWith('https://www.exploit-db.com/exploits/'))
+            edb_urls.push(allUrls[i]);
+    }
+    return edb_urls;
 }
 
 function getCurrentVulnsSorted() {
@@ -44,15 +53,27 @@ function getCurrentVulnsSorted() {
     else if (curSortColIdx == 3) {  // Exploits
         if (curSortColAsc) {
             return vulns.sort(function (vuln1, vuln2) {
-                exploits1 = vuln1.exploits || [];
-                exploits2 = vuln2.exploits || [];
+                var exploits1 = vuln1.exploits || [];
+                var exploits2 = vuln2.exploits || [];
+
+                if (onlyShowEDBExploits) {
+                    exploits1 = reduceToEDBUrls(exploits1);
+                    exploits2 = reduceToEDBUrls(exploits2);
+                }
+
                 return parseInt(exploits1.length) - parseInt(exploits2.length);
             });
         }
         else {
             return vulns.sort(function (vuln1, vuln2) {
-                exploits1 = vuln1.exploits || [];
-                exploits2 = vuln2.exploits || [];
+                var exploits1 = vuln1.exploits || [];
+                var exploits2 = vuln2.exploits || [];
+
+                if (onlyShowEDBExploits) {
+                    exploits1 = reduceToEDBUrls(exploits1);
+                    exploits2 = reduceToEDBUrls(exploits2);
+                }
+
                 return parseInt(exploits2.length) - parseInt(exploits1.length);
             });
         }
@@ -126,6 +147,9 @@ function createVulnsHtml() {
         exploits = [];
         if (vulns[i].exploits !== undefined) {
             for (var j = 0; j < vulns[i].exploits.length; j++) {
+                if (onlyShowEDBExploits && !vulns[i].exploits[j].startsWith('https://www.exploit-db.com/exploits/'))
+                    continue;
+
                 exploit_url_show = vulns[i].exploits[j];
                 if (exploit_url_show.length > exploit_url_show_max_length) {
                     exploit_url_show = exploit_url_show.substring(0, exploit_url_show_max_length - 2) + '...';
@@ -168,6 +192,9 @@ function createVulnsMarkDownTable() {
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             for (var j = 0; j < vulns[i].exploits.length; j++) {
+                if (onlyShowEDBExploits && !vulns[i].exploits[j].startsWith('https://www.exploit-db.com/exploits/'))
+                    continue;
+
                 exploit_url_show = vulns[i].exploits[j];
                 if (exploit_url_show.length > exploit_url_show_max_length_md) {
                     exploit_url_show = exploit_url_show.substring(0, exploit_url_show_max_length_md - 2) + '...';
@@ -210,8 +237,12 @@ function createVulnsCSV() {
         if (has_exploits)
             vulns_csv += ",";
 
-        if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0)
-            vulns_csv += `"${vulns[i].exploits.join(", ")}"`;
+        if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
+            if (onlyShowEDBExploits)
+                vulns_csv += `"${reduceToEDBUrls(vulns[i].exploits).join(", ")}"`;
+            else
+                vulns_csv += `"${vulns[i].exploits.join(", ")}"`;
+        }
         vulns_csv += '\n'
     }
 
@@ -250,10 +281,10 @@ function searchVulns() {
                 if (cpe != undefined) {
                     curVulnData = vulns[query]['vulns'];
                     if (Object.keys(curVulnData).length > 0) {
-                        vulns_html = createVulnsHtml(1, false);
+                        vulns_html = createVulnsHtml();
                         vulns_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div>` + vulns_html;
                         vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-                        vulns_html += showAsButtonsHTML;
+                        vulns_html += copyButtonsHTML;
                     }
                     else {
                         vulns_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div><br><h5 class="text-center">No known vulnerabilities could be found.</h5>`;
@@ -293,9 +324,9 @@ function searchVulns() {
 function reorderVulns(sortColumnIdx, asc) {
     curSortColIdx = sortColumnIdx;
     curSortColAsc = asc;
-    vulns_html = createVulnsHtml(sortColumnIdx, asc);
+    vulns_html = createVulnsHtml();
     vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-    vulns_html += showAsButtonsHTML;
+    vulns_html += copyButtonsHTML;
     $("#vulns").html(vulns_html);
 }
 
@@ -303,6 +334,14 @@ function ignoreGeneralVulnsToggle() {
     ignoreGeneralCpeVulns = !ignoreGeneralCpeVulns;
     $("#vulns").html('');
     curVulnData = {};
+}
+
+function onlyEDBExploitsToggle() {
+    onlyShowEDBExploits = !onlyShowEDBExploits;
+    var vulns_html = createVulnsHtml();
+    vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
+    vulns_html += copyButtonsHTML;
+    $("#vulns").html(vulns_html);
 }
 
 function copyToClipboardMarkdownTable() {

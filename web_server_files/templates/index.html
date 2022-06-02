@@ -33,28 +33,35 @@
     <!-- BEGIN SearchVulns -->
     <div class="container-fluid col-12 col-lg-10 px-0 px-lg-auto mx-0 mx-lg-auto" style="min-height: 65vh;">
         <div class="row px-0 px-lg-2 mx-0 mx-lg-2 justify-content-center align-items-center">
-            <div class="col-12 col-lg-7 input-group text-center ml-0 pl-0">
+            <div class="col-12 col-md-4 col-lg-6 input-group text-center ml-0 pl-0">
                 <span class="input-group-prepend"><span class="input-group-text" style="font-size:1.3rem"><i
                             class="fa-solid fa-database"></i>
                     </span></span><input input type="text" class="form-control" name="query" id="query"
                     placeholder="Enter Software" autofocus>
             </div>
-            <div class="col-12 col-lg-5">
+            <div class="col-12 col-md-8 col-lg-6">
                 <div class="row text-center">
-                    <div class="col-4 ml-0 pl-0">
+                    <div class="col-3 ml-0 pl-0">
                         <button type="button" class="btn btn-primary" name="searchVulnsButton" id="searchVulnsButton"
                             onclick="searchVulns()">Search Vulns</button>
                     </div>
-                    <div class="col-8 mx-auto border border-info" style="border-radius:.4rem!important;">
+                    <div class="col-9 mx-auto border border-info" style="border-radius:.4rem!important;">
                         <div class="row align-items-center h-100 my-auto">
-                            <div class="col-12">
-                                <div class="col-12 custom-control custom-toggle d-block"><input type="checkbox"
+                            <div class="col-6">
+                                <div class="col-12 custom-control custom-checkbox d-block"><input type="checkbox"
                                         id="toggleIgnoreGeneralCpeVulns" name="toggleIgnoreGeneralCpeVulns"
                                         class="custom-control-input" onchange="ignoreGeneralVulnsToggle()"><label
-                                        class="custom-control-label" for="toggleIgnoreGeneralCpeVulns">Don't show
+                                        class="custom-control-label" for="toggleIgnoreGeneralCpeVulns">No
                                         general vulns &nbsp;<i class="fas fa-info-circle text-secondary"
                                             style="font-size: 0.85rem" data-toggle="tooltip" data-placement="bottom"
                                             data-original-title="Some vulnerabilities in the used data set do not contain information about the affected version. These are often False Positives and returning them can be disabled here."></i></label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="col-12 custom-control custom-checkbox d-block"><input type="checkbox"
+                                        id="toggleOnlyEDBExploits" name="toggleOnlyEDBExploits"
+                                        class="custom-control-input" onchange="onlyEDBExploitsToggle()"><label
+                                        class="custom-control-label" for="toggleOnlyEDBExploits">Only EDB exploits</label>
                                 </div>
                             </div>
                         </div>
