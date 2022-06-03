@@ -338,10 +338,12 @@ function ignoreGeneralVulnsToggle() {
 
 function onlyEDBExploitsToggle() {
     onlyShowEDBExploits = !onlyShowEDBExploits;
-    var vulns_html = createVulnsHtml();
-    vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-    vulns_html += copyButtonsHTML;
-    $("#vulns").html(vulns_html);
+    if (!$.isEmptyObject(curVulnData)) {
+        var vulns_html = createVulnsHtml();
+        vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
+        vulns_html += copyButtonsHTML;
+        $("#vulns").html(vulns_html);
+    }
 }
 
 function copyToClipboardMarkdownTable() {
