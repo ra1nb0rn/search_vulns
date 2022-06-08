@@ -12,7 +12,8 @@ from cpe_version import CPEVersion
 from cpe_search.cpe_search import (
     search_cpes,
     match_cpe23_to_cpe23_from_dict,
-    create_cpe_from_base_cpe_and_query
+    create_cpe_from_base_cpe_and_query,
+    create_base_cpe_if_versionless_query
 )
 from updater import run as run_updater
 
@@ -295,7 +296,7 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
 
     cpe, pot_cpes = query, []
     if not MATCH_CPE_23_RE.match(query):
-        cpes = search_cpes(query, cpe_version="2.3", count=6, threshold=0.42, zero_extend_versions=zero_extend_versions, keep_data_in_memory=keep_data_in_memory)
+        cpes = search_cpes(query, cpe_version="2.3", count=6, threshold=0.33, zero_extend_versions=zero_extend_versions, keep_data_in_memory=keep_data_in_memory)
 
         if not cpes or not cpes[query]:
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
@@ -305,11 +306,24 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
             new_cpe = create_cpe_from_base_cpe_and_query(cpes[query][0][0], query)
             if new_cpe:
                 cpes[query].insert(0, (new_cpe, -1))
+            else:
+                # if query has no version but CPE does, return a general CPE as related query
+                base_cpe = create_base_cpe_if_versionless_query(cpes[query][0][0], query)
+                if base_cpe:
+                    cpes[query].insert(0, (base_cpe, -1))
+
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
 
         # ensure that CPE has a number if query has a number
         check_str = cpes[query][0][0][8:]
         if any(char.isdigit() for char in query) and not any(char.isdigit() for char in check_str):
+            return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
+
+        # if query has no version but CPE does, return a general CPE as related query
+        base_cpe = create_base_cpe_if_versionless_query(cpes[query][0][0], query)
+        if base_cpe:
+            if base_cpe != cpes[query][0][0]:
+                cpes[query].insert(0, (base_cpe, -1))
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
 
         pot_cpes = cpes[query]
