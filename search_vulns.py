@@ -296,7 +296,7 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
 
     cpe, pot_cpes = query, []
     if not MATCH_CPE_23_RE.match(query):
-        cpes = search_cpes(query, cpe_version="2.3", count=6, threshold=0.33, zero_extend_versions=zero_extend_versions, keep_data_in_memory=keep_data_in_memory)
+        cpes = search_cpes(query, cpe_version="2.3", count=6, threshold=0.25, zero_extend_versions=zero_extend_versions, keep_data_in_memory=keep_data_in_memory)
 
         if not cpes or not cpes[query]:
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
