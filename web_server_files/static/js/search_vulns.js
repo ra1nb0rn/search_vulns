@@ -172,8 +172,10 @@ function createVulnsMarkDownTable() {
 
     for (var i = 0; i < vulns.length; i++) {
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
-            has_exploits = true;
-            break
+            if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
+                has_exploits = true;
+                break
+            }
         }
     }
 
@@ -201,8 +203,10 @@ function createVulnsMarkDownTable() {
                 }
                 vulns_md += `[${htmlEntities(exploit_url_show)}](${vulns[i].exploits[j]})<br>`;
             }
-            vulns_md = vulns_md.substring(0, vulns_md.length - 4);  // remove last <br>
-            vulns_md += "|";
+            if (has_exploits) {
+                vulns_md = vulns_md.substring(0, vulns_md.length - 4);  // remove last <br>
+                vulns_md += "|";
+            }
         }
         else if (has_exploits)
             vulns_md += "|";
@@ -220,8 +224,10 @@ function createVulnsCSV() {
 
     for (var i = 0; i < vulns.length; i++) {
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
-            has_exploits = true;
-            break
+            if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
+                has_exploits = true;
+                break
+            }
         }
     }
 
@@ -237,7 +243,7 @@ function createVulnsCSV() {
         if (has_exploits)
             vulns_csv += ",";
 
-        if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
+        if (has_exploits && vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             if (onlyShowEDBExploits)
                 vulns_csv += `"${reduceToEDBUrls(vulns[i].exploits).join(", ")}"`;
             else
