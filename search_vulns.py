@@ -321,11 +321,16 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
 
         # if query has no version but CPE does, return a general CPE as related query
-        base_cpe = create_base_cpe_if_versionless_query(cpes[query][0][0], query)
-        if base_cpe:
-            if base_cpe != cpes[query][0][0]:
-                cpes[query].insert(0, (base_cpe, -1))
-            return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
+        cpe_version = cpes[query][0][0].split(':')[5] if cpes[query][0][0].count(':') > 5 else ""
+        if cpe_version not in ('*', '-'):
+            base_cpe = create_base_cpe_if_versionless_query(cpes[query][0][0], query)
+            if base_cpe:
+                base_cpe_split = base_cpe.split(':')
+                base_cpe_alt = ':'.join(base_cpe_split[0:5]) + ':-:' + ':'.join(base_cpe_split[6:])
+                if cpes[query][0][0] not in (base_cpe, base_cpe_alt):
+                    cpes[query].insert(0, (base_cpe, -1))
+
+                return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
 
         pot_cpes = cpes[query]
         cpe = cpes[query][0][0]
