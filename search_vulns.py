@@ -330,12 +330,12 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
         if cpe_version not in ('*', '-'):
             base_cpe = create_base_cpe_if_versionless_query(cpes[query][0][0], query)
             if base_cpe:
-                base_cpe_split = base_cpe.split(':')
-                base_cpe_alt = ':'.join(base_cpe_split[0:5]) + ':-:' + ':'.join(base_cpe_split[6:])
-                if cpes[query][0][0] not in (base_cpe, base_cpe_alt):
-                    cpes[query].insert(0, (base_cpe, -1))
+                new_cpes = set([base_cpe])
+                for i in range(1, len(cpes[query])):
+                    base_cpe = create_base_cpe_if_versionless_query(cpes[query][i][0], query)
+                    new_cpes.add(base_cpe)
 
-                return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
+                return {query: {'cpe': None, 'vulns': None, 'pot_cpes': [(cpe, -1) for cpe in new_cpes]}}
 
         pot_cpes = cpes[query]
         cpe = cpes[query][0][0]
