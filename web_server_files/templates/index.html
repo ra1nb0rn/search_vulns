@@ -53,7 +53,9 @@
                                         class="custom-control-input" onchange="ignoreGeneralVulnsToggle()"><label
                                         class="custom-control-label" for="toggleIgnoreGeneralCpeVulns">No
                                         general vulns &nbsp;<i class="fas fa-info-circle text-secondary"
-                                            style="font-size: 0.85rem" data-toggle="tooltip" data-placement="bottom"
+                                            style="font-size: 0.85rem" data-toggle="tooltip"
+                                            data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-info'></div></div>"
+                                            data-placement="bottom"
                                             data-original-title="Some vulnerabilities in the used data set do not contain information about the affected version. These are often False Positives and returning them can be disabled here."></i></label>
                                 </div>
                             </div>
@@ -61,7 +63,8 @@
                                 <div class="col-12 custom-control custom-checkbox d-block"><input type="checkbox"
                                         id="toggleOnlyEDBExploits" name="toggleOnlyEDBExploits"
                                         class="custom-control-input" onchange="onlyEDBExploitsToggle()"><label
-                                        class="custom-control-label" for="toggleOnlyEDBExploits">Only EDB exploits</label>
+                                        class="custom-control-label" for="toggleOnlyEDBExploits">Only EDB
+                                        exploits</label>
                                 </div>
                             </div>
                         </div>

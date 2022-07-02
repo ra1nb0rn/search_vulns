@@ -133,15 +133,19 @@ function createVulnsHtml() {
         vulns_html += `<tr>`;
         vulns_html += `<td class="text-nowrap pr-2"><a href="${htmlEntities(vulns[i]["href"])}" target="_blank" style="color: inherit;">${vulns[i]["id"]}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a></td>`;
 
+        var cvss_vector = vulns[i].cvss_vec;
+        if (!cvss_vector.startsWith('CVSS'))
+            cvss_vector = "CVSS:2.0/" + cvss_vector;
+
         cvss = parseFloat(vulns[i].cvss);
         if (cvss >= 9.0)
-            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-critical text-center">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
+            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-critical text-center" data-toggle="tooltip" data-container="body" data-placement="bottom" data-html="true" data-original-title="<b>${cvss_vector}</b>" data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-cvss'></div></div>">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
         else if (cvss < 9.0 && cvss >= 7.0)
-            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-high text-center">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
+            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-high text-center" data-toggle="tooltip" data-container="body" data-placement="bottom" data-html="true" data-original-title="<b>${cvss_vector}</b>" data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-cvss'></div></div>">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
         else if (cvss < 7.0 && cvss >= 4.0)
-            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-medium text-center">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
+            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-medium text-center" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="<b>${cvss_vector}</b>" data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-cvss'></div></div>">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
         else if (cvss < 4.0 && cvss >= 0.1)
-            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-low text-center">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
+            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-low text-center" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="<b>${cvss_vector}</b>" data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-cvss'></div></div>">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
 
         vulns_html += `<td>${htmlEntities(vulns[i]["description"])}</td>`;
         exploits = [];

@@ -72,19 +72,21 @@
 /* Custom Tooltip Config /*
 /* Small */
 @media (max-width: 991px) {
-    .tooltip{
-    }
-    .tooltip-inner {
+    .tooltip-info {
         max-width: 20rem !important;
+    }
+    .tooltip-cvss {
+        max-width: 22rem !important;
     }
 }
 
 /* Bigger */
 @media (min-width: 992px) {
-    .tooltip{
-    }
-    .tooltip-inner {
+    .tooltip-info {
         max-width: 20rem !important;
+    }
+    .tooltip-cvss {
+        max-width: 22rem !important;
     }
 }
 

@@ -188,10 +188,11 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_nvd_exploit_re
         if cve_id in detailed_vulns:
             continue
 
-        query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score FROM cve WHERE cve_id = ?'
-        edb_ids, descr, publ, last_mod, cvss_ver, score = db_cursor.execute(query, (cve_id,)).fetchone()
+        query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score, vector FROM cve WHERE cve_id = ?'
+        edb_ids, descr, publ, last_mod, cvss_ver, score, vector = db_cursor.execute(query, (cve_id,)).fetchone()
         detailed_vulns[cve_id] = {"id": cve_id, "description": descr, "published": publ, "modified": last_mod,
-                                  "href": "https://nvd.nist.gov/vuln/detail/%s" % cve_id}
+                                  "href": "https://nvd.nist.gov/vuln/detail/%s" % cve_id, "cvss_ver": cvss_ver,
+                                  "cvss": score, "cvss_vec": vector}
 
         edb_ids = edb_ids.strip()
         if edb_ids:
@@ -208,9 +209,6 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_nvd_exploit_re
                     detailed_vulns[cve_id]["exploits"] = []
                 detailed_vulns[cve_id]["exploits"] += [ref[0] for ref in nvd_exploit_refs]
                 detailed_vulns[cve_id]["exploits"] = list(set(detailed_vulns[cve_id]["exploits"]))
-
-        detailed_vulns[cve_id]['cvss_ver'] = cvss_ver
-        detailed_vulns[cve_id]['cvss'] = score
 
     return detailed_vulns
 
