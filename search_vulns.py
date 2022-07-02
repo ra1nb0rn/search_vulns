@@ -311,7 +311,12 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
                 # if query has no version but CPE does, return a general CPE as related query
                 base_cpe = create_base_cpe_if_versionless_query(cpes[query][0][0], query)
                 if base_cpe:
-                    cpes[query].insert(0, (base_cpe, -1))
+                    new_cpes = set([base_cpe])
+                    for i in range(1, len(cpes[query])):
+                        base_cpe = create_base_cpe_if_versionless_query(cpes[query][i][0], query)
+                        new_cpes.add(base_cpe)
+
+                    return {query: {'cpe': None, 'vulns': None, 'pot_cpes': [(cpe, -1) for cpe in new_cpes]}}
 
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
 
