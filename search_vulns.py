@@ -207,8 +207,11 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_nvd_exploit_re
             if nvd_exploit_refs:
                 if "exploits" not in detailed_vulns[cve_id]:
                     detailed_vulns[cve_id]["exploits"] = []
-                detailed_vulns[cve_id]["exploits"] += [ref[0] for ref in nvd_exploit_refs]
-                detailed_vulns[cve_id]["exploits"] = list(set(detailed_vulns[cve_id]["exploits"]))
+                for nvd_exploit_ref in nvd_exploit_refs:
+                    if (nvd_exploit_ref[0] not in detailed_vulns[cve_id]["exploits"] and
+                            nvd_exploit_ref[0] + '/' not in detailed_vulns[cve_id]["exploits"] and
+                            nvd_exploit_ref[0][:-1] not in detailed_vulns[cve_id]["exploits"]):
+                        detailed_vulns[cve_id]["exploits"].append(nvd_exploit_ref[0])
 
     return detailed_vulns
 
