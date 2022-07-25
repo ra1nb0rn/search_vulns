@@ -171,7 +171,7 @@ function createVulnsHtml() {
 function createVulnsMarkDownTable() {
     var vulns = getCurrentVulnsSorted();
     var vulns_md = "";
-    var has_exploits = false;
+    var has_exploits = false, cur_vuln_has_exploits = false;
     var exploit_url_show;
 
     for (var i = 0; i < vulns.length; i++) {
@@ -193,6 +193,7 @@ function createVulnsMarkDownTable() {
     }
 
     for (var i = 0; i < vulns.length; i++) {
+        cur_vuln_has_exploits = false;
         vulns_md += `|[${vulns[i]["id"]}](${htmlEntities(vulns[i]["href"])})|${vulns[i]["cvss"]}&nbsp;(v${vulns[i]["cvss_ver"]})|`;
         vulns_md += `${htmlEntities(vulns[i]["description"]).replaceAll('|', '&#124;')}|`;
 
@@ -206,11 +207,14 @@ function createVulnsMarkDownTable() {
                     exploit_url_show = exploit_url_show.substring(0, exploit_url_show_max_length_md - 2) + '...';
                 }
                 vulns_md += `[${htmlEntities(exploit_url_show)}](${vulns[i].exploits[j]})<br>`;
+                cur_vuln_has_exploits = true;
             }
-            if (has_exploits) {
+            if (cur_vuln_has_exploits) {
                 vulns_md = vulns_md.substring(0, vulns_md.length - 4);  // remove last <br>
                 vulns_md += "|";
             }
+            else if (has_exploits)
+                vulns_md += "|";
         }
         else if (has_exploits)
             vulns_md += "|";
