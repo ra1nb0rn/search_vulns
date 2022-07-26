@@ -74,8 +74,8 @@ setup_create_db() {
 }
 
 create_vuln_and_software_db() {
-    if [ -f nvd_db.db3 ]; then
-        rm nvd_db.db3
+    if [ -f vulndb.db3 ]; then
+        rm vulndb.db3
     fi
 
     if [ $FULL_RESOURCE_INSTALL != 0 ]; then
