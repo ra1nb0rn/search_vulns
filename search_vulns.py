@@ -324,6 +324,9 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
         # ensure that CPE has a number if query has a number
         check_str = cpes[query][0][0][8:]
         if any(char.isdigit() for char in query) and not any(char.isdigit() for char in check_str):
+            if cpes[query][0][1] > software_match_threshold:
+                new_cpe = create_cpe_from_base_cpe_and_query(cpes[query][0][0], query)
+                cpes[query].insert(0, (new_cpe, -1))
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
 
         # if query has no version but CPE does, return a general CPE as related query
