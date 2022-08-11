@@ -6,7 +6,7 @@ var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
 var iconSortDesc = '<i class="fa-solid fa-sort-down"></i>';
 var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
 var curSortColIdx = 1, curSortColAsc = false;
-var copyButtonsHTML = `<div class="row mt-3 justify-content-center align-items-center"><div class="col-6 text-center justify-content-center align-items-center"><button type="button" class="btn btn-info" name="copyCSVButton" id="copyCSVButton" onclick="copyToClipboardCSV()"><i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (CSV)</button></div><div class="col-6 text-center justify-content-center align-items-center"><button type="button" class="btn btn-info" name="copyMarkdownTableButton" id="copyMarkdownTableButton" onclick="copyToClipboardMarkdownTable()"><i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (Markdown Table)</button></div></div>`;
+var copyButtonsHTML = `<div class="row my-2 justify-content-center align-items-center"><div class="col-6 text-center justify-content-center align-items-center"><button type="button" class="btn btn-info" name="copyCSVButton" id="copyCSVButton" onclick="copyToClipboardCSV()"><i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (CSV)</button></div><div class="col-6 text-center justify-content-center align-items-center"><button type="button" class="btn btn-info" name="copyMarkdownTableButton" id="copyMarkdownTableButton" onclick="copyToClipboardMarkdownTable()"><i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (Markdown Table)</button></div></div>`;
 
 function htmlEntities(text) {
     return text.replace(/[\u00A0-\u9999<>\&"']/g, function (i) {
@@ -286,40 +286,47 @@ function searchVulns() {
         url: "/search_vulns",
         data: url_query,
         success: function (vulns) {
-            var vulns_html = "";
+            var vulns_html = "", search_display_html = "", process_results_html = "", related_queries_html = "";
             if (typeof vulns[query] !== "object")
-                vulns_html = `<h5 class="text-danger text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
+                search_display_html = `<h5 class="text-danger text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
             else {
                 cpe = vulns[query]['cpe'];
                 var alt_queries_start_idx = 1;
                 if (cpe != undefined) {
                     curVulnData = vulns[query]['vulns'];
                     if (Object.keys(curVulnData).length > 0) {
+                        search_display_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div>`;
                         vulns_html = createVulnsHtml();
-                        vulns_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div>` + vulns_html;
                         vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-                        vulns_html += copyButtonsHTML;
+                        process_results_html = copyButtonsHTML;
                     }
                     else {
-                        vulns_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div><br><h5 class="text-center">No known vulnerabilities could be found.</h5>`;
+                        search_display_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div><br><h5 class="text-center">No known vulnerabilities could be found.</h5>`;
                     }
                 }
                 else {
                     alt_queries_start_idx = 0;
-                    vulns_html = `<h5 class="text-danger text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
+                    search_display_html = `<h5 class="text-danger text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
                 }
 
                 if (vulns[query].hasOwnProperty('pot_cpes') && vulns[query]["pot_cpes"].length > 0 + alt_queries_start_idx) {
-                    vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-                    vulns_html += `<div class="row mx-2"><div class="col"><h5>Related queries:</h5></div></div>`;
-                    vulns_html += `<div class="row mx-2"><div class="col"><ul>`;
+                    related_queries_html = `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
+                    related_queries_html += `<div class="row mx-2"><div class="col"><h5>Related queries:</h5></div></div>`;
+                    related_queries_html += `<div class="row mx-2"><div class="col"><ul>`;
                     for (var i = alt_queries_start_idx; i < vulns[query]["pot_cpes"].length; i++) {
-                        vulns_html += `<li><a href="/?query=${htmlEntities(vulns[query]["pot_cpes"][i][0])}">${htmlEntities(vulns[query]["pot_cpes"][i][0])}</a></li>`
+                        related_queries_html += `<li><a href="/?query=${htmlEntities(vulns[query]["pot_cpes"][i][0])}">${htmlEntities(vulns[query]["pot_cpes"][i][0])}</a></li>`
                     }
-                    vulns_html += `</ul></div></div>`;
+                    related_queries_html += `</ul></div></div>`;
                 }
             }
-            $("#vulns").html(vulns_html);
+            if (search_display_html != "")
+                $("#search-display").html(search_display_html);
+            if (vulns_html != "")
+                $("#vulns").html(vulns_html);
+            if (process_results_html != "")
+                $("#process-results-display").html(process_results_html);
+            if (related_queries_html != "")
+                $("#related-queries-display").html(related_queries_html);
             $("#searchVulnsButton").removeAttr("disabled");
         },
         error: function (jXHR, textStatus, errorThrown) {
@@ -340,13 +347,16 @@ function reorderVulns(sortColumnIdx, asc) {
     curSortColAsc = asc;
     vulns_html = createVulnsHtml();
     vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-    vulns_html += copyButtonsHTML;
     $("#vulns").html(vulns_html);
+    $("#process-results-display").html(copyButtonsHTML);
 }
 
 function ignoreGeneralVulnsToggle() {
     ignoreGeneralCpeVulns = !ignoreGeneralCpeVulns;
     $("#vulns").html('');
+    $("#search-display").html('');
+    $("#process-results-display").html('');
+    $("#related-queries-display").html('');
     curVulnData = {};
 }
 
@@ -355,9 +365,9 @@ function onlyEDBExploitsToggle() {
     if (!$.isEmptyObject(curVulnData)) {
         var vulns_html = createVulnsHtml();
         vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-        vulns_html += copyButtonsHTML;
         $("#vulns").html(vulns_html);
     }
+    $("#process-results-display").html(copyButtonsHTML);
 }
 
 function copyToClipboardMarkdownTable() {
