@@ -6,7 +6,6 @@ var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
 var iconSortDesc = '<i class="fa-solid fa-sort-down"></i>';
 var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
 var curSortColIdx = 1, curSortColAsc = false;
-var copyButtonsHTML = `<div class="row my-2 justify-content-center align-items-center"><div class="col-6 text-center justify-content-center align-items-center"><button type="button" class="btn btn-info" name="copyCSVButton" id="copyCSVButton" onclick="copyToClipboardCSV()"><i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (CSV)</button></div><div class="col-6 text-center justify-content-center align-items-center"><button type="button" class="btn btn-info" name="copyMarkdownTableButton" id="copyMarkdownTableButton" onclick="copyToClipboardMarkdownTable()"><i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (Markdown Table)</button></div></div>`;
 
 function htmlEntities(text) {
     return text.replace(/[\u00A0-\u9999<>\&"']/g, function (i) {
@@ -168,13 +167,46 @@ function createVulnsHtml() {
     return vulns_html;
 }
 
+function createResultProcessingHtml() {
+    return `
+        <div class="d-flex p-0 justify-content-center">
+            <div class="form-group m-0 p-0 pr-2 justify-content-center align-self-center">
+                <select id="select-export-vulns" name="select-export-vulns" class="selectpicker form-control" data-selected-text-format="static" multiple data-actions-box="true" title=" Select CVEs (default: all)" onChange="resetCopyToClipboardMarkdownButton(); resetCopyToClipboardCSVButton();">
+                    ${getCurrentVulnsSorted().map(vuln => '<option>' + vuln.id + ' (' + vuln.cvss + ')' + '</option>').join('\n')}
+                </select>
+            </div>
+            <div class="form-group m-0 p-0 pr-5 justify-content-center align-self-center">
+                <select id="select-export-fields" name="select-export-fields" class="selectpicker form-control" multiple data-selected-text-format="static" data-actions-box="true" title="Select Fields (default: all)" onChange="resetCopyToClipboardMarkdownButton(); resetCopyToClipboardCSVButton();">
+                    <option>CVE-ID</option>
+                    <option>CVSS Score</option>
+                    <option>Description</option>
+                    <option>Exploits</option>
+                </select>
+            </div>
+            <div class="align-self-center pr-2"><button type="button"
+                class="btn btn-info" name="copyCSVButton" id="copyCSVButton"
+                onclick="copyToClipboardCSV()"><i style="font-size: 1rem"
+                    class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (CSV)</button></div>
+            <div class="align-self-center"><button type="button"
+                class="btn btn-info" name="copyMarkdownTableButton" id="copyMarkdownTableButton"
+                onclick="copyToClipboardMarkdownTable()"><i style="font-size: 1rem"
+                    class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (Markdown
+                Table)</button></div>
+        </div>
+    `;
+}
+
 function createVulnsMarkDownTable() {
+    var selectedVulns = $('#select-export-vulns').val().map(vuln => vuln.split(' ')[0]);
+    var selectedFields = $('#select-export-fields').val();
     var vulns = getCurrentVulnsSorted();
     var vulns_md = "";
     var has_exploits = false, cur_vuln_has_exploits = false;
     var exploit_url_show;
 
     for (var i = 0; i < vulns.length; i++) {
+        if (selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
+            continue;
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
                 has_exploits = true;
@@ -183,21 +215,53 @@ function createVulnsMarkDownTable() {
         }
     }
 
-    if (has_exploits) {
-        vulns_md = '|CVE|CVSS|Description|Exploits|\n';
-        vulns_md += '|:---:|:---:|:---|:---|\n';
+    if (selectedFields.length > 0) {
+        var table_row1 = "|", table_row2 = "|";
+        selectedFields.forEach(fieldName => {
+            if (fieldName == "CVE-ID") {
+                table_row1 += 'CVE|';
+                table_row2 += ':---:|';
+            }
+            else if (fieldName == "CVSS Score") {
+                table_row1 += 'CVSS|';
+                table_row2 += ':---:|';
+            }
+            else if (fieldName == "Description") {
+                table_row1 += 'Description|';
+                table_row2 += ':---|';
+            }
+            else if (fieldName == "Exploits" && has_exploits) {
+                table_row1 += 'Exploits|';
+                table_row2 += ':---|';
+            }
+        })
+        vulns_md = table_row1 + '\n' + table_row2 + '\n';
     }
     else {
-        vulns_md = '|CVE|CVSS|Description|\n';
-        vulns_md += '|:---:|:---:|:---|\n';
+        if (has_exploits) {
+            vulns_md = '|CVE|CVSS|Description|Exploits|\n';
+            vulns_md += '|:---:|:---:|:---|:---|\n';
+        }
+        else {
+            vulns_md = '|CVE|CVSS|Description|\n';
+            vulns_md += '|:---:|:---:|:---|\n';
+        }
     }
 
     for (var i = 0; i < vulns.length; i++) {
-        cur_vuln_has_exploits = false;
-        vulns_md += `|[${vulns[i]["id"]}](${htmlEntities(vulns[i]["href"])})|${vulns[i]["cvss"]}&nbsp;(v${vulns[i]["cvss_ver"]})|`;
-        vulns_md += `${htmlEntities(vulns[i]["description"]).replaceAll('|', '&#124;')}|`;
+        if (selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
+            continue;
 
-        if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
+        cur_vuln_has_exploits = false;
+        vulns_md += '|';
+        if (selectedFields.length < 1 || selectedFields.includes('CVE-ID'))
+            vulns_md += `[${vulns[i]["id"]}](${htmlEntities(vulns[i]["href"])})|`
+        if (selectedFields.length < 1 || selectedFields.includes('CVSS Score'))
+            vulns_md += `${vulns[i]["cvss"]}&nbsp;(v${vulns[i]["cvss_ver"]})|`;
+        if (selectedFields.length < 1 || selectedFields.includes('Description'))
+            vulns_md += `${htmlEntities(vulns[i]["description"]).replaceAll('|', '&#124;')}|`;
+
+        if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0 && (selectedFields.length < 1 || selectedFields.includes('Exploits'))) {
             for (var j = 0; j < vulns[i].exploits.length; j++) {
                 if (onlyShowEDBExploits && !vulns[i].exploits[j].startsWith('https://www.exploit-db.com/exploits/'))
                     continue;
@@ -216,7 +280,7 @@ function createVulnsMarkDownTable() {
             else if (has_exploits)
                 vulns_md += "|";
         }
-        else if (has_exploits)
+        else if (has_exploits && (selectedFields.length < 1 || selectedFields.includes('Exploits')))
             vulns_md += "|";
 
         vulns_md += '\n'
@@ -226,11 +290,15 @@ function createVulnsMarkDownTable() {
 }
 
 function createVulnsCSV() {
+    var selectedVulns = $('#select-export-vulns').val().map(vuln => vuln.split(' ')[0]);
+    var selectedFields = $('#select-export-fields').val();
     var vulns = getCurrentVulnsSorted();
     var vulns_csv = "";
     var has_exploits = false;
 
     for (var i = 0; i < vulns.length; i++) {
+        if (selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
+            continue;
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
                 has_exploits = true;
@@ -239,19 +307,42 @@ function createVulnsCSV() {
         }
     }
 
-    if (has_exploits)
-        vulns_csv = 'CVE,CVSS,Description,Exploits\n';
-    else
-        vulns_csv = 'CVE,CVSS,Description\n';
+    if (selectedFields.length > 0) {
+        selectedFields.forEach(fieldName => {
+            if (fieldName == "CVE-ID")
+                vulns_csv += 'CVE,';
+            else if (fieldName == "CVSS Score")
+                vulns_csv += 'CVSS,';
+            else if (fieldName == "Description")
+                vulns_csv += 'Description,';
+            else if (fieldName == "Exploits" && has_exploits)
+                vulns_csv += 'Exploits,';
+        })
+        vulns_csv = vulns_csv.slice(0, -1) + '\n';
+    }
+    else {
+        if (has_exploits)
+            vulns_csv = 'CVE,CVSS,Description,Exploits\n';
+        else
+            vulns_csv = 'CVE,CVSS,Description\n';
+    }
 
     for (var i = 0; i < vulns.length; i++) {
-        vulns_csv += `${vulns[i]["id"]},${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]}),`;
-        vulns_csv += `"${vulns[i]["description"].replaceAll('"', '""')}"`;
+        if (selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
+            continue;
 
-        if (has_exploits)
-            vulns_csv += ",";
+        if (selectedFields.length < 1 || selectedFields.includes('CVE-ID'))
+            vulns_csv += `${vulns[i]["id"]},`
+        if (selectedFields.length < 1 || selectedFields.includes('CVSS Score'))
+            vulns_csv += `${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]}),`;
+        if (selectedFields.length < 1 || selectedFields.includes('Description'))
+            vulns_csv += `"${vulns[i]["description"].replaceAll('"', '""')}",`;
 
-        if (has_exploits && vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
+
+        if (vulns_csv.length > 0 && (!has_exploits || (selectedFields.length > 0 && !selectedFields.includes('Exploits'))))
+            vulns_csv = vulns_csv.slice(0, -1);
+
+        if (has_exploits && vulns[i].exploits !== undefined && vulns[i].exploits.length > 0 && (selectedFields.length < 1 || selectedFields.includes('Exploits'))) {
             if (onlyShowEDBExploits)
                 vulns_csv += `"${reduceToEDBUrls(vulns[i].exploits).join(", ")}"`;
             else
@@ -298,7 +389,7 @@ function searchVulns() {
                         search_display_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div>`;
                         vulns_html = createVulnsHtml();
                         vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-                        process_results_html = copyButtonsHTML;
+                        process_results_html = createResultProcessingHtml();
                     }
                     else {
                         search_display_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div><br><h5 class="text-center">No known vulnerabilities could be found.</h5>`;
@@ -323,8 +414,10 @@ function searchVulns() {
                 $("#search-display").html(search_display_html);
             if (vulns_html != "")
                 $("#vulns").html(vulns_html);
-            if (process_results_html != "")
+            if (process_results_html != "") {
                 $("#process-results-display").html(process_results_html);
+                $('select').selectpicker();
+            }
             if (related_queries_html != "")
                 $("#related-queries-display").html(related_queries_html);
             $("#searchVulnsButton").removeAttr("disabled");
@@ -348,7 +441,8 @@ function reorderVulns(sortColumnIdx, asc) {
     vulns_html = createVulnsHtml();
     vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
     $("#vulns").html(vulns_html);
-    $("#process-results-display").html(copyButtonsHTML);
+    $("#process-results-display").html(createResultProcessingHtml());
+    $('select').selectpicker();
 }
 
 function ignoreGeneralVulnsToggle() {
@@ -367,7 +461,8 @@ function onlyEDBExploitsToggle() {
         vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
         $("#vulns").html(vulns_html);
     }
-    $("#process-results-display").html(copyButtonsHTML);
+    $("#process-results-display").html(createResultProcessingHtml());
+    $('select').selectpicker();
 }
 
 function copyToClipboardMarkdownTable() {
@@ -376,10 +471,20 @@ function copyToClipboardMarkdownTable() {
     $("#copyMarkdownTableButton").attr('class', 'btn btn-success');
 }
 
+function resetCopyToClipboardMarkdownButton() {
+    $("#copyMarkdownTableButton").html('<i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (Markdown Table)');
+    $("#copyMarkdownTableButton").attr('class', 'btn btn-info');
+}
+
 function copyToClipboardCSV() {
     navigator.clipboard.writeText(createVulnsCSV());
     $("#copyCSVButton").html('<i style="font-size: 1rem" class="fa-solid fa-clipboard-check"></i>&nbsp;&nbsp;Copied CSV to Clipboard');
     $("#copyCSVButton").attr('class', 'btn btn-success');
+}
+
+function resetCopyToClipboardCSVButton() {
+    $("#copyCSVButton").html('<i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (CSV)');
+    $("#copyCSVButton").attr('class', 'btn btn-info');
 }
 
 function init() {
