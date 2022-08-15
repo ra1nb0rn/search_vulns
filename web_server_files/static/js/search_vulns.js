@@ -368,6 +368,9 @@ function searchVulns() {
 
     history.pushState({}, null, new_url);  // update URL
     $("#searchVulnsButton").attr("disabled", true);
+    $("#search-display").html("");
+    $("#process-results-display").html("");
+    $("#related-queries-display").html("");
     $("#vulns").html('<div class="row mt-3 justify-content-center align-items-center"><h5 class="spinner-border text-primary" style="width: 3rem; height: 3rem"></h5></div>');
     curSortColIdx = 1;
     curSortColAsc = false;
@@ -410,16 +413,12 @@ function searchVulns() {
                     related_queries_html += `</ul></div></div>`;
                 }
             }
-            if (search_display_html != "")
-                $("#search-display").html(search_display_html);
-            if (vulns_html != "")
-                $("#vulns").html(vulns_html);
-            if (process_results_html != "") {
-                $("#process-results-display").html(process_results_html);
-                $('select').selectpicker();
-            }
-            if (related_queries_html != "")
-                $("#related-queries-display").html(related_queries_html);
+
+            $("#vulns").html(vulns_html);
+            $("#search-display").html(search_display_html);
+            $("#process-results-display").html(process_results_html);
+            $("select").selectpicker();
+            $("#related-queries-display").html(related_queries_html);
             $("#searchVulnsButton").removeAttr("disabled");
         },
         error: function (jXHR, textStatus, errorThrown) {
@@ -442,7 +441,7 @@ function reorderVulns(sortColumnIdx, asc) {
     vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
     $("#vulns").html(vulns_html);
     $("#process-results-display").html(createResultProcessingHtml());
-    $('select').selectpicker();
+    $("select").selectpicker();
 }
 
 function ignoreGeneralVulnsToggle() {
@@ -462,7 +461,7 @@ function onlyEDBExploitsToggle() {
         $("#vulns").html(vulns_html);
     }
     $("#process-results-display").html(createResultProcessingHtml());
-    $('select').selectpicker();
+    $("select").selectpicker();
 }
 
 function copyToClipboardMarkdownTable() {
