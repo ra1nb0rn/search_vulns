@@ -22,6 +22,8 @@ VULNDB_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/
 CVE_EDB_MAP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cveid_to_edbid.json")
 CPE_DICT_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary_v2.3.csv")
 CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary_v2.3.csv"
+POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
+POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PoC-in-GitHub")
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 QUIET = False
@@ -123,10 +125,21 @@ def update_vuln_db():
         return 'Building NVD database failed'
 
     shutil.rmtree(NVD_DATAFEED_DIR)
-    if os.path.isfile(VULNDB_BACKUP_FILE):
-        os.remove(VULNDB_BACKUP_FILE)
     NVD_UPDATE_SUCCESS = True
     cve_edb_map_thread.join()
+
+    # build and add table of PoC-in-GitHub
+    print('[+] Adding PoC-in-GitHub information')
+    try:
+        create_poc_in_github_table()
+    except:
+        communicate_warning('Building PoCs in GitHub table failed')
+        rollback()
+        return 'Building PoCs in GitHub table failed'
+
+    # remove backup file on success
+    if os.path.isfile(VULNDB_BACKUP_FILE):
+        os.remove(VULNDB_BACKUP_FILE)
 
 
 def rollback():
@@ -268,6 +281,52 @@ def recover_map_data_from_db():
 
     db_conn.close()
     return cve_edb_map
+
+
+def create_poc_in_github_table():
+    """ Create CVE ID <--> GitHub PoC URL mapping"""
+
+    if os.path.isdir(POC_IN_GITHUB_DIR):
+        shutil.rmtree(POC_IN_GITHUB_DIR)
+
+    # download PoC in GitHub Repo
+    return_code = subprocess.call(
+        "git clone --depth 1 %s '%s'"
+        % (POC_IN_GITHUB_REPO, POC_IN_GITHUB_DIR),
+        shell=True,
+        stderr=subprocess.DEVNULL
+    )
+    if return_code != 0:
+        raise (Exception("Could not download latest resources of PoC-in-GitHub"))
+
+    # add PoC / exploit information to DB
+    db_conn = sqlite3.connect(VULNDB_FILE)
+    db_cursor = db_conn.cursor()
+    db_cursor.execute('CREATE TABLE cve_poc_in_github_map (cve_id VARCHAR(25), reference text, PRIMARY KEY (cve_id, reference));')
+    db_conn.commit()
+
+    for file in os.listdir(POC_IN_GITHUB_DIR):
+        yearpath = os.path.join(POC_IN_GITHUB_DIR, file)
+        if not os.path.isdir(yearpath):
+            continue
+        try:
+            int(file)
+        except:
+            continue
+
+        for cve_file in os.listdir(yearpath):
+            cve_filepath = os.path.join(yearpath, cve_file)
+            cve_id = os.path.splitext(cve_file)[0]
+            with open(cve_filepath) as cve_fh:
+                cve_json = json.loads(cve_fh.read())
+                for poc_item in cve_json:
+                    db_cursor.execute('INSERT INTO cve_poc_in_github_map VALUES (?, ?)', (cve_id, poc_item['html_url']))
+
+    db_conn.commit()
+    db_conn.close()
+
+    if os.path.isdir(POC_IN_GITHUB_DIR):
+        shutil.rmtree(POC_IN_GITHUB_DIR)
 
 
 def run(full=False):

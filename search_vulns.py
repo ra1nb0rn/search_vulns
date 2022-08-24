@@ -169,7 +169,7 @@ def is_cpe_included_after_version(cpe1, cpe2):
     return True
 
 
-def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_nvd_exploit_refs=False):
+def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_refs=False):
     """Get known vulnerabilities for the given CPE 2.3 string"""
 
     cpe_parts = cpe.split(':')
@@ -201,8 +201,9 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_nvd_exploit_re
             for edb_id in edb_ids.split(","):
                 detailed_vulns[cve_id]["exploits"].append("https://www.exploit-db.com/exploits/%s" % edb_id)
 
-        # add exploit references from NVD
-        if add_nvd_exploit_refs:
+        # add other exploit references
+        if add_other_exploit_refs:
+            # from NVD
             query = 'SELECT exploit_ref FROM nvd_exploits_refs INNER JOIN cve_nvd_exploits_refs ON nvd_exploits_refs.ref_id = cve_nvd_exploits_refs.ref_id WHERE cve_id = ?'
             nvd_exploit_refs = db_cursor.execute(query, (cve_id,)).fetchall()
             if nvd_exploit_refs:
@@ -213,6 +214,19 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_nvd_exploit_re
                             nvd_exploit_ref[0] + '/' not in detailed_vulns[cve_id]["exploits"] and
                             nvd_exploit_ref[0][:-1] not in detailed_vulns[cve_id]["exploits"]):
                         detailed_vulns[cve_id]["exploits"].append(nvd_exploit_ref[0])
+
+            # from PoC-in-Github
+            query = 'SELECT reference FROM cve_poc_in_github_map WHERE cve_id = ?'
+            poc_in_github_refs = db_cursor.execute(query, (cve_id,)).fetchall()
+            if poc_in_github_refs:
+                if "exploits" not in detailed_vulns[cve_id]:
+                    detailed_vulns[cve_id]["exploits"] = []
+                for poc_in_github_ref in poc_in_github_refs:
+                    if (poc_in_github_ref[0] not in detailed_vulns[cve_id]["exploits"] and
+                            poc_in_github_ref[0] + '/' not in detailed_vulns[cve_id]["exploits"] and
+                            poc_in_github_ref[0][:-1] not in detailed_vulns[cve_id]["exploits"] and
+                            poc_in_github_ref[0] + '.git' not in detailed_vulns[cve_id]["exploits"]):
+                        detailed_vulns[cve_id]["exploits"].append(poc_in_github_ref[0])
 
     return detailed_vulns
 
@@ -254,7 +268,7 @@ def print_vulns(vulns, to_string=False):
         return out_string
 
 
-def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_nvd_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False):
+def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False):
     """Search for known vulnerabilities based on the given query"""
 
     # create DB handle if not given
@@ -286,7 +300,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
             cpe = pot_matching_cpe
 
     # use the retrieved CPE to search for known vulnerabilities
-    vulns = get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns, add_nvd_exploit_refs=add_nvd_exploit_refs)
+    vulns = get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns, add_other_exploit_refs=add_other_exploit_refs)
 
     if close_cursor_after:
         db_cursor.close()
@@ -294,7 +308,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     return vulns
 
 
-def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_nvd_exploit_refs=False, is_good_cpe=False, zero_extend_versions=False, ignore_general_cpe_vulns=False):
+def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploits_refs=False, is_good_cpe=False, zero_extend_versions=False, ignore_general_cpe_vulns=False):
     """Search for known vulnerabilities based on the given query and return them with their CPE"""
 
     cpe, pot_cpes = query, []
@@ -358,7 +372,7 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
         else:
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
 
-    vulns = search_vulns(cpe, db_cursor, software_match_threshold, keep_data_in_memory, add_nvd_exploit_refs, True, ignore_general_cpe_vulns)
+    vulns = search_vulns(cpe, db_cursor, software_match_threshold, keep_data_in_memory, add_other_exploits_refs, True, ignore_general_cpe_vulns)
     return {query: {'cpe': cpe, 'vulns': vulns, 'pot_cpes': pot_cpes}}
 
 
