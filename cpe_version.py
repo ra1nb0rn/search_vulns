@@ -47,6 +47,8 @@ class CPEVersion:
         parts, other_parts = self.get_version_parts(), other.get_version_parts()
         if parts == other_parts:
             return True
+        if (parts and not other_parts) or (not parts and other_parts):
+            return False
 
         # check for equality if one version has trailing ".0"
         same_prefix = True
