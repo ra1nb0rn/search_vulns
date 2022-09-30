@@ -295,6 +295,7 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
 
                     for (auto &vulnerable_cpe : vuln_child_group) {
                         cve_cpe_query.bind(2, vulnerable_cpe.vague_cpe);
+                        cve_cpe_query.bind(3, vulnerable_cpe.version_start);
                         if (vulnerable_cpe.version_start_type == "Including")
                             cve_cpe_query.bind(4, true);
                         else
@@ -304,7 +305,6 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
                             cve_cpe_query.bind(6, true);
                         else
                             cve_cpe_query.bind(6, false);
-                        cve_cpe_query.bind(6, vulnerable_cpe.version_end_type);
                         cve_cpe_query.bind(7, vulnerable_with_str);
 
                         try {
