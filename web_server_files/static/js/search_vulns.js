@@ -408,7 +408,7 @@ function searchVulns() {
                     related_queries_html += `<div class="row mx-2"><div class="col"><h5>Related queries:</h5></div></div>`;
                     related_queries_html += `<div class="row mx-2"><div class="col"><ul>`;
                     for (var i = alt_queries_start_idx; i < vulns[query]["pot_cpes"].length; i++) {
-                        related_queries_html += `<li><a href="/?query=${htmlEntities(vulns[query]["pot_cpes"][i][0])}">${htmlEntities(vulns[query]["pot_cpes"][i][0])}</a></li>`
+                        related_queries_html += `<li><a href="/?query=${encodeURIComponent(htmlEntities(vulns[query]["pot_cpes"][i][0]))}">${htmlEntities(vulns[query]["pot_cpes"][i][0])}</a></li>`
                     }
                     related_queries_html += `</ul></div></div>`;
                 }
