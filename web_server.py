@@ -20,6 +20,10 @@ app = Flask(__name__, static_folder=STATIC_FOLDER, template_folder=TEMPLATE_FOLD
 @app.route("/search_vulns")
 def search_vulns():
     url_query_string = request.query_string.lower()
+
+    if url_query_string in RESULTS_CACHE:
+        return RESULTS_CACHE[url_query_string]
+
     query = request.args.get('query')
     if not query:
         return "No query provided", 400
@@ -30,12 +34,15 @@ def search_vulns():
     else:
         ignore_general_cpe_vulns = False
 
-    if url_query_string in RESULTS_CACHE:
-        return RESULTS_CACHE[url_query_string]
+    is_good_cpe = request.args.get('is-good-cpe')
+    if is_good_cpe and is_good_cpe.lower() == 'false':
+        is_good_cpe = False
+    else:
+        is_good_cpe = True
 
     conn = sqlite3.connect(DB_URI, uri=True)
     db_cursor = conn.cursor()
-    vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, add_other_exploits_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, zero_extend_versions=True, is_good_cpe=True)
+    vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, add_other_exploits_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, zero_extend_versions=True, is_good_cpe=is_good_cpe)
 
     if vulns is None:
         RESULTS_CACHE[url_query_string] = {}

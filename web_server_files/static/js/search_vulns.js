@@ -1,7 +1,7 @@
 
 var curVulnData = {};
 var exploit_url_show_max_length = 55, exploit_url_show_max_length_md = 42;
-var ignoreGeneralCpeVulns = false, onlyShowEDBExploits = false;
+var ignoreGeneralCpeVulns = false, onlyShowEDBExploits = false, isGoodCpe = true;
 var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
 var iconSortDesc = '<i class="fa-solid fa-sort-down"></i>';
 var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
@@ -366,6 +366,12 @@ function searchVulns() {
         new_url += '&general-vulns=false';
     }
 
+    if (!isGoodCpe) {
+        url_query += "&is-good-cpe=false";
+        new_url += '&is-good-cpe=false';
+    }
+    isGoodCpe = true;  // reset for subsequent query that wasn't initiated via URL
+
     history.pushState({}, null, new_url);  // update URL
     $("#searchVulnsButton").attr("disabled", true);
     $("#search-display").html("");
@@ -408,7 +414,7 @@ function searchVulns() {
                     related_queries_html += `<div class="row mx-2"><div class="col"><h5>Related queries:</h5></div></div>`;
                     related_queries_html += `<div class="row mx-2"><div class="col"><ul>`;
                     for (var i = alt_queries_start_idx; i < vulns[query]["pot_cpes"].length; i++) {
-                        related_queries_html += `<li><a href="/?query=${encodeURIComponent(htmlEntities(vulns[query]["pot_cpes"][i][0]))}">${htmlEntities(vulns[query]["pot_cpes"][i][0])}</a></li>`
+                        related_queries_html += `<li><a href="/?query=${encodeURIComponent(htmlEntities(vulns[query]["pot_cpes"][i][0]))}&is-good-cpe=false">${htmlEntities(vulns[query]["pot_cpes"][i][0])}</a></li>`
                     }
                     related_queries_html += `</ul></div></div>`;
                 }
@@ -497,6 +503,10 @@ function init() {
         var show_general_vulns = params.get('general-vulns');
         if (String(show_general_vulns).toLowerCase() === "false")
             $('#toggleIgnoreGeneralCpeVulns').click();
+
+        var is_good_cpe = params.get('is-good-cpe');
+        if (String(is_good_cpe).toLowerCase() === "false")
+            isGoodCpe = false;
 
         if (init_query !== null)
             $("#searchVulnsButton").click();

@@ -268,6 +268,26 @@ def print_vulns(vulns, to_string=False):
         return out_string
 
 
+def get_equivalent_cpes(cpe):
+    equivalent_cpes = [('cpe:2.3:a:redis:redis:*:*:*:*:*:*:*:*', 'cpe:2.3:a:redislabs:redis:*:*:*:*:*:*:*:*'),
+                       ('cpe:2.3:a:jquery:jquery_ui:*:*:*:*:*:*:*:*', 'cpe:2.3:a:jqueryui:jquery_ui:*:*:*:*:*:*:*:*')
+                      ]
+    cpes = [cpe]
+
+    for cpe1, cpe2 in equivalent_cpes:
+        cpe_split = cpe.split(':')
+        prefix_cpe = ':'.join(cpe_split[:5])
+        prefix_cpe1 = ':'.join(cpe1.split(':')[:5])
+        prefix_cpe2 = ':'.join(cpe2.split(':')[:5])
+
+        if prefix_cpe == prefix_cpe1 and is_cpe_included_after_version(cpe, cpe1):
+            cpes.append(prefix_cpe2 + ':' + ':'.join(cpe_split[5:]))
+        elif prefix_cpe == prefix_cpe2 and is_cpe_included_after_version(cpe, cpe2):
+            cpes.append(prefix_cpe1 + ':' + ':'.join(cpe_split[5:]))
+
+    return cpes
+
+
 def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False):
     """Search for known vulnerabilities based on the given query"""
 
@@ -300,7 +320,17 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
             cpe = pot_matching_cpe
 
     # use the retrieved CPE to search for known vulnerabilities
-    vulns = get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns, add_other_exploit_refs=add_other_exploit_refs)
+    vulns = {}
+    if is_good_cpe:
+        equivalent_cpes = [cpe]  # only use provided CPE
+    else:
+        equivalent_cpes = get_equivalent_cpes(cpe)  # also search and use equivalent CPEs
+
+    for cur_cpe in equivalent_cpes:
+        cur_vulns = get_vulns(cur_cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns, add_other_exploit_refs=add_other_exploit_refs)
+        for cve_id, vuln in cur_vulns.items():
+            if cve_id not in vulns:
+                vulns[cve_id] = vuln
 
     if close_cursor_after:
         db_cursor.close()
@@ -313,6 +343,7 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
 
     cpe, pot_cpes = query, []
     if not MATCH_CPE_23_RE.match(query):
+        is_good_cpe = False
         cpes = search_cpes(query, cpe_version="2.3", count=4, threshold=0.25, zero_extend_versions=zero_extend_versions, keep_data_in_memory=keep_data_in_memory)
 
         if not cpes or not cpes[query]:
@@ -370,15 +401,21 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
 
         pot_cpes = cpes[query]
         cpe = cpes[query][0][0]
-    elif not is_good_cpe:
-        pot_matching_cpe = match_cpe23_to_cpe23_from_dict(cpe, keep_data_in_memory=keep_data_in_memory)
-        if pot_matching_cpe:
-            cpe = pot_matching_cpe
-        else:
-            return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
 
-    vulns = search_vulns(cpe, db_cursor, software_match_threshold, keep_data_in_memory, add_other_exploits_refs, True, ignore_general_cpe_vulns)
-    return {query: {'cpe': cpe, 'vulns': vulns, 'pot_cpes': pot_cpes}}
+    # use the retrieved CPE to search for known vulnerabilities
+    vulns = {}
+    if is_good_cpe:
+        equivalent_cpes = [cpe]  # only use provided CPE
+    else:
+        equivalent_cpes = get_equivalent_cpes(cpe)  # also search and use equivalent CPEs
+
+    for cur_cpe in equivalent_cpes:
+        cur_vulns = search_vulns(cur_cpe, db_cursor, software_match_threshold, keep_data_in_memory, add_other_exploits_refs, True, ignore_general_cpe_vulns)
+        for cve_id, vuln in cur_vulns.items():
+            if cve_id not in vulns:
+                vulns[cve_id] = vuln
+
+    return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes}}
 
 
 def parse_args():
@@ -452,24 +489,35 @@ def main():
             if matching_cpe:
                 cpe = matching_cpe
 
-        # retrieve known vulns and print
+        # use the retrieved CPE to search for known vulnerabilities
+        vulns[query] = {}
+        equivalent_cpes = get_equivalent_cpes(cpe)
+
         if args.format.lower() == 'txt':
             if not args.output:
                 print()
-                printit('[+] %s (%s)' % (query, cpe), color=BRIGHT_BLUE)
-                vulns[query] = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, False, True, args.ignore_general_cpe_vulns)
+                printit('[+] %s (%s)' % (query, '/'.join(equivalent_cpes)), color=BRIGHT_BLUE)
+
+        for cur_cpe in equivalent_cpes:
+            cur_vulns = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, False, True, args.ignore_general_cpe_vulns)
+            for cve_id, vuln in cur_vulns.items():
+                if cve_id not in vulns[query]:
+                    vulns[query][cve_id] = vuln
+
+        # print found vulnerabilities
+        if args.format.lower() == 'txt':
+            if not args.output:
                 print_vulns(vulns[query])
             else:
                 out_string += '\n' + '[+] %s (%s)\n' % (query, cpe)
-                vulns[query] = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, False, True, args.ignore_general_cpe_vulns)
                 out_string += print_vulns(vulns[query], to_string=True)
         else:
-            cpe_vulns = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, False, True, args.ignore_general_cpe_vulns)
+            cpe_vulns = vulns[query]
             cve_ids_sorted = sorted(list(cpe_vulns), key=lambda cve_id: float(cpe_vulns[cve_id]["cvss"]), reverse=True)
             cpe_vulns_sorted = {}
             for cve_id in cve_ids_sorted:
                 cpe_vulns_sorted[cve_id] = cpe_vulns[cve_id]
-            vulns[query] = {'cpe': cpe, 'vulns': cpe_vulns_sorted}
+            vulns[query] = {'cpe': '/'.join(equivalent_cpes), 'vulns': cpe_vulns_sorted}
 
     if args.output:
         with open(args.output, 'w') as f:
