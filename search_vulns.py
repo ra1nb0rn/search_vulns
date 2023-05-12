@@ -269,21 +269,20 @@ def print_vulns(vulns, to_string=False):
 
 
 def get_equivalent_cpes(cpe):
-    equivalent_cpes = [('cpe:2.3:a:redis:redis:*:*:*:*:*:*:*:*', 'cpe:2.3:a:redislabs:redis:*:*:*:*:*:*:*:*'),
-                       ('cpe:2.3:a:jquery:jquery_ui:*:*:*:*:*:*:*:*', 'cpe:2.3:a:jqueryui:jquery_ui:*:*:*:*:*:*:*:*')
-                      ]
+    equivalent_cpes = {
+        'cpe:2.3:a:redis:redis:': ['cpe:2.3:a:redislabs:redis:'],
+        'cpe:2.3:a:redislabs:redis:': ['cpe:2.3:a:redis:redis:'],
+        'cpe:2.3:a:jquery:jquery_ui:': ['cpe:2.3:a:jqueryui:jquery_ui:'],
+        'cpe:2.3:a:jqueryui:jquery_ui:': ['cpe:2.3:a:jquery:jquery_ui:']
+    }
+
     cpes = [cpe]
+    cpe_split = cpe.split(':')
+    cpe_prefix = ':'.join(cpe_split[:5]) + ':'
 
-    for cpe1, cpe2 in equivalent_cpes:
-        cpe_split = cpe.split(':')
-        prefix_cpe = ':'.join(cpe_split[:5])
-        prefix_cpe1 = ':'.join(cpe1.split(':')[:5])
-        prefix_cpe2 = ':'.join(cpe2.split(':')[:5])
-
-        if prefix_cpe == prefix_cpe1 and is_cpe_included_after_version(cpe, cpe1):
-            cpes.append(prefix_cpe2 + ':' + ':'.join(cpe_split[5:]))
-        elif prefix_cpe == prefix_cpe2 and is_cpe_included_after_version(cpe, cpe2):
-            cpes.append(prefix_cpe1 + ':' + ':'.join(cpe_split[5:]))
+    for equivalent_cpe in equivalent_cpes.get(cpe_prefix, []):
+        equivalent_cpe_prefix = ':'.join(equivalent_cpe.split(':')[:5]) + ':'
+        cpes.append(equivalent_cpe_prefix + ':'.join(cpe_split[5:]))
 
     return cpes
 
