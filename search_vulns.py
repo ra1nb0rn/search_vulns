@@ -14,7 +14,8 @@ from cpe_search.cpe_search import (
     search_cpes,
     match_cpe23_to_cpe23_from_dict,
     create_cpe_from_base_cpe_and_query,
-    create_base_cpe_if_versionless_query
+    create_base_cpe_if_versionless_query,
+    VERSION_MATCH_CPE_CREATION_RE
 )
 from updater import run as run_updater
 
@@ -373,15 +374,29 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
 
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
 
-        # ensure that CPEs have a number if query has a number
+        # catch bad CPE matches
+        bad_match = False
         check_str = cpes[query][0][0][8:]
+
+        # ensure that the retrieved CPE has a number if query has a number
         if any(char.isdigit() for char in query) and not any(char.isdigit() for char in check_str):
+            bad_match = True
+
+        # if a version number is clearly detectable in query, ensure this version is somewhat reflected in the CPE
+        simple_query_version = VERSION_MATCH_CPE_CREATION_RE.search(query)
+        if simple_query_version:
+            for char in simple_query_version.group(1):
+                if char.isdigit() and char not in check_str:
+                    bad_match = True
+                    break
+
+        if bad_match:
             if cpes[query][0][1] > software_match_threshold:
                 new_cpes = []
                 for i in range(len(cpes[query])):
                     new_cpes.append(cpes[query][i])
                     new_cpe = create_cpe_from_base_cpe_and_query(cpes[query][i][0], query)
-                    if new_cpe and not any(is_cpe_equal(new_cpe, other) for other in new_cpes):
+                    if new_cpe and not any(is_cpe_equal(new_cpe, other[0]) for other in new_cpes):
                         new_cpes.append((new_cpe, -1))
                 return {query: {'cpe': None, 'vulns': None, 'pot_cpes': new_cpes}}
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
