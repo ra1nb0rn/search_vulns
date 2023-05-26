@@ -349,18 +349,18 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
 
         if cpes[query][0][1] < software_match_threshold:
-            # try to create a valid CPE from the query, e.g. in case the queried software is too recent
-            new_cpe = create_cpe_from_base_cpe_and_query(cpes[query][0][0], query)
-            if new_cpe:
-                new_cpes = [new_cpe]
-                for cpe, sim in cpes[query][1:]:
-                    new_cpe = create_cpe_from_base_cpe_and_query(cpe, query)
-                    if new_cpe and not any(is_cpe_equal(new_cpe, other) for other in new_cpes):
-                        new_cpes.append(new_cpe)
+            # try to create valid new CPEs from the query, e.g. in case the queried software is too recent
+            new_cpes = []
+            for cpe, sim in cpes[query]:
+                new_cpe = create_cpe_from_base_cpe_and_query(cpe, query)
+                if new_cpe and not any(is_cpe_equal(new_cpe, other) for other in new_cpes):
+                    new_cpes.append(new_cpe)
 
-                for i in range(len(new_cpes)):
+            for i in range(len(new_cpes)):
+                if new_cpes[i] not in [cpe_match[0] for cpe_match in cpes[query]]:
                     cpes[query].insert(i*2, (new_cpes[i], -1))
-            else:
+
+            if not new_cpes:
                 # if query has no version but CPE does, return a general CPE as related query
                 base_cpe = create_base_cpe_if_versionless_query(cpes[query][0][0], query)
                 if base_cpe:
