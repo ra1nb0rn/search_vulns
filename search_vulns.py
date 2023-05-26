@@ -354,14 +354,14 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
             new_cpes = []
             for cpe, sim in cpes[query]:
                 new_cpe = create_cpe_from_base_cpe_and_query(cpe, query)
-                if new_cpe and not any(is_cpe_equal(new_cpe, other) for other in new_cpes):
-                    new_cpes.append(new_cpe)
+                if new_cpe and not any(is_cpe_equal(new_cpe, other[0]) for other in new_cpes):
+                    new_cpes.append((new_cpe, -1))
+                if not any(is_cpe_equal(cpe, other[0]) for other in new_cpes):
+                    new_cpes.append((cpe, sim))
 
-            for i in range(len(new_cpes)):
-                if new_cpes[i] not in [cpe_match[0] for cpe_match in cpes[query]]:
-                    cpes[query].insert(i*2, (new_cpes[i], -1))
-
-            if not new_cpes:
+            if new_cpes:
+                cpes[query] = new_cpes
+            else:
                 # if query has no version but CPE does, return a general CPE as related query
                 base_cpe = create_base_cpe_if_versionless_query(cpes[query][0][0], query)
                 if base_cpe:
@@ -394,10 +394,11 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
             if cpes[query][0][1] > software_match_threshold:
                 new_cpes = []
                 for i in range(len(cpes[query])):
-                    new_cpes.append(cpes[query][i])
                     new_cpe = create_cpe_from_base_cpe_and_query(cpes[query][i][0], query)
                     if new_cpe and not any(is_cpe_equal(new_cpe, other[0]) for other in new_cpes):
                         new_cpes.append((new_cpe, -1))
+                    if not any(is_cpe_equal(cpes[query][i][0], other[0]) for other in new_cpes):
+                        new_cpes.append(cpes[query][i])
                 return {query: {'cpe': None, 'vulns': None, 'pot_cpes': new_cpes}}
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
 
