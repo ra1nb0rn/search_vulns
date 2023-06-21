@@ -258,8 +258,12 @@ function createVulnsMarkDownTable() {
             vulns_md += `[${vulns[i]["id"]}](${htmlEntities(vulns[i]["href"])})|`
         if (selectedFields.length < 1 || selectedFields.includes('CVSS Score'))
             vulns_md += `${vulns[i]["cvss"]}&nbsp;(v${vulns[i]["cvss_ver"]})|`;
-        if (selectedFields.length < 1 || selectedFields.includes('Description'))
-            vulns_md += `${htmlEntities(vulns[i]["description"]).replaceAll('|', '&#124;')}|`;
+        if (selectedFields.length < 1 || selectedFields.includes('Description')) {
+            var description = htmlEntities(vulns[i]["description"].trim());
+            description = description.replaceAll('\n', '<br>');
+            description = description.replaceAll('|', '&#124;');
+            vulns_md += `${description}|`;
+        }
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0 && (selectedFields.length < 1 || selectedFields.includes('Exploits'))) {
             for (var j = 0; j < vulns[i].exploits.length; j++) {
