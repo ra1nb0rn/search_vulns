@@ -1,0 +1,44 @@
+name: 'Run Test Cases'
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout search_vulns code
+        uses: actions/checkout@v3
+
+      - name: Update
+        run: sudo apt-get update
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          cache: 'pip'
+          version: '3.8'
+
+      - name: Upgrade Pip
+        run: python3 -m pip install --upgrade pip
+
+      - name: Install Dependencies
+        run: pip3 install -r requirements.txt
+      
+      - name: Run install.sh
+        run: ./install.sh
+        
+      - name: Build DB
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: NVD_API_KEY=$NVD_API_KEY python3 search_vulns.py --full-update
+
+      - name: Testing CVE Completeness
+        run: python3 ./tests/cve_completeness_tests.py
+        
+      - name: Testing Description Completeness
+        run: python3 ./tests/description_completeness_tests.py
+      
+      - name: Testing Exploit Completeness
+        run: python3 ./tests/exploit_completeness_tests.py
