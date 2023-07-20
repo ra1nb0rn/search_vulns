@@ -12,8 +12,17 @@ import sys
 import threading
 import time
 import zipfile
+import asyncio
+import aiohttp
 
+from aiolimiter import AsyncLimiter
+from time import sleep
 from cpe_search.cpe_search import update as update_cpe
+
+try:  # use ujson if available
+    import ujson as json
+except ModuleNotFoundError:
+    import json
 
 NVD_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "nvd_data_feeds")
 VULNDB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb.db3")
@@ -27,8 +36,43 @@ POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "P
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 QUIET = False
+DEBUG = True
 
-def update_vuln_db():
+CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+NVD_API_KEY = os.getenv('NVD_API_KEY')
+RATE_LIMIT = AsyncLimiter(25.0, 30.0)
+RESULTS_PER_PAGE = 2000
+START_INDEX = 0
+
+async def api_request(headers, params, requestno):
+    retry_limit = 3
+    retry_interval = 6
+    for i in range(retry_limit + 1):
+            async with aiohttp.ClientSession() as session:
+                cve_api_data_response = await session.get(url=CVE_API_URL, headers=headers, params=params)
+                if cve_api_data_response.status == 200 and cve_api_data_response.text is not None:
+                    if DEBUG:
+                        print(f"[+] Successfully received data from request {requestno}.")
+                    return await cve_api_data_response.json()
+                else:
+                    if not QUIET:
+                        print(f"[-] Received status code {cve_api_data_response.status} on request {requestno} Retrying...")
+                await asyncio.sleep(retry_interval)
+
+def write_data_to_json_file(api_data, requestno):
+    '''Performs creation of cve json files'''
+    if not QUIET and DEBUG:
+        print(f"[+] Writing data from request number {requestno} to file.")
+    with open(os.path.join(NVD_DATAFEED_DIR, f"nvdcve-2.0-{requestno}.json"), 'a') as outfile:
+        json.dump(api_data, outfile)
+
+async def worker(headers, params, requestno):
+    '''Handles requests within its offset space asychronously, then performs processing steps to produce final database.'''
+    async with RATE_LIMIT:
+        api_data_response = await api_request(headers=headers, params=params, requestno=requestno)
+    write_data_to_json_file(api_data=api_data_response, requestno=requestno)
+
+async def update_vuln_db():
     """Update the vulnerability database"""
 
     global NVD_UPDATE_SUCCESS
@@ -40,7 +84,7 @@ def update_vuln_db():
     cve_edb_map_thread = threading.Thread(target=create_cveid_edbid_mapping)
     cve_edb_map_thread.start()
 
-    # download NVD datafeeds from https://nvd.nist.gov/vuln/data-feeds
+    # download NVD datafeed from 
     if os.path.exists(NVD_DATAFEED_DIR):
         shutil.rmtree(NVD_DATAFEED_DIR)
     os.makedirs(NVD_DATAFEED_DIR)
@@ -48,68 +92,47 @@ def update_vuln_db():
     if not QUIET:
         print('[+] Downloading NVD data feeds and EDB information')
 
-    # first download the data feed overview to retrieve URLs to all data feeds
+    offset = START_INDEX
+
+    # initial request to set paramters
+    params = {'resultsPerPage': RESULTS_PER_PAGE, 'startIndex': offset}
+    headers = {'apiKey': NVD_API_KEY}
     try:
-        nvd_response = requests.get("https://nvd.nist.gov/vuln/data-feeds", timeout=20)
+        cve_api_initial_response = requests.get(url=CVE_API_URL,headers=headers,params=params)
     except:
-        NVD_UPDATE_SUCCESS = False
-        communicate_warning('An error occured when trying to download webpage: https://nvd.nist.gov/vuln/data-feeds')
-        rollback()
-        cve_edb_map_thread.join()
-        return 'An error occured when trying to download webpage: https://nvd.nist.gov/vuln/data-feeds'
-    if nvd_response.status_code != requests.codes.ok:
-        NVD_UPDATE_SUCCESS = False
-        rollback()
-        cve_edb_map_thread.join()
-        return 'An error occured when trying to download webpage: https://nvd.nist.gov/vuln/data-feeds'
-
-    # match the data feed URLs
-    nvd_nist_datafeed_html = nvd_response.text
-    jfeed_expr = re.compile(r"/feeds/json/cve/1\.1/nvdcve-1\.1-\d\d\d\d.json\.zip")
-    nvd_feed_urls = re.findall(jfeed_expr, nvd_nist_datafeed_html)
-
-    if not nvd_feed_urls:
-        NVD_UPDATE_SUCCESS = False
-        communicate_warning('No data feed links available on https://nvd.nist.gov/vuln/data-feeds')
-        rollback()
-        cve_edb_map_thread.join()
-        return 'No data feed links available on https://nvd.nist.gov/vuln/data-feeds'
-
-    # download all data feeds
-    with open(os.devnull, "w") as outfile:
-        zipfiles = []
-        for nvd_feed_url in nvd_feed_urls:
-            nvd_feed_url = "https://nvd.nist.gov" + nvd_feed_url
-            outname = os.path.join(NVD_DATAFEED_DIR, nvd_feed_url.split("/")[-1])
-            return_code = subprocess.call("wget %s -O %s" % (shlex.quote(nvd_feed_url), shlex.quote(outname)),
-                                          stdout=outfile, stderr=subprocess.STDOUT, shell=True)
-            if return_code != 0:
-                NVD_UPDATE_SUCCESS = False
-                communicate_warning('Retrieving NVD data feed %s failed' %  nvd_feed_url)
-                rollback()
-                cve_edb_map_thread.join()
-                return 'Retrieving NVD data feed %s failed' %  nvd_feed_url
-            zipfiles.append(outname)
-
-    if os.path.isfile("wget-log"):
-        os.remove("wget-log")
-
-    # unzip data feeds
-    if not QUIET:
-        print("[+] Unzipping data feeds")
-
-    for file in zipfiles:
-        try:
-            zip_ref = zipfile.ZipFile(file, "r")
-            zip_ref.extractall(NVD_DATAFEED_DIR)
-            zip_ref.close()
-            os.remove(file)
-        except:
             NVD_UPDATE_SUCCESS = False
-            communicate_warning('Unzipping data feed %s failed' % file)
+            communicate_warning('An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0')
             rollback()
             cve_edb_map_thread.join()
-            return 'Unzipping data feed %s failed' % file
+            return 'An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0'
+    if cve_api_initial_response.status_code != requests.codes.ok:
+        NVD_UPDATE_SUCCESS = False
+        rollback()
+        cve_edb_map_thread.join()
+        return 'An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0; received a non-ok response code.'
+    
+    numTotalResults = cve_api_initial_response.json().get('totalResults')
+
+    # make necessary amount of requests
+    requestno = 0
+    tasks = []
+    while(offset <= numTotalResults):
+        requestno += 1
+        params = {'resultsPerPage': RESULTS_PER_PAGE, 'startIndex': offset}
+        task = asyncio.create_task(worker(headers=headers, params=params, requestno = requestno))
+        tasks.append(task)
+        offset += RESULTS_PER_PAGE
+    
+    await asyncio.gather(*tasks)
+
+    if not len(os.listdir(NVD_DATAFEED_DIR)):
+        NVD_UPDATE_SUCCESS = False
+        communicate_warning('No data feed links available on https://services.nvd.nist.gov/rest/json/cves/2.0')
+        rollback()
+        cve_edb_map_thread.join()
+        return 'No data feed links available on https://services.nvd.nist.gov/rest/json/cves/2.0'
+    if os.path.isfile("wget-log"):
+        os.remove("wget-log")
 
     # build local NVD copy with downloaded data feeds
     print('[+] Building vulnerability database')
@@ -122,7 +145,7 @@ def update_vuln_db():
         communicate_warning('Building NVD database failed')
         rollback()
         cve_edb_map_thread.join()
-        return 'Building NVD database failed'
+        return f"Building NVD database failed with status code {return_code}."
 
     shutil.rmtree(NVD_DATAFEED_DIR)
     NVD_UPDATE_SUCCESS = True
@@ -334,7 +357,8 @@ def run(full=False):
         print("[+] Updating stored software information")
         update_cpe("2.3")
         print("[+] Updating vulnerability database")
-        error = update_vuln_db()
+        loop = asyncio.get_event_loop()
+        error = loop.run_until_complete(update_vuln_db())
         if error:
             print(error)
             sys.exit(1)
