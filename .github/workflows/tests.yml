@@ -35,7 +35,7 @@ jobs:
         run: NVD_API_KEY=$NVD_API_KEY python3 search_vulns.py --full-update
 
       - name: Testing CVE Completeness
-        run: python3 test_cve_completeness.py
+        run: python3 ./tests/test_cve_completeness.py
       
       - name: Testing Exploit Completeness
-        run: python3 test_exploit_completeness.py
+        run: python3 ./tests/test_exploit_completeness.py
