@@ -11,12 +11,10 @@ import subprocess
 import sys
 import threading
 import time
-import zipfile
 import asyncio
 import aiohttp
 
 from aiolimiter import AsyncLimiter
-from time import sleep
 from cpe_search.cpe_search import update as update_cpe
 
 try:  # use ujson if available
@@ -36,8 +34,7 @@ POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "P
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 QUIET = False
-DEBUG = True
-
+DEBUG = False
 CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 NVD_API_KEY = os.getenv('NVD_API_KEY')
 RATE_LIMIT = AsyncLimiter(25.0, 30.0)
@@ -79,6 +76,9 @@ async def update_vuln_db():
 
     if os.path.isfile(VULNDB_FILE):
         shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
+    
+    if not NVD_API_KEY:
+        raise TypeError("No API Key found - Please provide a valid API Key for the NVD API!")
 
     # start CVE ID <--> EDB ID mapping creation in background thread
     cve_edb_map_thread = threading.Thread(target=create_cveid_edbid_mapping)
