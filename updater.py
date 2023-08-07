@@ -37,7 +37,6 @@ QUIET = False
 DEBUG = False
 CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 NVD_API_KEY = os.getenv('NVD_API_KEY')
-RATE_LIMIT = AsyncLimiter(25.0, 30.0)
 RESULTS_PER_PAGE = 2000
 START_INDEX = 0
 
@@ -63,9 +62,9 @@ def write_data_to_json_file(api_data, requestno):
     with open(os.path.join(NVD_DATAFEED_DIR, f"nvdcve-2.0-{requestno}.json"), 'a') as outfile:
         json.dump(api_data, outfile)
 
-async def worker(headers, params, requestno):
+async def worker(headers, params, requestno, rate_limit):
     '''Handles requests within its offset space asychronously, then performs processing steps to produce final database.'''
-    async with RATE_LIMIT:
+    async with rate_limit:
         api_data_response = await api_request(headers=headers, params=params, requestno=requestno)
     write_data_to_json_file(api_data=api_data_response, requestno=requestno)
 
@@ -77,8 +76,13 @@ async def update_vuln_db():
     if os.path.isfile(VULNDB_FILE):
         shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
     
-    if not NVD_API_KEY:
-        raise TypeError("No API Key found - Please provide a valid API Key for the NVD API!")
+    if NVD_API_KEY:
+        if not QUIET:
+            print('[+] API Key found - Requests will be sent at a rate of 25 per 30s.')
+        rate_limit = AsyncLimiter(25.0, 30.0)
+    else:
+        print('[-] No API Key found - Requests will be sent at a rate of 5 per 30s. To lower build time, consider getting an NVD API Key.')
+        rate_limit = AsyncLimiter(5.0, 30.0)
 
     # start CVE ID <--> EDB ID mapping creation in background thread
     cve_edb_map_thread = threading.Thread(target=create_cveid_edbid_mapping)
@@ -119,7 +123,7 @@ async def update_vuln_db():
     while(offset <= numTotalResults):
         requestno += 1
         params = {'resultsPerPage': RESULTS_PER_PAGE, 'startIndex': offset}
-        task = asyncio.create_task(worker(headers=headers, params=params, requestno = requestno))
+        task = asyncio.create_task(worker(headers=headers, params=params, requestno = requestno, rate_limit=rate_limit))
         tasks.append(task)
         offset += RESULTS_PER_PAGE
     
