@@ -69,8 +69,8 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
     json j;
     input_file >> j;
 
-    json metrics_entry, references_entry;
-    std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity, cvss_version, descr_line, ref_url;
+    json metrics_entry, metrics_type_entry, references_entry;
+    std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity, cvss_version, ref_url;
     std::unordered_map<std::string, int> nvd_exploits_refs;
     std::unordered_map<std::string, std::unordered_set<int>> cveid_exploits_map;
     bool vulnerable;
@@ -82,38 +82,40 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
         edb_ids = "";
 
         // first retrieve data about CVE and put it into DB
-        // assume English as description language
-        description = "";
+        description = "N/A";
         for (auto &desc_entry : cve_entry["cve"]["descriptions"]) {
-            descr_line = desc_entry["value"];
-            description += descr_line + "\n";
-        }
-        if (description != "")
-            description.pop_back();
-
-        metrics_entry = cve_entry["cve"]["metrics"]; //i.e. cvssMetricV2
-        if (metrics_entry.find("cvssMetricV31") != metrics_entry.end()) {
-            for (auto &metric_v31 : cve_entry["cve"]["metrics"]["cvssMetricV31"]){
-            base_score = metric_v31["cvssData"]["baseScore"];
-            vector_string = metric_v31["cvssData"]["vectorString"];
-            severity = metric_v31["cvssData"]["baseSeverity"];
-            cvss_version = metric_v31["cvssData"]["version"];
+            if (desc_entry["lang"] == "en") {
+                description = desc_entry["value"];
+                break;
             }
+        }
+
+        metrics_entry = cve_entry["cve"]["metrics"];
+        if (metrics_entry.find("cvssMetricV31") != metrics_entry.end()) {
+            metrics_type_entry = metrics_entry["cvssMetricV31"];
         }
         else if (metrics_entry.find("cvssMetricV30") != metrics_entry.end()) {
-            for (auto &metric_v30 : cve_entry["cve"]["metrics"]["cvssMetricV30"]){
-            base_score = metric_v30["cvssData"]["baseScore"];
-            vector_string = metric_v30["cvssData"]["vectorString"];
-            severity = metric_v30["cvssData"]["baseSeverity"];
-            cvss_version = metric_v30["cvssData"]["version"];
-            }
+            metrics_type_entry = metrics_entry["cvssMetricV30"];
         }
         else if (metrics_entry.find("cvssMetricV2") != metrics_entry.end()) {
-            for (auto &metric_v2 : cve_entry["cve"]["metrics"]["cvssMetricV2"]){
-            base_score = metric_v2["cvssData"]["baseScore"];
-            vector_string = metric_v2["cvssData"]["vectorString"];
-            severity = metric_v2["baseSeverity"];
-            cvss_version = metric_v2["cvssData"]["version"];
+            metrics_type_entry = metrics_entry["cvssMetricV2"];
+        }
+
+        if (metrics_type_entry != NULL){
+            for (auto &metric : metrics_type_entry){
+                // assume there's always a Primary entry
+                if (metric["type"] == "Primary") {
+                    base_score = metric["cvssData"]["baseScore"];
+                    vector_string = metric["cvssData"]["vectorString"];
+                    cvss_version = metric["cvssData"]["version"];
+
+                    if (cvss_version == "2.0")
+                        severity = metric["baseSeverity"];
+                    else
+                        severity = metric["cvssData"]["baseSeverity"];
+
+                    break;
+                }
             }
         }
         else {
@@ -122,17 +124,13 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
             cvss_version = "";
             severity = "";
         }
+
         published = cve_entry["cve"]["published"];
         std::replace(published.begin(), published.end(), 'T', ' ');
-        std::replace(published.begin(), published.end(), 'Z', ':');
-        published += "00";
         last_modified = cve_entry["cve"]["lastModified"];
         std::replace(last_modified.begin(), last_modified.end(), 'T', ' ');
-        std::replace(last_modified.begin(), last_modified.end(), 'Z', ':');
-        last_modified += "00";
 
         references_entry = cve_entry["cve"]["references"];
-        //if (references_entry[0] != references_entry.end()) {
         for (auto &ref_entry : references_entry) {
             ref_url = ref_entry["url"];
             if (ref_entry.find("tags") != ref_entry.end()) {
@@ -151,7 +149,6 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
                 }
             }
         }
-        //}
 
         cve_query.bind(1, cve_id);
         cve_query.bind(2, description);
