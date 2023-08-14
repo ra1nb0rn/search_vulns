@@ -106,7 +106,11 @@ async def update_vuln_db(nvd_api_key=None):
 
     # initial request to set paramters
     params = {'resultsPerPage': API_RESULTS_PER_PAGE, 'startIndex': offset}
-    headers = {'apiKey': nvd_api_key}
+    if nvd_api_key:
+        headers = {'apiKey': nvd_api_key}
+    else:
+        headers = {}
+
     try:
         cve_api_initial_response = requests.get(url=CVE_API_URL, headers=headers, params=params)
     except:

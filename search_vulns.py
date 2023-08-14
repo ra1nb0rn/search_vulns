@@ -431,7 +431,8 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description="Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)")
     parser.add_argument("-u", "--update", action="store_true", help="Download the latest version of the the local vulnerability and software database")
-    parser.add_argument("--full-update", action="store_true", help="Build complete update of the local vulnerability and software database")
+    parser.add_argument("--full-update", action="store_true", help="Fully (re)build the local vulnerability and software database")
+    parser.add_argument("-k", "--api-key", type=str, help="NVD API key to use for updating the local vulnerability and software database")
     parser.add_argument("-f", "--format", type=str, default="txt", choices={"txt", "json"}, help="Output format, either 'txt' or 'json' (default: 'txt')")
     parser.add_argument("-o", "--output", type=str, help="File to write found vulnerabilities to")
     parser.add_argument("-q", "--query", dest="queries", metavar="QUERY", action="append", help="A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string")
@@ -447,10 +448,11 @@ def parse_args():
 def main():
     # parse args and run update routine if requested
     args = parse_args()
+
     if args.update == True:
-        run_updater(False)
+        run_updater(False, args.api_key)
     elif args.full_update == True:
-        run_updater(True)
+        run_updater(True, args.api_key)
 
     if not args.queries:
         return
