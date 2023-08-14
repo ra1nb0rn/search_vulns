@@ -91,14 +91,6 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_genera
                     if len(found_vulns_cpes[cve_id]) > 1:
                         remove_vulns.add(pot_vuln)
 
-                if with_cpes:
-                    vuln_cpe_wildcard_count = vuln_cpe.count(':*') + vuln_cpe.count(':-')
-                    for with_cpe in with_cpes.split(','):
-                        with_cpe_wildcard_count = with_cpe.count(':*') + with_cpe.count(':-')
-
-                        if with_cpe_wildcard_count < vuln_cpe_wildcard_count:
-                            remove_vulns.add(pot_vuln)
-                            break
             general_cpe_nvd_data -= remove_vulns
 
     if not cpe_version:
