@@ -11,31 +11,25 @@ jobs:
       - name: Checkout search_vulns code
         uses: actions/checkout@v3
 
-      - name: Update
-        run: sudo apt-get update
-
-      - name: Set up Python
+      - name: Set up Python and Pip
         uses: actions/setup-python@v4
         with:
           cache: 'pip'
-          version: '3.8'
+          python-version: '3.8'
 
       - name: Upgrade Pip
         run: python3 -m pip install --upgrade pip
 
       - name: Install Dependencies
         run: pip3 install -r requirements.txt
-      
-      - name: Run install.sh
-        run: ./install.sh
-        
-      - name: Build DB
+
+      - name: Install tool and build DB
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: NVD_API_KEY=$NVD_API_KEY python3 search_vulns.py --full-update
+        run: NVD_API_KEY=$NVD_API_KEY ./install.sh --full
 
-      - name: Testing CVE Completeness
+      - name: Test CVE Completeness
         run: python3 ./tests/test_cve_completeness.py
-      
-      - name: Testing Exploit Completeness
+
+      - name: Test Exploit Completeness
         run: python3 ./tests/test_exploit_completeness.py

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import asyncio
 import json
 import os
 import re
@@ -11,9 +12,8 @@ import subprocess
 import sys
 import threading
 import time
-import asyncio
-import aiohttp
 
+import aiohttp
 from aiolimiter import AsyncLimiter
 from cpe_search.cpe_search import update as update_cpe
 
@@ -33,14 +33,15 @@ POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
 POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PoC-in-GitHub")
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
+CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 QUIET = False
 DEBUG = False
-CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-NVD_API_KEY = os.getenv('NVD_API_KEY')
-RESULTS_PER_PAGE = 2000
-START_INDEX = 0
+API_RESULTS_PER_PAGE = 2000
+
 
 async def api_request(headers, params, requestno):
+    '''Perform request to API for one task'''
+
     retry_limit = 3
     retry_interval = 6
     for i in range(retry_limit + 1):
@@ -51,32 +52,37 @@ async def api_request(headers, params, requestno):
                         print(f"[+] Successfully received data from request {requestno}.")
                     return await cve_api_data_response.json()
                 else:
-                    if not QUIET:
+                    if DEBUG:
                         print(f"[-] Received status code {cve_api_data_response.status} on request {requestno} Retrying...")
                 await asyncio.sleep(retry_interval)
 
+
 def write_data_to_json_file(api_data, requestno):
-    '''Performs creation of cve json files'''
-    if not QUIET and DEBUG:
+    '''Perform creation of cve json files'''
+
+    if DEBUG:
         print(f"[+] Writing data from request number {requestno} to file.")
     with open(os.path.join(NVD_DATAFEED_DIR, f"nvdcve-2.0-{requestno}.json"), 'a') as outfile:
         json.dump(api_data, outfile)
 
+
 async def worker(headers, params, requestno, rate_limit):
-    '''Handles requests within its offset space asychronously, then performs processing steps to produce final database.'''
+    '''Handle requests within its offset space asychronously, then performs processing steps to produce final database.'''
+
     async with rate_limit:
         api_data_response = await api_request(headers=headers, params=params, requestno=requestno)
     write_data_to_json_file(api_data=api_data_response, requestno=requestno)
 
-async def update_vuln_db():
+
+async def update_vuln_db(nvd_api_key=None):
     """Update the vulnerability database"""
 
     global NVD_UPDATE_SUCCESS
 
     if os.path.isfile(VULNDB_FILE):
         shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
-    
-    if NVD_API_KEY:
+
+    if nvd_api_key:
         if not QUIET:
             print('[+] API Key found - Requests will be sent at a rate of 25 per 30s.')
         rate_limit = AsyncLimiter(25.0, 30.0)
@@ -96,13 +102,13 @@ async def update_vuln_db():
     if not QUIET:
         print('[+] Downloading NVD data feeds and EDB information')
 
-    offset = START_INDEX
+    offset = 0
 
     # initial request to set paramters
-    params = {'resultsPerPage': RESULTS_PER_PAGE, 'startIndex': offset}
-    headers = {'apiKey': NVD_API_KEY}
+    params = {'resultsPerPage': API_RESULTS_PER_PAGE, 'startIndex': offset}
+    headers = {'apiKey': nvd_api_key}
     try:
-        cve_api_initial_response = requests.get(url=CVE_API_URL,headers=headers,params=params)
+        cve_api_initial_response = requests.get(url=CVE_API_URL, headers=headers, params=params)
     except:
             NVD_UPDATE_SUCCESS = False
             communicate_warning('An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0')
@@ -122,10 +128,10 @@ async def update_vuln_db():
     tasks = []
     while(offset <= numTotalResults):
         requestno += 1
-        params = {'resultsPerPage': RESULTS_PER_PAGE, 'startIndex': offset}
+        params = {'resultsPerPage': API_RESULTS_PER_PAGE, 'startIndex': offset}
         task = asyncio.create_task(worker(headers=headers, params=params, requestno = requestno, rate_limit=rate_limit))
         tasks.append(task)
-        offset += RESULTS_PER_PAGE
+        offset += API_RESULTS_PER_PAGE
     
     await asyncio.gather(*tasks)
 
@@ -356,13 +362,17 @@ def create_poc_in_github_table():
         shutil.rmtree(POC_IN_GITHUB_DIR)
 
 
-def run(full=False):
+def run(full=False, nvd_api_key=None):
     if full:
+        if not nvd_api_key:
+            nvd_api_key = os.getenv('NVD_API_KEY')
+
         print("[+] Updating stored software information")
         update_cpe("2.3")
         print("[+] Updating vulnerability database")
-        loop = asyncio.get_event_loop()
-        error = loop.run_until_complete(update_vuln_db())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        error = loop.run_until_complete(update_vuln_db(nvd_api_key))
         if error:
             print(error)
             sys.exit(1)
