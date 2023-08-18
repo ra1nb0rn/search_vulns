@@ -42,10 +42,16 @@ API_RESULTS_PER_PAGE = 2000
 async def api_request(headers, params, requestno):
     '''Perform request to API for one task'''
 
+    global NVD_UPDATE_SUCCESS
+
+    if NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS:
+        return None
+
     retry_limit = 3
     retry_interval = 6
-    for i in range(retry_limit + 1):
-            async with aiohttp.ClientSession() as session:
+    for _ in range(retry_limit + 1):
+        async with aiohttp.ClientSession() as session:
+            try:
                 cve_api_data_response = await session.get(url=CVE_API_URL, headers=headers, params=params)
                 if cve_api_data_response.status == 200 and cve_api_data_response.text is not None:
                     if DEBUG:
@@ -55,6 +61,11 @@ async def api_request(headers, params, requestno):
                     if DEBUG:
                         print(f"[-] Received status code {cve_api_data_response.status} on request {requestno} Retrying...")
                 await asyncio.sleep(retry_interval)
+            except Exception as e:
+                if NVD_UPDATE_SUCCESS is None:
+                    communicate_warning('Got the following exception when downloading vuln data via API: %s' % str(e))
+                NVD_UPDATE_SUCCESS = False
+                return None
 
 
 def write_data_to_json_file(api_data, requestno):
@@ -69,8 +80,14 @@ def write_data_to_json_file(api_data, requestno):
 async def worker(headers, params, requestno, rate_limit):
     '''Handle requests within its offset space asychronously, then performs processing steps to produce final database.'''
 
+    global NVD_UPDATE_SUCCESS
+
     async with rate_limit:
         api_data_response = await api_request(headers=headers, params=params, requestno=requestno)
+
+    if NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS:
+        return None
+
     write_data_to_json_file(api_data=api_data_response, requestno=requestno)
 
 
@@ -94,7 +111,7 @@ async def update_vuln_db(nvd_api_key=None):
     cve_edb_map_thread = threading.Thread(target=create_cveid_edbid_mapping)
     cve_edb_map_thread.start()
 
-    # download NVD datafeed from 
+    # download vulnerability data via NVD's API
     if os.path.exists(NVD_DATAFEED_DIR):
         shutil.rmtree(NVD_DATAFEED_DIR)
     os.makedirs(NVD_DATAFEED_DIR)
@@ -124,7 +141,7 @@ async def update_vuln_db(nvd_api_key=None):
         rollback()
         cve_edb_map_thread.join()
         return 'An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0; received a non-ok response code.'
-    
+
     numTotalResults = cve_api_initial_response.json().get('totalResults')
 
     # make necessary amount of requests
@@ -136,17 +153,18 @@ async def update_vuln_db(nvd_api_key=None):
         task = asyncio.create_task(worker(headers=headers, params=params, requestno = requestno, rate_limit=rate_limit))
         tasks.append(task)
         offset += API_RESULTS_PER_PAGE
-    
-    await asyncio.gather(*tasks)
 
-    if not len(os.listdir(NVD_DATAFEED_DIR)):
+    while True:
+        _, pending = await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED, timeout=2)
+        if len(pending) < 1 or (NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS):
+            break
+
+    if (not len(os.listdir(NVD_DATAFEED_DIR))) or (NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS):
         NVD_UPDATE_SUCCESS = False
-        communicate_warning('No data feed links available on https://services.nvd.nist.gov/rest/json/cves/2.0')
+        communicate_warning('Could not download vuln data from https://services.nvd.nist.gov/rest/json/cves/2.0')
         rollback()
         cve_edb_map_thread.join()
-        return 'No data feed links available on https://services.nvd.nist.gov/rest/json/cves/2.0'
-    if os.path.isfile("wget-log"):
-        os.remove("wget-log")
+        return 'Could not download vuln data from https://services.nvd.nist.gov/rest/json/cves/2.0'
 
     # build local NVD copy with downloaded data feeds
     print('[+] Building vulnerability database')
