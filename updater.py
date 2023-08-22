@@ -27,8 +27,14 @@ VULNDB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb.
 VULNDB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb.db3.bak")
 VULNDB_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/vulndb.db3"
 CVE_EDB_MAP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cveid_to_edbid.json")
+
 CPE_DICT_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary_v2.3.csv")
+CPE_DICT_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary_v2.3.csv.bak")
 CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary_v2.3.csv"
+CPE_DEPRECATIONS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json")
+CPE_DEPRECATIONS_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json.bak")
+CPE_DEPRECATIONS_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary_v2.3.csv"
+
 POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
 POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PoC-in-GitHub")
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
@@ -195,6 +201,27 @@ async def update_vuln_db(nvd_api_key=None):
     # remove backup file on success
     if os.path.isfile(VULNDB_BACKUP_FILE):
         os.remove(VULNDB_BACKUP_FILE)
+
+
+async def handle_cpes_update(nvd_api_key=None):
+    if os.path.isfile(CPE_DICT_FILE):
+        shutil.move(CPE_DICT_FILE, CPE_DICT_BACKUP_FILE)
+    if os.path.isfile(CPE_DEPRECATIONS_FILE):
+        shutil.move(CPE_DEPRECATIONS_FILE, CPE_DEPRECATIONS_BACKUP_FILE)
+
+    success = await update_cpe(nvd_api_key)
+    if not success:
+        if os.path.isfile(CPE_DICT_BACKUP_FILE):
+            shutil.move(CPE_DICT_BACKUP_FILE, CPE_DICT_FILE)
+        if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
+            shutil.move(CPE_DEPRECATIONS_BACKUP_FILE, CPE_DEPRECATIONS_FILE)
+    else:
+        if os.path.isfile(CPE_DICT_BACKUP_FILE):
+            os.remove(CPE_DICT_BACKUP_FILE)
+        if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
+            os.remove(CPE_DEPRECATIONS_BACKUP_FILE)
+
+    return not success
 
 
 def rollback():
@@ -389,19 +416,24 @@ def run(full=False, nvd_api_key=None):
         if not nvd_api_key:
             nvd_api_key = os.getenv('NVD_API_KEY')
 
-        print("[+] Updating stored software information")
-        update_cpe("2.3")
-        print("[+] Updating vulnerability database")
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        print("[+] Updating stored software information")
+        error = loop.run_until_complete(handle_cpes_update(nvd_api_key))
+        if error:
+            sys.exit(1)
+        print("[+] Updating vulnerability database")
         error = loop.run_until_complete(update_vuln_db(nvd_api_key))
         if error:
             print(error)
             sys.exit(1)
     else:
         print("[+] Downloading latest versions of resources ...")
+
         if os.path.isfile(CPE_DICT_FILE):
-            shutil.move(CPE_DICT_FILE, CPE_DICT_FILE+".bak")
+            shutil.move(CPE_DICT_FILE, CPE_DICT_BACKUP_FILE)
+        # if os.path.isfile(CPE_DEPRECATIONS_FILE):
+        #     shutil.move(CPE_DEPRECATIONS_FILE, CPE_DEPRECATIONS_BACKUP_FILE)
         if os.path.isfile(VULNDB_FILE):
             shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
 
@@ -416,20 +448,31 @@ def run(full=False, nvd_api_key=None):
                                           shlex.quote(CPE_DICT_FILE)), shell=True)
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
+
+            # return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(CPE_DEPRECATIONS_ARTIFACT_URL),
+            #                               shlex.quote(CPE_DEPRECATIONS_FILE)), shell=True)
+            # if return_code != 0:
+            #     raise(Exception("Could not download latest resource files"))
+
             return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(VULNDB_ARTIFACT_URL),
                                           shlex.quote(VULNDB_FILE)), shell=True)
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
 
-            if os.path.isfile(CPE_DICT_FILE+".bak"):
-                os.remove(CPE_DICT_FILE+".bak")
+            if os.path.isfile(CPE_DICT_BACKUP_FILE):
+                os.remove(CPE_DICT_BACKUP_FILE)
+            # if os.path.isfile(CPE_DEPRECATIONS_FILE):
+            #     os.remove(CPE_DEPRECATIONS_BACKUP_FILE)
             if os.path.isfile(VULNDB_BACKUP_FILE):
                 os.remove(VULNDB_BACKUP_FILE)
         except Exception as e:
             print("[!] Encountered an error: %s" % str(e))
-            if os.path.isfile(CPE_DICT_FILE+".bak"):
-                shutil.move(CPE_DICT_FILE+".bak", CPE_DICT_FILE)
+            if os.path.isfile(CPE_DICT_BACKUP_FILE):
+                shutil.move(CPE_DICT_BACKUP_FILE, CPE_DICT_FILE)
                 print("[+] Restored software infos from backup")
+            # if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
+            #     shutil.move(CPE_DEPRECATIONS_BACKUP_FILE, CPE_DEPRECATIONS_FILE)
+            #     print("[+] Restored software deprecation infos from backup")
             if os.path.isfile(VULNDB_BACKUP_FILE):
                 shutil.move(VULNDB_BACKUP_FILE, VULNDB_FILE)
                 print("[+] Restored vulnerability infos from backup")

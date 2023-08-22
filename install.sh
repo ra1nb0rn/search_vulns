@@ -99,6 +99,9 @@ setup_cpe_search() {
         git submodule --quiet init
         git submodule --quiet update
     fi
+
+    pip3 install -r requirements.txt
+
     cd ..
 }
 
