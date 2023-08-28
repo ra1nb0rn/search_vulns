@@ -17,7 +17,6 @@ from cpe_search.cpe_search import (
     create_base_cpe_if_versionless_query,
     VERSION_MATCH_CPE_CREATION_RE
 )
-from updater import run as run_updater
 
 DATABASE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'vulndb.db3')
 MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
@@ -91,14 +90,6 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_genera
                     if len(found_vulns_cpes[cve_id]) > 1:
                         remove_vulns.add(pot_vuln)
 
-                if with_cpes:
-                    vuln_cpe_wildcard_count = vuln_cpe.count(':*') + vuln_cpe.count(':-')
-                    for with_cpe in with_cpes.split(','):
-                        with_cpe_wildcard_count = with_cpe.count(':*') + with_cpe.count(':-')
-
-                        if with_cpe_wildcard_count < vuln_cpe_wildcard_count:
-                            remove_vulns.add(pot_vuln)
-                            break
             general_cpe_nvd_data -= remove_vulns
 
     if not cpe_version:
@@ -304,7 +295,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     # if given query is not already a CPE, retrieve a CPE that matches the query
     cpe = query
     if not MATCH_CPE_23_RE.match(query):
-        cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=software_match_threshold, keep_data_in_memory=keep_data_in_memory)
+        cpe = search_cpes(query, count=1, threshold=software_match_threshold, keep_data_in_memory=keep_data_in_memory)
 
         if not cpe or not cpe[query]:
             return None
@@ -344,7 +335,7 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
     cpe, pot_cpes = query, []
     if not MATCH_CPE_23_RE.match(query):
         is_good_cpe = False
-        cpes = search_cpes(query, cpe_version="2.3", count=4, threshold=0.25, zero_extend_versions=zero_extend_versions, keep_data_in_memory=keep_data_in_memory)
+        cpes = search_cpes(query, count=4, threshold=0.25, zero_extend_versions=zero_extend_versions, keep_data_in_memory=keep_data_in_memory)
 
         if not cpes or not cpes[query]:
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
@@ -439,7 +430,8 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description="Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)")
     parser.add_argument("-u", "--update", action="store_true", help="Download the latest version of the the local vulnerability and software database")
-    parser.add_argument("--full-update", action="store_true", help="Build complete update of the local vulnerability and software database")
+    parser.add_argument("--full-update", action="store_true", help="Fully (re)build the local vulnerability and software database")
+    parser.add_argument("-k", "--api-key", type=str, help="NVD API key to use for updating the local vulnerability and software database")
     parser.add_argument("-f", "--format", type=str, default="txt", choices={"txt", "json"}, help="Output format, either 'txt' or 'json' (default: 'txt')")
     parser.add_argument("-o", "--output", type=str, help="File to write found vulnerabilities to")
     parser.add_argument("-q", "--query", dest="queries", metavar="QUERY", action="append", help="A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string")
@@ -455,10 +447,13 @@ def parse_args():
 def main():
     # parse args and run update routine if requested
     args = parse_args()
+
     if args.update == True:
-        run_updater(False)
+        from updater import run as run_updater
+        run_updater(False, args.api_key)
     elif args.full_update == True:
-        run_updater(True)
+        from updater import run as run_updater
+        run_updater(True, args.api_key)
 
     if not args.queries:
         return
@@ -477,7 +472,7 @@ def main():
         # if current query is not already a CPE, retrieve a CPE that matches the query
         cpe = query
         if not MATCH_CPE_23_RE.match(query):
-            cpe = search_cpes(query, cpe_version="2.3", count=1, threshold=args.cpe_search_threshold)
+            cpe = search_cpes(query, count=1, threshold=args.cpe_search_threshold)
 
             found_cpe = True
             if not cpe or not cpe[query]:

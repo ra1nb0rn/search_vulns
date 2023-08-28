@@ -2,3 +2,6 @@ requests
 Flask
 gunicorn
 gevent
+aiohttp
+aiolimiter
+ujson

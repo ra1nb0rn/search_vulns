@@ -4,10 +4,18 @@ Search for known vulnerabilities in software using software titles or a CPE 2.3 
 ## About
 *search_vulns* can be used to search for known vulnerabilities in software. To achieve this, the tool utilizes a locally built vulnerability database, currently containing CVE information from the [National Vulnerability Database (NVD)](https://nvd.nist.gov/) and exploit information from the [Exploit-DB (EDB)](https://www.exploit-db.com/) and from [PoC-in-GitHub](https://github.com/nomi-sec/PoC-in-GitHub). Using the *search_vulns* tool, this local information can be queried, either by providing software titles like 'Apache 2.4.39' or by providing a CPE 2.3 string like ``cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*``.
 
-*search_vulns* can either be used as a CLI tool or via a web server. It is recommended to use the CLI tool for automated work flows that might be resource-constrained. Otherwise, using the web server is recommended, because it offers more features and flexibility. This includes the ability to achieve more complete results. Also, the presentation of results is clearer and results can be exported for further use.
+*search_vulns* can either be used as a CLI tool or via a web server. It is recommended to use the CLI tool for automated workflows that might be resource-constrained. Otherwise, using the web server is recommended, because it offers more features and flexibility. This includes the ability to achieve more complete results. Also, the presentation of results is clearer and results can be exported for further use.
 
 ## Installation
-To install this tool, simply run the ``install.sh`` script. First, this script automatically installs the required dependencies. Thereafter it downloads the required software and vulnerability resources (see the [Release artifacts](https://github.com/ra1nb0rn/search_vulns/releases/latest)). These resources can also be built directly by invoking the install script with the according flag: ``install.sh --full``. Note, however, that this may take more time than simply downloading the resources. Of course, you can also look at the installation script and setup everything manually. Finally, you can also use the provided ``Dockerfile`` to build a container:
+You can perform a quick install by running the following commands:
+```shell
+git clone https://github.com/ra1nb0rn/search_vulns
+cd search_vulns
+pip3 install -r requirements.txt
+./search_vulns.py -u
+```
+
+Alternatively, for a full install, simply run the ``install.sh`` script. First, this script automatically installs the required dependencies. Thereafter it downloads the required software and vulnerability resources (see the [Release artifacts](https://github.com/ra1nb0rn/search_vulns/releases/latest)). These resources can also be built directly by invoking the install script with the according flag: ``install.sh --full``. Note, however, that this may take more time than simply downloading the resources. Of course, you can also look at the installation script and setup everything manually. Finally, you can also use the provided ``Dockerfile`` to build a container:
 ```
 docker build -t search_vulns .
 ```
@@ -19,20 +27,31 @@ docker run -it search_vulns
 ## Usage
 *search_vulns*'s usage information is shown in the following:
 ```
-usage: search_vulns.py [-h] [-u] [--full-update] [-f {txt,json}] [-o OUTPUT] [-q QUERY]
+usage: search_vulns.py [-h] [-u] [--full-update] [-k API_KEY] [-f {json,txt}] [-o OUTPUT]
+                       [-q QUERY] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
+                       [--ignore-general-cpe-vulns]
 
 Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -u, --update          Download the latest version of the the local vulnerability and software database
-  --full-update         Build complete update of the local vulnerability and software database
-  -f {txt,json}, --format {txt,json}
+  -u, --update          Download the latest version of the the local vulnerability and software
+                        database
+  --full-update         Fully (re)build the local vulnerability and software database
+  -k API_KEY, --api-key API_KEY
+                        NVD API key to use for updating the local vulnerability and software
+                        database
+  -f {json,txt}, --format {json,txt}
                         Output format, either 'txt' or 'json' (default: 'txt')
   -o OUTPUT, --output OUTPUT
                         File to write found vulnerabilities to
   -q QUERY, --query QUERY
                         A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string
+  --cpe-search-threshold CPE_SEARCH_THRESHOLD
+                        Similarity threshold used for retrieving a CPE via the cpe_search tool
+  --ignore-general-cpe-vulns
+                        Ignore vulnerabilities that only affect a general CPE (i.e. without
+                        version)
 ```
 Note that when querying software with ``-q`` you have to put the software information in quotes if it contains any spaces. Also, you can use ``-q`` multiple times to make multiple queries at once. For one, a query can be a software name / title like 'Apache 2.4.39' or 'Wordpress 5.7.2'. Furthermore, a query can also be a [CPE 2.3](https://csrc.nist.gov/projects/security-content-automation-protocol/specifications/cpe) string.
 
@@ -64,7 +83,7 @@ Here are some examples:
 Again, note that when *search_vulns* is initially installed, it takes quite some time to setup the local vulnerability and software database.
 
 ## Running a Web Server
-It is also possible to run a web server that provides this tool's functionality to clients over the network. ``web_server.py`` contains a working example using Flask. Depending on your environment, you may want to modify the server ip and port at the end of this file. To run a simple Flask web server, just run:
+It is also possible to run a web server that provides this tool's functionality to clients over the network. ``web_server.py`` contains a working example using Flask. Depending on your environment, you may want to modify the server IP and port at the end of this file. To run a simple Flask web server, just run:
 ```bash
 ./web_server.py
 ```

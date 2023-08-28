@@ -69,40 +69,57 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
     json j;
     input_file >> j;
 
-    json impact_entry, references_entry;
-    std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity, cvss_version, descr_line, ref_url;
+    json metrics_entry, metrics_type_entry, references_entry;
+    std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity;
+    std::string cvss_version, ref_url, op, vulnerable_with_cpes_node_str, vulnerable_with_cpes_str;
     std::unordered_map<std::string, int> nvd_exploits_refs;
     std::unordered_map<std::string, std::unordered_set<int>> cveid_exploits_map;
+    std::size_t datetime_dot_pos;
     bool vulnerable;
     double base_score;
+    int cur_node_id, cur_with_str_idx;
 
     // iterate the array
-    for (auto &cve_entry : j["CVE_Items"]) {
-        cve_id = cve_entry["cve"]["CVE_data_meta"]["ID"];
+    for (auto &cve_entry : j["vulnerabilities"]) {
+        cve_id = cve_entry["cve"]["id"];
         edb_ids = "";
 
         // first retrieve data about CVE and put it into DB
-        // assume English as description language
-        description = "";
-        for (auto &desc_entry : cve_entry["cve"]["description"]["description_data"]) {
-            descr_line = desc_entry["value"];
-            description += descr_line + "\n";
+        description = "N/A";
+        for (auto &desc_entry : cve_entry["cve"]["descriptions"]) {
+            if (desc_entry["lang"] == "en") {
+                description = desc_entry["value"];
+                break;
+            }
         }
-        if (description != "")
-            description.pop_back();
 
-        impact_entry = cve_entry["impact"];
-        if (impact_entry.find("baseMetricV3") != impact_entry.end()) {
-            base_score = (impact_entry["baseMetricV3"]["cvssV3"]["baseScore"]);
-            vector_string = impact_entry["baseMetricV3"]["cvssV3"]["vectorString"];
-            severity = impact_entry["baseMetricV3"]["cvssV3"]["baseSeverity"];
-            cvss_version = impact_entry["baseMetricV3"]["cvssV3"]["version"];
+        metrics_entry = cve_entry["cve"]["metrics"];
+        if (metrics_entry.find("cvssMetricV31") != metrics_entry.end()) {
+            metrics_type_entry = metrics_entry["cvssMetricV31"];
         }
-        else if (impact_entry.find("baseMetricV2") != impact_entry.end()) {
-            base_score = impact_entry["baseMetricV2"]["cvssV2"]["baseScore"];
-            vector_string = impact_entry["baseMetricV2"]["cvssV2"]["vectorString"];
-            cvss_version = impact_entry["baseMetricV2"]["cvssV2"]["version"];
-            severity = impact_entry["baseMetricV2"]["severity"];
+        else if (metrics_entry.find("cvssMetricV30") != metrics_entry.end()) {
+            metrics_type_entry = metrics_entry["cvssMetricV30"];
+        }
+        else if (metrics_entry.find("cvssMetricV2") != metrics_entry.end()) {
+            metrics_type_entry = metrics_entry["cvssMetricV2"];
+        }
+
+        if (metrics_type_entry != NULL){
+            for (auto &metric : metrics_type_entry){
+                // assume there's always a Primary entry
+                if (metric["type"] == "Primary") {
+                    base_score = metric["cvssData"]["baseScore"];
+                    vector_string = metric["cvssData"]["vectorString"];
+                    cvss_version = metric["cvssData"]["version"];
+
+                    if (cvss_version == "2.0")
+                        severity = metric["baseSeverity"];
+                    else
+                        severity = metric["cvssData"]["baseSeverity"];
+
+                    break;
+                }
+            }
         }
         else {
             base_score = -1;
@@ -110,32 +127,34 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
             cvss_version = "";
             severity = "";
         }
-        published = cve_entry["publishedDate"];
+
+        published = cve_entry["cve"]["published"];
         std::replace(published.begin(), published.end(), 'T', ' ');
-        std::replace(published.begin(), published.end(), 'Z', ':');
-        published += "00";
-        last_modified = cve_entry["lastModifiedDate"];
+        datetime_dot_pos = published.rfind(".");
+        if (datetime_dot_pos != std::string::npos)
+            published = published.substr(0, datetime_dot_pos);
+
+        last_modified = cve_entry["cve"]["lastModified"];
         std::replace(last_modified.begin(), last_modified.end(), 'T', ' ');
-        std::replace(last_modified.begin(), last_modified.end(), 'Z', ':');
-        last_modified += "00";
+        datetime_dot_pos = last_modified.rfind(".");
+        if (datetime_dot_pos != std::string::npos)
+            last_modified = last_modified.substr(0, datetime_dot_pos);
 
         references_entry = cve_entry["cve"]["references"];
-        if (references_entry.find("reference_data") != references_entry.end()) {
-            for (auto &ref_entry : references_entry["reference_data"]) {
-                ref_url = ref_entry["url"];
-                if (ref_entry.find("tags") != ref_entry.end()) {
-                    for (auto &tag : ref_entry["tags"]) {
-                        if (tag == "Exploit" || tag == "exploit") {
-                            if (nvd_exploits_refs.find(ref_url) == nvd_exploits_refs.end()) {
-                                nvd_exploits_refs[ref_url] = nvd_exploit_ref_id;
-                                nvd_exploit_ref_id++;
-                            }
-                            if (cveid_exploits_map.find(cve_id) == cveid_exploits_map.end()) {
-                                std::unordered_set<int> exploit_refs;
-                                cveid_exploits_map[cve_id] = exploit_refs;
-                            }
-                            cveid_exploits_map[cve_id].emplace(nvd_exploits_refs[ref_url]);
+        for (auto &ref_entry : references_entry) {
+            ref_url = ref_entry["url"];
+            if (ref_entry.find("tags") != ref_entry.end()) {
+                for (auto &tag : ref_entry["tags"]) {
+                    if (tag == "Exploit" || tag == "exploit") {
+                        if (nvd_exploits_refs.find(ref_url) == nvd_exploits_refs.end()) {
+                            nvd_exploits_refs[ref_url] = nvd_exploit_ref_id;
+                            nvd_exploit_ref_id++;
                         }
+                        if (cveid_exploits_map.find(cve_id) == cveid_exploits_map.end()) {
+                            std::unordered_set<int> exploit_refs;
+                            cveid_exploits_map[cve_id] = exploit_refs;
+                        }
+                        cveid_exploits_map[cve_id].emplace(nvd_exploits_refs[ref_url]);
                     }
                 }
             }
@@ -159,91 +178,31 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
         // Next, retrieve CPE data and put into DB  
         cve_cpe_query.bind(1, cve_id);
         VagueCpeInfo vague_cpe_info;
+        for (auto &cve_config_entry: cve_entry["cve"]["configurations"]){
+            // assumption 1: the encapsulation depth of logic operators is no more than 2
+            // assumption 2: no entry contains "negate":true
+            // assumption 3: operator on second level is always "OR"
 
-        for (auto &config_nodes_entry : cve_entry["configurations"]["nodes"]) {
-            // assumption: either cpe_match.empty() or children.empty()
+            if (cve_config_entry.find("operator") != cve_config_entry.end())
+                op = cve_config_entry["operator"];
+            else
+                op = "OR";  // default if no operator explicitly specified
 
-            // if there are specific CPEs listed
-            if ((config_nodes_entry.find("cpe_match") != config_nodes_entry.end()) &&
-                    !config_nodes_entry["cpe_match"].empty()) {
+            std::vector<std::vector<VagueCpeInfo>> all_vulnerable_cpes;
+            std::vector<std::string> vulnerable_with_cpes_node_strs;
+            for (auto &config_nodes_entry : cve_config_entry["nodes"]) {
+                std::vector<VagueCpeInfo> node_vulnerable_cpes;
+                vulnerable_with_cpes_node_str = "";
 
-                if (config_nodes_entry.find("children") != config_nodes_entry.end() && !config_nodes_entry["children"].empty())
-                    std::cerr << "Cannot parse CVE " << cve_id << " properly b/c cpe_match and children are not empty." << std::endl;
+                if (config_nodes_entry.find("cpeMatch") != config_nodes_entry.end()) {
+                    for (auto &cpe_entry : config_nodes_entry["cpeMatch"]) {
+                        vague_cpe_info = {cpe_entry["criteria"], "", "", "", ""};
 
-                for (auto &cpe_entry : config_nodes_entry["cpe_match"]) {
-                    vulnerable = cpe_entry["vulnerable"];
-                    if (!vulnerable)
-                        continue;
+                        if (op == "AND")
+                            vulnerable_with_cpes_node_str += vague_cpe_info.vague_cpe + ",";
 
-                    vague_cpe_info = {cpe_entry["cpe23Uri"], "", "", "", ""};
-
-                    if (cpe_entry.find("versionStartIncluding") != cpe_entry.end()) {
-                        vague_cpe_info.version_start = cpe_entry["versionStartIncluding"];
-                        vague_cpe_info.version_start_type = "Including";
-                    }
-                    else if (cpe_entry.find("versionStartExcluding") != cpe_entry.end()) {
-                        vague_cpe_info.version_start = cpe_entry["versionStartExcluding"];
-                        vague_cpe_info.version_start_type = "Excluding";
-                    }
-
-                    if (cpe_entry.find("versionEndIncluding") != cpe_entry.end()) {
-                        vague_cpe_info.version_end = cpe_entry["versionEndIncluding"];
-                        vague_cpe_info.version_end_type = "Including";
-                    }
-                    else if (cpe_entry.find("versionEndExcluding") != cpe_entry.end()) {
-                        vague_cpe_info.version_end = cpe_entry["versionEndExcluding"];
-                        vague_cpe_info.version_end_type = "Excluding";
-                    }
-
-                    cve_cpe_query.bind(2, vague_cpe_info.vague_cpe);
-                    cve_cpe_query.bind(3, vague_cpe_info.version_start);
-                    if (vague_cpe_info.version_start_type == "Including")
-                        cve_cpe_query.bind(4, true);
-                    else
-                        cve_cpe_query.bind(4, false);
-                    cve_cpe_query.bind(5, vague_cpe_info.version_end);
-                    if (vague_cpe_info.version_end_type == "Including")
-                        cve_cpe_query.bind(6, true);
-                    else
-                        cve_cpe_query.bind(6, false);
-                    cve_cpe_query.bind(7, "");
-
-                    try {
-                        cve_cpe_query.exec();
-                    }
-                    catch (SQLite::Exception& e) {
-                        handle_exception(e);
-                    }
-
-                    try {
-                        cve_cpe_query.reset();
-                    }
-                    catch (SQLite::Exception& e) {
-                        handle_exception(e);
-                    }
-                }
-            }
-            // otherwise if CPE data with version start and end is available
-            else if (config_nodes_entry.find("children") != config_nodes_entry.end() &&
-                    !config_nodes_entry["children"].empty()) {
-
-                if (config_nodes_entry.find("operator") == config_nodes_entry.end()) {
-                    std::cerr << "Cannot parse CVE " << cve_id << " properly. No operator." << std::endl;
-                    continue;
-                }
-                else if (config_nodes_entry["operator"] != "AND" && config_nodes_entry["operator"] != "OR") {
-                    std::cerr << "Cannot parse CVE " << cve_id << " properly. Unknown operator." << std::endl;
-                    continue;
-                }
-
-                std::vector<std::unordered_set<VagueCpeInfo>> all_vulnerable_vague_cpes;
-                std::vector<std::unordered_set<VagueCpeInfo>> all_children_cpes;
-
-                for (auto &children_entry : config_nodes_entry["children"]) {
-                    std::unordered_set<VagueCpeInfo> vulnerable_vague_cpes, children_cpes;
-
-                    for (auto &cpe_entry : children_entry["cpe_match"]) {
-                        VagueCpeInfo vague_cpe_info = {cpe_entry["cpe23Uri"], "", "", "", ""};
+                        if (!cpe_entry["vulnerable"])
+                            continue;
 
                         if (cpe_entry.find("versionStartIncluding") != cpe_entry.end()) {
                             vague_cpe_info.version_start = cpe_entry["versionStartIncluding"];
@@ -263,65 +222,58 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
                             vague_cpe_info.version_end_type = "Excluding";
                         }
 
-                        if (cpe_entry["vulnerable"])
-                            vulnerable_vague_cpes.emplace(vague_cpe_info);
-
-                        children_cpes.emplace(vague_cpe_info);
+                        node_vulnerable_cpes.push_back(vague_cpe_info);
                     }
-                    all_vulnerable_vague_cpes.push_back(vulnerable_vague_cpes);
-                    all_children_cpes.push_back(children_cpes);
                 }
 
-                std::string vulnerable_with_str = "";
-                int cur_vuln_children_group_idx = 0, cur_with_children_group_idx = 0;
-                for (auto &vuln_child_group : all_vulnerable_vague_cpes) {
-                    std::string vulnerable_with_str = "";
-                    cur_with_children_group_idx = 0;
+                all_vulnerable_cpes.push_back(node_vulnerable_cpes);
 
-                    for (auto &with_child_group : all_children_cpes) {
-                        if (cur_vuln_children_group_idx == cur_with_children_group_idx) {
-                            cur_with_children_group_idx++;
-                            continue;
-                        }
+                if (vulnerable_with_cpes_node_str != "")
+                    vulnerable_with_cpes_node_str.pop_back();
+                vulnerable_with_cpes_node_strs.push_back(vulnerable_with_cpes_node_str);
+            }
 
-                        for (auto &vulnerable_with_cpe : with_child_group) {
-                            vulnerable_with_str += vulnerable_with_cpe.vague_cpe + ",";
-                        }
-                        cur_with_children_group_idx++;
+            cur_node_id = -1;
+            for (auto &node_vulnerable_cpes : all_vulnerable_cpes) {
+                cur_node_id++;
+                vulnerable_with_cpes_str = "";
+                cur_with_str_idx = -1;
+                for (auto &with_str : vulnerable_with_cpes_node_strs) {
+                    cur_with_str_idx++;
+
+                    if (cur_with_str_idx != cur_node_id)
+                        vulnerable_with_cpes_str += with_str + ',';
+                }
+
+                if (vulnerable_with_cpes_str != "")
+                    vulnerable_with_cpes_str.pop_back();
+
+                for (auto &vague_cpe_info : node_vulnerable_cpes) {
+                    cve_cpe_query.bind(2, vague_cpe_info.vague_cpe);
+                    cve_cpe_query.bind(3, vague_cpe_info.version_start);
+                    if (vague_cpe_info.version_start_type == "Including")
+                        cve_cpe_query.bind(4, true);
+                    else
+                        cve_cpe_query.bind(4, false);
+                    cve_cpe_query.bind(5, vague_cpe_info.version_end);
+                    if (vague_cpe_info.version_end_type == "Including")
+                        cve_cpe_query.bind(6, true);
+                    else
+                        cve_cpe_query.bind(6, false);
+                    cve_cpe_query.bind(7, vulnerable_with_cpes_str);
+
+                    try {
+                        cve_cpe_query.exec();
+                    }
+                    catch (SQLite::Exception& e) {
+                        handle_exception(e);
                     }
 
-                    if (vulnerable_with_str != "")
-                        vulnerable_with_str.pop_back();
-
-                    for (auto &vulnerable_cpe : vuln_child_group) {
-                        cve_cpe_query.bind(2, vulnerable_cpe.vague_cpe);
-                        cve_cpe_query.bind(3, vulnerable_cpe.version_start);
-                        if (vulnerable_cpe.version_start_type == "Including")
-                            cve_cpe_query.bind(4, true);
-                        else
-                            cve_cpe_query.bind(4, false);
-                        cve_cpe_query.bind(5, vulnerable_cpe.version_end);
-                        if (vulnerable_cpe.version_end_type == "Including")
-                            cve_cpe_query.bind(6, true);
-                        else
-                            cve_cpe_query.bind(6, false);
-                        cve_cpe_query.bind(7, vulnerable_with_str);
-
-                        try {
-                            cve_cpe_query.exec();
-                        }
-                        catch (SQLite::Exception& e) {
-                            handle_exception(e);
-                        }
-
-                        try {
-                            cve_cpe_query.reset();
-                        }
-                        catch (SQLite::Exception& e) {
-                        }
+                    try {
+                        cve_cpe_query.reset();
                     }
-
-                    cur_vuln_children_group_idx++;
+                    catch (SQLite::Exception& e) {
+                    }
                 }
             }
         }

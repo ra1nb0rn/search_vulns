@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import asyncio
 import json
 import os
 import re
@@ -11,24 +12,92 @@ import subprocess
 import sys
 import threading
 import time
-import zipfile
 
+import aiohttp
+from aiolimiter import AsyncLimiter
 from cpe_search.cpe_search import update as update_cpe
+
+try:  # use ujson if available
+    import ujson as json
+except ModuleNotFoundError:
+    import json
 
 NVD_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "nvd_data_feeds")
 VULNDB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb.db3")
 VULNDB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb.db3.bak")
 VULNDB_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/vulndb.db3"
 CVE_EDB_MAP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cveid_to_edbid.json")
+
 CPE_DICT_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary_v2.3.csv")
+CPE_DICT_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary_v2.3.csv.bak")
 CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary_v2.3.csv"
+CPE_DEPRECATIONS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json")
+CPE_DEPRECATIONS_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json.bak")
+CPE_DEPRECATIONS_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary_v2.3.csv"
+
 POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
 POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PoC-in-GitHub")
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
+CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 QUIET = False
+DEBUG = False
+API_RESULTS_PER_PAGE = 2000
 
-def update_vuln_db():
+
+async def api_request(headers, params, requestno):
+    '''Perform request to API for one task'''
+
+    global NVD_UPDATE_SUCCESS
+
+    if NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS:
+        return None
+
+    retry_limit = 3
+    retry_interval = 6
+    for _ in range(retry_limit + 1):
+        async with aiohttp.ClientSession() as session:
+            try:
+                cve_api_data_response = await session.get(url=CVE_API_URL, headers=headers, params=params)
+                if cve_api_data_response.status == 200 and cve_api_data_response.text is not None:
+                    if DEBUG:
+                        print(f"[+] Successfully received data from request {requestno}.")
+                    return await cve_api_data_response.json()
+                else:
+                    if DEBUG:
+                        print(f"[-] Received status code {cve_api_data_response.status} on request {requestno} Retrying...")
+                await asyncio.sleep(retry_interval)
+            except Exception as e:
+                if NVD_UPDATE_SUCCESS is None:
+                    communicate_warning('Got the following exception when downloading vuln data via API: %s' % str(e))
+                NVD_UPDATE_SUCCESS = False
+                return None
+
+
+def write_data_to_json_file(api_data, requestno):
+    '''Perform creation of cve json files'''
+
+    if DEBUG:
+        print(f"[+] Writing data from request number {requestno} to file.")
+    with open(os.path.join(NVD_DATAFEED_DIR, f"nvdcve-2.0-{requestno}.json"), 'a') as outfile:
+        json.dump(api_data, outfile)
+
+
+async def worker(headers, params, requestno, rate_limit):
+    '''Handle requests within its offset space asychronously, then performs processing steps to produce final database.'''
+
+    global NVD_UPDATE_SUCCESS
+
+    async with rate_limit:
+        api_data_response = await api_request(headers=headers, params=params, requestno=requestno)
+
+    if NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS:
+        return None
+
+    write_data_to_json_file(api_data=api_data_response, requestno=requestno)
+
+
+async def update_vuln_db(nvd_api_key=None):
     """Update the vulnerability database"""
 
     global NVD_UPDATE_SUCCESS
@@ -36,11 +105,19 @@ def update_vuln_db():
     if os.path.isfile(VULNDB_FILE):
         shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
 
+    if nvd_api_key:
+        if not QUIET:
+            print('[+] API Key found - Requests will be sent at a rate of 25 per 30s.')
+        rate_limit = AsyncLimiter(25.0, 30.0)
+    else:
+        print('[-] No API Key found - Requests will be sent at a rate of 5 per 30s. To lower build time, consider getting an NVD API Key.')
+        rate_limit = AsyncLimiter(5.0, 30.0)
+
     # start CVE ID <--> EDB ID mapping creation in background thread
     cve_edb_map_thread = threading.Thread(target=create_cveid_edbid_mapping)
     cve_edb_map_thread.start()
 
-    # download NVD datafeeds from https://nvd.nist.gov/vuln/data-feeds
+    # download vulnerability data via NVD's API
     if os.path.exists(NVD_DATAFEED_DIR):
         shutil.rmtree(NVD_DATAFEED_DIR)
     os.makedirs(NVD_DATAFEED_DIR)
@@ -48,68 +125,52 @@ def update_vuln_db():
     if not QUIET:
         print('[+] Downloading NVD data feeds and EDB information')
 
-    # first download the data feed overview to retrieve URLs to all data feeds
+    offset = 0
+
+    # initial request to set paramters
+    params = {'resultsPerPage': API_RESULTS_PER_PAGE, 'startIndex': offset}
+    if nvd_api_key:
+        headers = {'apiKey': nvd_api_key}
+    else:
+        headers = {}
+
     try:
-        nvd_response = requests.get("https://nvd.nist.gov/vuln/data-feeds", timeout=20)
+        cve_api_initial_response = requests.get(url=CVE_API_URL, headers=headers, params=params)
     except:
-        NVD_UPDATE_SUCCESS = False
-        communicate_warning('An error occured when trying to download webpage: https://nvd.nist.gov/vuln/data-feeds')
-        rollback()
-        cve_edb_map_thread.join()
-        return 'An error occured when trying to download webpage: https://nvd.nist.gov/vuln/data-feeds'
-    if nvd_response.status_code != requests.codes.ok:
-        NVD_UPDATE_SUCCESS = False
-        rollback()
-        cve_edb_map_thread.join()
-        return 'An error occured when trying to download webpage: https://nvd.nist.gov/vuln/data-feeds'
-
-    # match the data feed URLs
-    nvd_nist_datafeed_html = nvd_response.text
-    jfeed_expr = re.compile(r"/feeds/json/cve/1\.1/nvdcve-1\.1-\d\d\d\d.json\.zip")
-    nvd_feed_urls = re.findall(jfeed_expr, nvd_nist_datafeed_html)
-
-    if not nvd_feed_urls:
-        NVD_UPDATE_SUCCESS = False
-        communicate_warning('No data feed links available on https://nvd.nist.gov/vuln/data-feeds')
-        rollback()
-        cve_edb_map_thread.join()
-        return 'No data feed links available on https://nvd.nist.gov/vuln/data-feeds'
-
-    # download all data feeds
-    with open(os.devnull, "w") as outfile:
-        zipfiles = []
-        for nvd_feed_url in nvd_feed_urls:
-            nvd_feed_url = "https://nvd.nist.gov" + nvd_feed_url
-            outname = os.path.join(NVD_DATAFEED_DIR, nvd_feed_url.split("/")[-1])
-            return_code = subprocess.call("wget %s -O %s" % (shlex.quote(nvd_feed_url), shlex.quote(outname)),
-                                          stdout=outfile, stderr=subprocess.STDOUT, shell=True)
-            if return_code != 0:
-                NVD_UPDATE_SUCCESS = False
-                communicate_warning('Retrieving NVD data feed %s failed' %  nvd_feed_url)
-                rollback()
-                cve_edb_map_thread.join()
-                return 'Retrieving NVD data feed %s failed' %  nvd_feed_url
-            zipfiles.append(outname)
-
-    if os.path.isfile("wget-log"):
-        os.remove("wget-log")
-
-    # unzip data feeds
-    if not QUIET:
-        print("[+] Unzipping data feeds")
-
-    for file in zipfiles:
-        try:
-            zip_ref = zipfile.ZipFile(file, "r")
-            zip_ref.extractall(NVD_DATAFEED_DIR)
-            zip_ref.close()
-            os.remove(file)
-        except:
             NVD_UPDATE_SUCCESS = False
-            communicate_warning('Unzipping data feed %s failed' % file)
+            communicate_warning('An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0')
             rollback()
             cve_edb_map_thread.join()
-            return 'Unzipping data feed %s failed' % file
+            return 'An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0'
+    if cve_api_initial_response.status_code != requests.codes.ok:
+        NVD_UPDATE_SUCCESS = False
+        rollback()
+        cve_edb_map_thread.join()
+        return 'An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0; received a non-ok response code.'
+
+    numTotalResults = cve_api_initial_response.json().get('totalResults')
+
+    # make necessary amount of requests
+    requestno = 0
+    tasks = []
+    while(offset <= numTotalResults):
+        requestno += 1
+        params = {'resultsPerPage': API_RESULTS_PER_PAGE, 'startIndex': offset}
+        task = asyncio.create_task(worker(headers=headers, params=params, requestno = requestno, rate_limit=rate_limit))
+        tasks.append(task)
+        offset += API_RESULTS_PER_PAGE
+
+    while True:
+        _, pending = await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED, timeout=2)
+        if len(pending) < 1 or (NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS):
+            break
+
+    if (not len(os.listdir(NVD_DATAFEED_DIR))) or (NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS):
+        NVD_UPDATE_SUCCESS = False
+        communicate_warning('Could not download vuln data from https://services.nvd.nist.gov/rest/json/cves/2.0')
+        rollback()
+        cve_edb_map_thread.join()
+        return 'Could not download vuln data from https://services.nvd.nist.gov/rest/json/cves/2.0'
 
     # build local NVD copy with downloaded data feeds
     print('[+] Building vulnerability database')
@@ -122,7 +183,7 @@ def update_vuln_db():
         communicate_warning('Building NVD database failed')
         rollback()
         cve_edb_map_thread.join()
-        return 'Building NVD database failed'
+        return f"Building NVD database failed with status code {return_code}."
 
     shutil.rmtree(NVD_DATAFEED_DIR)
     NVD_UPDATE_SUCCESS = True
@@ -140,6 +201,27 @@ def update_vuln_db():
     # remove backup file on success
     if os.path.isfile(VULNDB_BACKUP_FILE):
         os.remove(VULNDB_BACKUP_FILE)
+
+
+async def handle_cpes_update(nvd_api_key=None):
+    if os.path.isfile(CPE_DICT_FILE):
+        shutil.move(CPE_DICT_FILE, CPE_DICT_BACKUP_FILE)
+    if os.path.isfile(CPE_DEPRECATIONS_FILE):
+        shutil.move(CPE_DEPRECATIONS_FILE, CPE_DEPRECATIONS_BACKUP_FILE)
+
+    success = await update_cpe(nvd_api_key)
+    if not success:
+        if os.path.isfile(CPE_DICT_BACKUP_FILE):
+            shutil.move(CPE_DICT_BACKUP_FILE, CPE_DICT_FILE)
+        if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
+            shutil.move(CPE_DEPRECATIONS_BACKUP_FILE, CPE_DEPRECATIONS_FILE)
+    else:
+        if os.path.isfile(CPE_DICT_BACKUP_FILE):
+            os.remove(CPE_DICT_BACKUP_FILE)
+        if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
+            os.remove(CPE_DEPRECATIONS_BACKUP_FILE)
+
+    return not success
 
 
 def rollback():
@@ -329,19 +411,29 @@ def create_poc_in_github_table():
         shutil.rmtree(POC_IN_GITHUB_DIR)
 
 
-def run(full=False):
+def run(full=False, nvd_api_key=None):
     if full:
+        if not nvd_api_key:
+            nvd_api_key = os.getenv('NVD_API_KEY')
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         print("[+] Updating stored software information")
-        update_cpe("2.3")
+        error = loop.run_until_complete(handle_cpes_update(nvd_api_key))
+        if error:
+            sys.exit(1)
         print("[+] Updating vulnerability database")
-        error = update_vuln_db()
+        error = loop.run_until_complete(update_vuln_db(nvd_api_key))
         if error:
             print(error)
             sys.exit(1)
     else:
         print("[+] Downloading latest versions of resources ...")
+
         if os.path.isfile(CPE_DICT_FILE):
-            shutil.move(CPE_DICT_FILE, CPE_DICT_FILE+".bak")
+            shutil.move(CPE_DICT_FILE, CPE_DICT_BACKUP_FILE)
+        # if os.path.isfile(CPE_DEPRECATIONS_FILE):
+        #     shutil.move(CPE_DEPRECATIONS_FILE, CPE_DEPRECATIONS_BACKUP_FILE)
         if os.path.isfile(VULNDB_FILE):
             shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
 
@@ -356,20 +448,31 @@ def run(full=False):
                                           shlex.quote(CPE_DICT_FILE)), shell=True)
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
+
+            # return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(CPE_DEPRECATIONS_ARTIFACT_URL),
+            #                               shlex.quote(CPE_DEPRECATIONS_FILE)), shell=True)
+            # if return_code != 0:
+            #     raise(Exception("Could not download latest resource files"))
+
             return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(VULNDB_ARTIFACT_URL),
                                           shlex.quote(VULNDB_FILE)), shell=True)
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
 
-            if os.path.isfile(CPE_DICT_FILE+".bak"):
-                os.remove(CPE_DICT_FILE+".bak")
+            if os.path.isfile(CPE_DICT_BACKUP_FILE):
+                os.remove(CPE_DICT_BACKUP_FILE)
+            # if os.path.isfile(CPE_DEPRECATIONS_FILE):
+            #     os.remove(CPE_DEPRECATIONS_BACKUP_FILE)
             if os.path.isfile(VULNDB_BACKUP_FILE):
                 os.remove(VULNDB_BACKUP_FILE)
         except Exception as e:
             print("[!] Encountered an error: %s" % str(e))
-            if os.path.isfile(CPE_DICT_FILE+".bak"):
-                shutil.move(CPE_DICT_FILE+".bak", CPE_DICT_FILE)
+            if os.path.isfile(CPE_DICT_BACKUP_FILE):
+                shutil.move(CPE_DICT_BACKUP_FILE, CPE_DICT_FILE)
                 print("[+] Restored software infos from backup")
+            # if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
+            #     shutil.move(CPE_DEPRECATIONS_BACKUP_FILE, CPE_DEPRECATIONS_FILE)
+            #     print("[+] Restored software deprecation infos from backup")
             if os.path.isfile(VULNDB_BACKUP_FILE):
                 shutil.move(VULNDB_BACKUP_FILE, VULNDB_FILE)
                 print("[+] Restored vulnerability infos from backup")
