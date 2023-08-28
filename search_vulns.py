@@ -17,7 +17,6 @@ from cpe_search.cpe_search import (
     create_base_cpe_if_versionless_query,
     VERSION_MATCH_CPE_CREATION_RE
 )
-from updater import run as run_updater
 
 DATABASE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'vulndb.db3')
 MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
@@ -450,8 +449,10 @@ def main():
     args = parse_args()
 
     if args.update == True:
+        from updater import run as run_updater
         run_updater(False, args.api_key)
     elif args.full_update == True:
+        from updater import run as run_updater
         run_updater(True, args.api_key)
 
     if not args.queries:
