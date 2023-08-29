@@ -4,9 +4,10 @@ import argparse
 from collections import OrderedDict
 import json
 import os
+import re
 import sqlite3
 import sys
-import re
+import threading
 
 from cpe_version import CPEVersion
 from cpe_search.cpe_search import (
@@ -21,6 +22,9 @@ from cpe_search.cpe_search import (
 DATABASE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'vulndb.db3')
 MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
 CPE_SEARCH_THRESHOLD = 0.72
+CPE_DEPRECATIONS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json")
+EQUIVALENT_CPES = {}
+LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
 
 # define ANSI color escape sequences
 # Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
@@ -260,19 +264,64 @@ def print_vulns(vulns, to_string=False):
         return out_string
 
 
+def load_equivalent_cpes():
+    """Load dictionary containing CPE equivalences"""
+
+    LOAD_EQUIVALENT_CPES_MUTEX.acquire()
+    if not EQUIVALENT_CPES:
+        # first add official deprecation information from the NVD
+        with open(CPE_DEPRECATIONS_FILE, "r") as f:
+            cpe_deprecations_raw = json.loads(f.read())
+            for cpe, deprecations in cpe_deprecations_raw.items():
+                cpe_short = ':'.join(cpe.split(':')[:5]) + ':'
+                deprecations_short = []
+                for deprecatedby_cpe in deprecations:
+                    deprecatedby_cpe_short = ':'.join(deprecatedby_cpe.split(':')[:5]) + ':'
+                    if deprecatedby_cpe_short not in deprecations_short:
+                        deprecations_short.append(deprecatedby_cpe_short)
+
+                if cpe_short not in EQUIVALENT_CPES:
+                    EQUIVALENT_CPES[cpe_short] = deprecations_short
+                else:
+                    EQUIVALENT_CPES[cpe_short] = list(set(EQUIVALENT_CPES[cpe_short] + deprecations_short))
+
+                for deprecatedby_cpe_short in deprecations_short:
+                    if deprecatedby_cpe_short not in EQUIVALENT_CPES:
+                        EQUIVALENT_CPES[deprecatedby_cpe_short] = [cpe_short]
+                    elif cpe_short not in EQUIVALENT_CPES[deprecatedby_cpe_short]:
+                        EQUIVALENT_CPES[deprecatedby_cpe_short].append(cpe_short)
+
+        # then manually add further information
+        manual_equivalent_cpes = {
+            'cpe:2.3:a:redis:redis:': ['cpe:2.3:a:redislabs:redis:'],
+            'cpe:2.3:a:jquery:jquery_ui:': ['cpe:2.3:a:jqueryui:jquery_ui:'],
+        }
+
+        for man_equiv_cpe, other_equiv_cpes in manual_equivalent_cpes.items():
+            if man_equiv_cpe not in EQUIVALENT_CPES:
+                EQUIVALENT_CPES[man_equiv_cpe] = other_equiv_cpes
+            else:
+                EQUIVALENT_CPES[man_equiv_cpe] = list(set(EQUIVALENT_CPES[man_equiv_cpe] + other_equiv_cpes))
+
+            for other_equiv_cpe in other_equiv_cpes:
+                if other_equiv_cpe not in EQUIVALENT_CPES:
+                    EQUIVALENT_CPES[other_equiv_cpe] = [man_equiv_cpe]
+                elif other_equiv_cpes not in EQUIVALENT_CPES[man_equiv_cpe]:
+                    EQUIVALENT_CPES[other_equiv_cpe].append(man_equiv_cpe)
+
+    LOAD_EQUIVALENT_CPES_MUTEX.release()
+
+
 def get_equivalent_cpes(cpe):
-    equivalent_cpes = {
-        'cpe:2.3:a:redis:redis:': ['cpe:2.3:a:redislabs:redis:'],
-        'cpe:2.3:a:redislabs:redis:': ['cpe:2.3:a:redis:redis:'],
-        'cpe:2.3:a:jquery:jquery_ui:': ['cpe:2.3:a:jqueryui:jquery_ui:'],
-        'cpe:2.3:a:jqueryui:jquery_ui:': ['cpe:2.3:a:jquery:jquery_ui:']
-    }
+
+    # make sure equivalent CPEs are loaded
+    load_equivalent_cpes()
 
     cpes = [cpe]
     cpe_split = cpe.split(':')
     cpe_prefix = ':'.join(cpe_split[:5]) + ':'
 
-    for equivalent_cpe in equivalent_cpes.get(cpe_prefix, []):
+    for equivalent_cpe in EQUIVALENT_CPES.get(cpe_prefix, []):
         equivalent_cpe_prefix = ':'.join(equivalent_cpe.split(':')[:5]) + ':'
         cpes.append(equivalent_cpe_prefix + ':'.join(cpe_split[5:]))
 
