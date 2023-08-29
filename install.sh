@@ -2,6 +2,7 @@
 
 QUIET=0
 FULL_RESOURCE_INSTALL=0
+SKIP_RESOURCE_INSTALL=0
 LINUX_PACKAGE_MANAGER="apt-get"
 
 install_linux_packages() {
@@ -117,19 +118,16 @@ SANE="\033[0m"
 
 # parse arguments if any
 if [ $# -gt 0 ]; then
-    if [ $1 == "-q" ]; then
-        QUIET=1
-    elif [ $1 == "--full" ]; then
-        FULL_RESOURCE_INSTALL=1
-    fi
-
-    if [ $# -gt 1 ]; then
-        if [ $2 == "-q" ]; then
+    for arg in "$@"
+    do
+        if [ $arg == "-q" ]; then
             QUIET=1
-        elif [ $2 == "--full" ]; then
+        elif [ $arg == "--full" ]; then
             FULL_RESOURCE_INSTALL=1
+        elif [ $arg == "--no-resources" ]; then
+            SKIP_RESOURCE_INSTALL=1
         fi
-    fi
+    done
 fi
 
 # run script
@@ -139,7 +137,12 @@ printf "${GREEN}[+] Setting up cpe_search tool\\n${SANE}"
 setup_cpe_search
 printf "${GREEN}[+] Setting up vulnerability database creation tool\\n${SANE}"
 setup_create_db
-printf "${GREEN}[+] Creating vulnerability and software database (this may take some time)\\n${SANE}"
-create_vuln_and_software_db
+if [ $SKIP_RESOURCE_INSTALL == 0 ]; then
+    printf "${GREEN}[+] Creating vulnerability and software database (this may take some time)\\n${SANE}"
+    create_vuln_and_software_db
+else
+    printf "${GREEN}[-] Skipping install of vulnerability and software database\\n${SANE}"
+fi
+
 
 sudo ln -sf "$(pwd -P)/search_vulns.py" /usr/local/bin/search_vulns
