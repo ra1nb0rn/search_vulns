@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
-import sqlite3
+import datetime
 import os
+import sqlite3
+import time
+
 from flask import Flask, request
 from flask import render_template
 
@@ -51,10 +54,27 @@ def search_vulns():
         RESULTS_CACHE[url_query_string] = vulns
         return vulns
 
+
+@app.route("/version")
+def version():
+    with open('version.txt') as f:
+        search_vulns_version = f.read()
+
+    db_modified_ts = os.path.getmtime(DATABASE_FILE)
+    db_modified_datetime = datetime.datetime.fromtimestamp(db_modified_ts)
+
+    result = {'version': search_vulns_version,
+              'last_db_update_ts': db_modified_ts,
+              'last_db_update': db_modified_datetime}
+
+    return result
+
+
 @app.route("/")
 @app.route("/index")
 def index():
     return render_template("index.html")
+
 
 if __name__ == '__main__':
     print('[+] Loading resources')
