@@ -245,7 +245,7 @@ def communicate_warning(msg: str):
 
 def get_all_edbids():
     """ Return a list of all existing EDB IDs """
-    files_exploits_resp = requests.get("https://raw.githubusercontent.com/offensive-security/exploitdb/master/files_exploits.csv", headers=REQUEST_HEADERS)
+    files_exploits_resp = requests.get("https://gitlab.com/exploit-database/exploitdb/-/raw/main/files_exploits.csv", headers=REQUEST_HEADERS)
     files_exploits = files_exploits_resp.text
     return re.findall(r"^(\d+),.*$", files_exploits, re.MULTILINE)
 
