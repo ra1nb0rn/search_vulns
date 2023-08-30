@@ -116,6 +116,18 @@ class TestSearches(unittest.TestCase):
             self.assertEqual(cve_attrs['cvss'], expected_attrs[cve]['cvss'])
             self.assertEqual(cve_attrs['cvss_vec'], expected_attrs[cve]['cvss_vec'])
 
+    def test_search_hitachi_replication_manager_86500(self):
+        self.maxDiff = None
+        result = search_vulns.search_vulns(query='cpe:2.3:a:hitachi:replication_manager:8.6.5-00:*:*:*:*:*:*:*', add_other_exploit_refs=True, is_good_cpe=True)
+        expected_attrs = {'CVE-2020-36695': {'published': '2023-07-18 03:15:52', 'cvss_ver': '3.1', 'cvss': '7.8', 'cvss_vec': 'CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H'}, 'CVE-2022-4146': {'published': '2023-07-18 03:15:55', 'cvss_ver': '3.1', 'cvss': '9.8', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'}, 'CVE-2019-17360': {'published': '2019-11-12 18:15:11', 'cvss_ver': '3.1', 'cvss': '7.5', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H'}}
+
+        for cve, cve_attrs in result.items():
+            self.assertIn(cve, expected_attrs)
+            self.assertEqual(cve_attrs['published'], expected_attrs[cve]['published'])
+            self.assertEqual(cve_attrs['cvss_ver'], expected_attrs[cve]['cvss_ver'])
+            self.assertEqual(cve_attrs['cvss'], expected_attrs[cve]['cvss'])
+            self.assertEqual(cve_attrs['cvss_vec'], expected_attrs[cve]['cvss_vec'])
+
 
 if __name__ == '__main__':
     unittest.main()
