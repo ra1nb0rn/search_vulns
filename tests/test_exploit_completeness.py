@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 import unittest
-import sys 
+import sys
 
 sys.path.insert(1, '../search_vulns/')
 import search_vulns
 
-class TestSearches(unittest.TestCase): 
+class TestSearches(unittest.TestCase):
 
     def test_search_wp_572(self):
         self.maxDiff = None

@@ -31,5 +31,8 @@ jobs:
       - name: Test CVE Completeness
         run: python3 ./tests/test_cve_completeness.py
 
+      - name: Test CVE Attribute Completeness
+        run: python3 ./tests/test_cve_attr_completeness.py
+
       - name: Test Exploit Completeness
         run: python3 ./tests/test_exploit_completeness.py
