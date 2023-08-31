@@ -359,6 +359,52 @@ function createVulnsCSV() {
 }
 
 
+function buildTextualReprFromCPE(cpe) {
+    var product_title, cpe_parts, product_type, cpe_condition = '';
+    cpe_parts = cpe.split(":");
+    cpe_condition = '';
+
+    if (cpe_parts[2] == 'a')
+        product_type = 'Software';
+    else if (cpe_parts[2] == 'o')
+        product_type = 'Operating System';
+    else if (cpe_parts[2] == 'h')
+        product_type = 'Hardware';
+
+    cpe_parts[3] = cpe_parts[3][0].toUpperCase() + cpe_parts[3].substring(1);
+    cpe_parts[4] = cpe_parts[4][0].toUpperCase() + cpe_parts[4].substring(1);
+    if (cpe_parts[4].startsWith(cpe_parts[3]))
+        cpe_parts[4] = cpe_parts[4].substring(cpe_parts[3].length).trim();
+    if (cpe_parts[4].startsWith('_'))
+        cpe_parts[4] = cpe_parts[4].substring(1);
+
+    product_title = cpe_parts[3].split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ') + ' ';
+    if (cpe_parts[4] && cpe_parts[4] != cpe_parts[3])
+        product_title += cpe_parts[4].split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ') + ' ';
+
+    if (cpe_parts[5] && cpe_parts[5] != '-' && cpe_parts[5] != '*')
+        product_title += cpe_parts[5] + ' ';
+
+    if (cpe_parts[6] && cpe_parts[6] != '-' && cpe_parts[6] != '*')
+        product_title += cpe_parts[6] + ' ';
+
+    cpe_parts.slice(7).forEach(cpe_part => {
+        if (cpe_part && cpe_part != '-' && cpe_part != '*') {
+            cpe_part = cpe_part[0].toUpperCase() + cpe_part.substring(1);
+            cpe_condition += cpe_part.split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ') + ' ';
+        }
+    });
+
+    product_title = product_title.trim();
+    cpe_condition = cpe_condition.trim();
+
+    if (cpe_condition)
+        return product_type + ': ' + product_title + ' ' + '[' + cpe_condition + ']';
+
+    return product_type + ': ' + product_title
+}
+
+
 function searchVulns() {
     var query = $('#query').val();
     var queryEnc = encodeURIComponent(query);
@@ -418,7 +464,7 @@ function searchVulns() {
                     related_queries_html += `<div class="row mx-2"><div class="col"><h5>Related queries:</h5></div></div>`;
                     related_queries_html += `<div class="row mx-2"><div class="col"><ul>`;
                     for (var i = alt_queries_start_idx; i < vulns[query]["pot_cpes"].length; i++) {
-                        related_queries_html += `<li><a href="/?query=${encodeURIComponent(htmlEntities(vulns[query]["pot_cpes"][i][0]))}&is-good-cpe=false">${htmlEntities(vulns[query]["pot_cpes"][i][0])}</a></li>`
+                        related_queries_html += `<li><a href="/?query=${encodeURIComponent(htmlEntities(vulns[query]["pot_cpes"][i][0]))}&is-good-cpe=false">${htmlEntities(vulns[query]["pot_cpes"][i][0])}</a> &nbsp; &nbsp;(${htmlEntities(buildTextualReprFromCPE(vulns[query]["pot_cpes"][i][0]))})</li>`
                     }
                     related_queries_html += `</ul></div></div>`;
                 }
