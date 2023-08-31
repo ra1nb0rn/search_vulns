@@ -306,7 +306,7 @@ def load_equivalent_cpes():
             for other_equiv_cpe in other_equiv_cpes:
                 if other_equiv_cpe not in EQUIVALENT_CPES:
                     EQUIVALENT_CPES[other_equiv_cpe] = [man_equiv_cpe]
-                elif other_equiv_cpes not in EQUIVALENT_CPES[man_equiv_cpe]:
+                elif man_equiv_cpe not in EQUIVALENT_CPES[other_equiv_cpe]:
                     EQUIVALENT_CPES[other_equiv_cpe].append(man_equiv_cpe)
 
     LOAD_EQUIVALENT_CPES_MUTEX.release()
