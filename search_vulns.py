@@ -323,7 +323,8 @@ def get_equivalent_cpes(cpe):
 
     for equivalent_cpe in EQUIVALENT_CPES.get(cpe_prefix, []):
         equivalent_cpe_prefix = ':'.join(equivalent_cpe.split(':')[:5]) + ':'
-        cpes.append(equivalent_cpe_prefix + ':'.join(cpe_split[5:]))
+        if equivalent_cpe != cpe_prefix:
+            cpes.append(equivalent_cpe_prefix + ':'.join(cpe_split[5:]))
 
     return cpes
 
