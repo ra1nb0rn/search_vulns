@@ -432,8 +432,8 @@ def run(full=False, nvd_api_key=None):
 
         if os.path.isfile(CPE_DICT_FILE):
             shutil.move(CPE_DICT_FILE, CPE_DICT_BACKUP_FILE)
-        # if os.path.isfile(CPE_DEPRECATIONS_FILE):
-        #     shutil.move(CPE_DEPRECATIONS_FILE, CPE_DEPRECATIONS_BACKUP_FILE)
+        if os.path.isfile(CPE_DEPRECATIONS_FILE):
+            shutil.move(CPE_DEPRECATIONS_FILE, CPE_DEPRECATIONS_BACKUP_FILE)
         if os.path.isfile(VULNDB_FILE):
             shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
 
@@ -449,10 +449,10 @@ def run(full=False, nvd_api_key=None):
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
 
-            # return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(CPE_DEPRECATIONS_ARTIFACT_URL),
-            #                               shlex.quote(CPE_DEPRECATIONS_FILE)), shell=True)
-            # if return_code != 0:
-            #     raise(Exception("Could not download latest resource files"))
+            return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(CPE_DEPRECATIONS_ARTIFACT_URL),
+                                          shlex.quote(CPE_DEPRECATIONS_FILE)), shell=True)
+            if return_code != 0:
+                raise(Exception("Could not download latest resource files"))
 
             return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(VULNDB_ARTIFACT_URL),
                                           shlex.quote(VULNDB_FILE)), shell=True)
@@ -461,8 +461,8 @@ def run(full=False, nvd_api_key=None):
 
             if os.path.isfile(CPE_DICT_BACKUP_FILE):
                 os.remove(CPE_DICT_BACKUP_FILE)
-            # if os.path.isfile(CPE_DEPRECATIONS_FILE):
-            #     os.remove(CPE_DEPRECATIONS_BACKUP_FILE)
+            if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
+                os.remove(CPE_DEPRECATIONS_BACKUP_FILE)
             if os.path.isfile(VULNDB_BACKUP_FILE):
                 os.remove(VULNDB_BACKUP_FILE)
         except Exception as e:
@@ -470,9 +470,9 @@ def run(full=False, nvd_api_key=None):
             if os.path.isfile(CPE_DICT_BACKUP_FILE):
                 shutil.move(CPE_DICT_BACKUP_FILE, CPE_DICT_FILE)
                 print("[+] Restored software infos from backup")
-            # if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
-            #     shutil.move(CPE_DEPRECATIONS_BACKUP_FILE, CPE_DEPRECATIONS_FILE)
-            #     print("[+] Restored software deprecation infos from backup")
+            if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
+                shutil.move(CPE_DEPRECATIONS_BACKUP_FILE, CPE_DEPRECATIONS_FILE)
+                print("[+] Restored software deprecation infos from backup")
             if os.path.isfile(VULNDB_BACKUP_FILE):
                 shutil.move(VULNDB_BACKUP_FILE, VULNDB_FILE)
                 print("[+] Restored vulnerability infos from backup")

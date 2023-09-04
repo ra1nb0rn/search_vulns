@@ -1,7 +1,7 @@
 name: Auto build artifacts
 on:
-  push:
-    branches: [ master ]
+  # push:
+  #   branches: [ master ]
   schedule:
     - cron: "15 4 1,11,21 * *"
   workflow_dispatch:
@@ -41,6 +41,7 @@ jobs:
             vulndb.db3
             cveid_to_edbid.json
             cpe_search/cpe-search-dictionary_v2.3.csv
+            cpe_search/deprecated-cpes.json
           draft: false
           prerelease: false
       - name: Delete previous soft release
