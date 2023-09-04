@@ -25,6 +25,8 @@ CPE_SEARCH_THRESHOLD = 0.72
 CPE_DEPRECATIONS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json")
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
+DEDUP_LINEBREAKS_RE_1 = re.compile(r'(\r\n)+')
+DEDUP_LINEBREAKS_RE_2 = re.compile(r'\n+')
 
 # define ANSI color escape sequences
 # Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
@@ -234,7 +236,7 @@ def print_vulns(vulns, to_string=False):
     cve_ids_sorted = sorted(list(vulns), key=lambda cve_id: float(vulns[cve_id]["cvss"]), reverse=True)
     for cve_id in cve_ids_sorted:
         vuln_node = vulns[cve_id]
-        description = vuln_node["description"].replace("\r\n\r\n", "\n").replace("\n\n", "\n").strip()
+        description = DEDUP_LINEBREAKS_RE_2.sub('\n', DEDUP_LINEBREAKS_RE_1.sub('\r\n', vuln_node["description"].strip()))
 
         if not to_string:
             print_str = GREEN + vuln_node["id"] + SANE
