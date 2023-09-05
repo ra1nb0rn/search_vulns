@@ -12,6 +12,8 @@ You can perform a quick install by running the following commands:
 git clone https://github.com/ra1nb0rn/search_vulns
 cd search_vulns
 pip3 install -r requirements.txt
+git submodule init
+git submodule update
 ./search_vulns.py -u
 ```
 
