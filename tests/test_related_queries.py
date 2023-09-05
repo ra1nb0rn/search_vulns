@@ -30,7 +30,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'Airflow'
         result = search_vulns.search_vulns_return_cpe(query=query, zero_extend_versions=True)
-        expected_related_cpes = [('cpe:2.3:a:apache:airflow:0.1:*:*:*:*:*:*:*', 0.5773500383793437)]
+        expected_related_cpes = [('cpe:2.3:a:apache:airflow:*:*:*:*:*:*:*:*', -1), ('cpe:2.3:a:apache:airflow:0.1:*:*:*:*:*:*:*', 0.5773500383793437)]
         for i, (expected_related_cpe, match_score) in enumerate(expected_related_cpes):
             self.assertEqual(expected_related_cpe, result[query]['pot_cpes'][i][0])
             self.assertEqual(round(match_score, 4), round(result[query]['pot_cpes'][i][1], 4))
@@ -67,6 +67,15 @@ class TestSearches(unittest.TestCase):
         query = 'citrix adc 13.1-42.47'
         result = search_vulns.search_vulns_return_cpe(query=query, zero_extend_versions=True)
         expected_related_cpes = [('cpe:2.3:a:citrix:application_delivery_controller:13.1-42.47:*:*:*:-:*:*:*', -1), ('cpe:2.3:a:citrix:application_delivery_controller:13.1:*:*:*:-:*:*:*', 0.8908703582652887), ('cpe:2.3:a:citrix:application_delivery_controller:13.1-21.50:*:*:*:*:*:*:*', 0.8164962543292243), ('cpe:2.3:h:citrix:application_delivery_controller:13.1-42.47:*:*:*:*:*:*:*', -1), ('cpe:2.3:h:citrix:application_delivery_controller:-:*:*:*:*:*:*:*', 0.7921181545730472), ('cpe:2.3:a:citrix:netscaler_application_delivery_controller:13.1-42.47:*:*:*:-:*:*:*', -1), ('cpe:2.3:a:citrix:netscaler_application_delivery_controller:13.1-49.13:*:*:*:-:*:*:*', 0.7580975941026593)]
+        for i, (expected_related_cpe, match_score) in enumerate(expected_related_cpes):
+            self.assertEqual(expected_related_cpe, result[query]['pot_cpes'][i][0])
+            self.assertEqual(round(match_score, 4), round(result[query]['pot_cpes'][i][1], 4))
+
+    def test_search_citrix_adc_no_version(self):
+        self.maxDiff = None
+        query = 'citrix adc'
+        result = search_vulns.search_vulns_return_cpe(query=query, zero_extend_versions=True)
+        expected_related_cpes = [('cpe:2.3:h:citrix:application_delivery_controller:-:*:*:*:*:*:*:*', 0.9701426473495096), ('cpe:2.3:a:citrix:application_delivery_controller:*:*:*:*:*:*:*:*', -1), ('cpe:2.3:a:citrix:application_delivery_controller:12.1:*:*:*:-:*:*:*', 0.8728711218881599), ('cpe:2.3:h:citrix:netscaler_application_delivery_controller:-:*:*:*:*:*:*:*', 0.8728711218881599), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:*:*:*:*:*:*:*:*', -1), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:10.1:*:*:*:*:*:*:*', 0.8164961618556671)]
         for i, (expected_related_cpe, match_score) in enumerate(expected_related_cpes):
             self.assertEqual(expected_related_cpe, result[query]['pot_cpes'][i][0])
             self.assertEqual(round(match_score, 4), round(result[query]['pot_cpes'][i][1], 4))

@@ -392,39 +392,30 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
         if not cpes or not cpes[query]:
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
 
-        if cpes[query][0][1] < software_match_threshold:
-            # try to create valid new CPEs from the query, e.g. in case the queried software is too recent
-            new_cpes = []
-            for cpe, sim in cpes[query]:
-                new_cpe = create_cpe_from_base_cpe_and_query(cpe, query)
-                if new_cpe and not any(is_cpe_equal(new_cpe, other[0]) for other in new_cpes):
-                    new_cpes.append((new_cpe, -1))
-                if not any(is_cpe_equal(cpe, other[0]) for other in new_cpes):
-                    new_cpes.append((cpe, sim))
-
-            if new_cpes:
-                cpes[query] = new_cpes
-            else:
-                # if query has no version but CPE does, return a general CPE as related query
-                base_cpe = create_base_cpe_if_versionless_query(cpes[query][0][0], query)
-                if base_cpe:
-                    new_cpes = set([base_cpe])
-                    for i in range(1, len(cpes[query])):
-                        base_cpe = create_base_cpe_if_versionless_query(cpes[query][i][0], query)
-                        new_cpes.add(base_cpe)
-
-                    return {query: {'cpe': None, 'vulns': None, 'pot_cpes': [(cpe, -1) for cpe in new_cpes]}}
-
-            return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
-
-
         # always create related queries with supplied version number
-        for i in range(len(cpes[query])):
-            new_cpe = create_cpe_from_base_cpe_and_query(cpes[query][i][0], query)
+        for cpe, sim in cpes[query]:
+            new_cpe = create_cpe_from_base_cpe_and_query(cpe, query)
             if new_cpe and not any(is_cpe_equal(new_cpe, other[0]) for other in pot_cpes):
                 pot_cpes.append((new_cpe, -1))
-            if not any(is_cpe_equal(cpes[query][i][0], other[0]) for other in pot_cpes):
-                pot_cpes.append(cpes[query][i])
+            if not any(is_cpe_equal(cpe, other[0]) for other in pot_cpes):
+                pot_cpes.append((cpe, sim))
+
+        # always create related queries without version number if query is versionless
+        versionless_cpe_inserts, new_idx = [], 0
+        for cpe, _ in pot_cpes:
+            base_cpe = create_base_cpe_if_versionless_query(cpe, query)
+            if base_cpe:
+                if ((not any(is_cpe_equal(base_cpe, other[0]) for other in pot_cpes)) and
+                     not any(is_cpe_equal(base_cpe, other[0][0]) for other in versionless_cpe_inserts)):
+                    versionless_cpe_inserts.append(((base_cpe, -1), new_idx))
+                    new_idx += 1
+            new_idx += 1
+
+        for new_cpe, idx in versionless_cpe_inserts:
+            pot_cpes.insert(idx, new_cpe)
+
+        if cpes[query][0][1] < software_match_threshold:
+            return {query: {'cpe': None, 'vulns': None, 'pot_cpes': pot_cpes}}
 
         # catch bad CPE matches
         bad_match = False
@@ -447,17 +438,19 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
                 return {query: {'cpe': None, 'vulns': None, 'pot_cpes': pot_cpes}}
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': cpes[query]}}
 
-        # if query has no version but CPE does, return a general CPE as related query
+        # also catch bad match if query is versionless, but retrieved CPE is not
         cpe_version = cpes[query][0][0].split(':')[5] if cpes[query][0][0].count(':') > 5 else ""
         if cpe_version not in ('*', '-'):
             base_cpe = create_base_cpe_if_versionless_query(cpes[query][0][0], query)
             if base_cpe:
-                new_cpes = set([base_cpe])
-                for i in range(1, len(cpes[query])):
-                    base_cpe = create_base_cpe_if_versionless_query(cpes[query][i][0], query)
-                    new_cpes.add(base_cpe)
+                # remove CPEs from related queries that have a version
+                pot_cpes_versionless = []
+                for i, (pot_cpe, score) in enumerate(pot_cpes):
+                    cpe_version_iter = pot_cpe.split(':')[5] if pot_cpe.count(':') > 5 else ""
+                    if cpe_version_iter in ('', '*', '-'):
+                        pot_cpes_versionless.append((pot_cpe, score))
 
-                return {query: {'cpe': None, 'vulns': None, 'pot_cpes': [(cpe, -1) for cpe in new_cpes]}}
+                return {query: {'cpe': None, 'vulns': None, 'pot_cpes': pot_cpes_versionless}}
 
         cpe = cpes[query][0][0]
 
