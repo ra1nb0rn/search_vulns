@@ -53,8 +53,13 @@ def printit(text: str = "", end: str = "\n", color=SANE):
 
 def get_exact_vuln_matches(cpe, db_cursor):
     """Get vulns whose cpe entry matches the given one exactly"""
-    query = "SELECT DISTINCT cve_id, with_cpes FROM cve_cpe WHERE cpe=?"
-    vulns = db_cursor.execute(query, (cpe, )).fetchall()
+    query_cpe = ':'.join(cpe.split(':')[:7]) + ':%%'
+    query = "SELECT DISTINCT cpe, cve_id, with_cpes FROM cve_cpe WHERE cpe LIKE ?"
+    pot_vulns = db_cursor.execute(query, (query_cpe, )).fetchall()
+    vulns = []
+    for vuln_cpe, cve_id, with_cpes in pot_vulns:
+        if is_cpe_included_after_version(cpe, vuln_cpe):
+            vulns.append((cve_id, with_cpes))
     return vulns
 
 
