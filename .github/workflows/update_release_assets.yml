@@ -1,4 +1,4 @@
-name: Auto build artifacts
+name: Update release assets
 on:
   schedule:
     - cron: "15 4 1,8,16,24 * *"
