@@ -11,6 +11,15 @@ jobs:
       - name: Checkout search_vulns code
         uses: actions/checkout@v3
 
+      - name: Check if code for building resources was changed
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            db_build_code_changed:
+              - 'db_creation_src/**'
+              - 'updater.py'
+
       - name: Set up Python and Pip
         uses: actions/setup-python@v4
         with:
@@ -20,13 +29,19 @@ jobs:
       - name: Upgrade Pip
         run: python3 -m pip install --upgrade pip
 
-      - name: Install Dependencies
-        run: pip3 install -r requirements.txt
-
-      - name: Install tool and build DB
+      - name: Install tool and build resources from source
+        if: steps.changes.outputs.db_build_code_changed == 'true'
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: NVD_API_KEY=$NVD_API_KEY ./install.sh --full
+
+      - name: Install tool and pull resources from release
+        if: steps.changes.outputs.db_build_code_changed == 'false'
+        run: |
+          pip3 install -r requirements.txt
+          git submodule init
+          git submodule update
+          ./search_vulns.py -u
 
       - name: Test CVE Completeness
         run: python3 ./tests/test_cve_completeness.py
