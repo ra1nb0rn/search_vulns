@@ -1,51 +1,44 @@
 name: Auto build artifacts
 on:
-  # push:
-  #   branches: [ master ]
   schedule:
-    - cron: "15 4 1,11,21 * *"
+    - cron: "15 4 1,8,16,24 * *"
   workflow_dispatch:
 jobs:
-  build:
+  build-artifacts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install
+      - name: Checkout search_vulns code
+        uses: actions/checkout@v3
+      - name: Set up Python and Pip
+        uses: actions/setup-python@v4
+        with:
+          cache: 'pip'
+          python-version: '3.8'
+      - name: Upgrade Pip
+        run: python3 -m pip install --upgrade pip
+      - name: Install tool and build DB
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: NVD_API_KEY=$NVD_API_KEY ./install.sh --full
+      - name: Test CVE Completeness
+        run: python3 ./tests/test_cve_completeness.py
+      - name: Test CVE Attribute Completeness
+        run: python3 ./tests/test_cve_attr_completeness.py
+      - name: Test Exploit Completeness
+        run: python3 ./tests/test_exploit_completeness.py
+      - name: Test Related Queries Functionality
+        run: python3 ./tests/test_related_queries.py
+      - name: Get latest release tag
         run: |
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata locales git build-essential gcc jq
-          sudo ./install.sh --full
-      - name: Set variables
-        run: |
-          VER="$(cat version.txt)"
-          echo "VERSION=$VER" >> $GITHUB_ENV
-          DATE1=$(date '+%Y%m%d')
-          echo "DATE_STR1=$DATE1" >> $GITHUB_ENV
-          DATE2=$(date '+%F')
-          echo "DATE_STR2=$DATE2" >> $GITHUB_ENV
-          LATEST_REL_URL=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/ra1nb0rn/search_vulns/releases/latest | jq -r '.url')
-          echo "LATEST_RELEASE_URL=$LATEST_REL_URL" >> $GITHUB_ENV
           LATEST_TAG=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/ra1nb0rn/search_vulns/releases/latest | jq -r '.tag_name')
           echo "LATEST_RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
-          if [[ $LATEST_TAG =~ ^v[0-9\.]+$ ]]; then LATEST_REL_SOFT="no"; else LATEST_REL_SOFT="yes"; fi
-          echo "IS_LATEST_RELEASE_SOFT=$LATEST_REL_SOFT" >> $GITHUB_ENV
-      - name: Create release
+      - name: Update resource files of latest release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: v${{ env.VERSION }}-${{ env.DATE_STR1 }}
-          name: Version ${{ env.VERSION }} (${{ env.DATE_STR2 }})
-          body: |
-            Update artifacts
+          tag_name: ${{ env.LATEST_RELEASE_TAG }}
           files: |
             vulndb.db3
             cveid_to_edbid.json
             cpe_search/cpe-search-dictionary_v2.3.csv
             cpe_search/deprecated-cpes.json
-          draft: false
-          prerelease: false
-      - name: Delete previous soft release
-        if: "${{ github.event_name != 'push' && env.IS_LATEST_RELEASE_SOFT == 'yes' }}"
-        run: |
-          curl -X DELETE -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${{ env.LATEST_RELEASE_URL }}"
-          curl -X DELETE -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/ra1nb0rn/search_vulns/git/refs/tags/${{ env.LATEST_RELEASE_TAG }}"
