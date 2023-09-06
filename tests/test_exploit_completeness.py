@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+import os
 import unittest
 import sys
 
-sys.path.insert(1, '../search_vulns/')
+SEARCH_VULNS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.insert(1, SEARCH_VULNS_PATH)
 import search_vulns
 
 class TestSearches(unittest.TestCase):
