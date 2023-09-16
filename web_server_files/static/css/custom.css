@@ -36,8 +36,8 @@
     background-color: #d7d4d4 !important;
 }
 
-.table-rounded tr:nth-child(even) td {
-    background-color: rgba(0,0,0,.05) !important;
+.table-rounded tr:nth-child(even) {
+    background-color: rgba(0,0,0,.05);
 }
 
 .table-rounded thead tr th:first-child {
@@ -58,6 +58,13 @@
 
 .table-rounded tr:last-child td:last-child {
     border-radius: 0 0 0.8rem 0;
+}
+
+
+/* Uncertain vulnerability table row */
+.uncertain-vuln {
+    background-color: rgba(255, 217, 180, 0.82) !important;
+    opacity: 75%;
 }
 
 

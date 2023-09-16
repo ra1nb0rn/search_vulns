@@ -129,8 +129,15 @@ function createVulnsHtml() {
     var exploits, cvss, exploit_url_show;
 
     for (var i = 0; i < vulns.length; i++) {
-        vulns_html += `<tr>`;
-        vulns_html += `<td class="text-nowrap pr-2"><a href="${htmlEntities(vulns[i]["href"])}" target="_blank" style="color: inherit;">${vulns[i]["id"]}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a></td>`;
+        if (vulns[i].vuln_match_reason == "general_cpe")
+            vulns_html += `<tr class="uncertain-vuln">`;
+        else
+            vulns_html += `<tr>`;
+
+        vulns_html += `<td class="text-nowrap pr-2"><a href="${htmlEntities(vulns[i]["href"])}" target="_blank" style="color: inherit;">${vulns[i]["id"]}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a>`;
+        if (vulns[i].vuln_match_reason == "general_cpe")
+            vulns_html += `<br><center><i class="far fa-question-circle" style="color: #FF4F00;" data-toggle="tooltip" data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-info'></div></div>" data-placement="bottom" data-original-title="This vulnerability affects the queried software in general and could be a false positive."></i></center>`;
+        vulns_html += "</td>";
 
         var cvss_vector = vulns[i].cvss_vec;
         if (!cvss_vector.startsWith('CVSS'))
@@ -161,7 +168,7 @@ function createVulnsHtml() {
             }
         }
         vulns_html += `<td class="text-nowrap">${exploits.join("<br>")}</td>`;
-        vulns_html += "</tr>"
+        vulns_html += "</tr>";
     }
     vulns_html += "</tbody></table>";
     return vulns_html;

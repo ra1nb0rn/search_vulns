@@ -59,7 +59,7 @@ def get_exact_vuln_matches(cpe, db_cursor):
     vulns = []
     for vuln_cpe, cve_id, with_cpes in pot_vulns:
         if is_cpe_included_after_version(cpe, vuln_cpe):
-            vulns.append((cve_id, with_cpes))
+            vulns.append(((cve_id, with_cpes), 'exact_cpe'))
     return vulns
 
 
@@ -116,7 +116,7 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_genera
         vuln_cpe = pot_vuln[1]
         version_start, version_start_incl = pot_vuln[2], pot_vuln[3]
         version_end, version_end_incl = pot_vuln[4], pot_vuln[5]
-        is_cpe_vuln = False
+        is_cpe_vuln, vuln_match_reason = False, 'version_in_range'
 
         if version_start and version_end:
             if version_start_incl == True and version_end_incl == True:
@@ -142,6 +142,7 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_genera
             if ignore_general_cpe_vulns and all(val in ('*', '-') for val in vuln_cpe.split(':')[5:]):
                 continue
             is_cpe_vuln = is_cpe_included_after_version(cpe, vuln_cpe)
+            vuln_match_reason = 'general_cpe'
 
         # check that everything after the version field matches in the CPE
         if is_cpe_vuln:
@@ -150,7 +151,7 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_genera
                     is_cpe_vuln = False
 
         if is_cpe_vuln:
-            vulns.append(pot_vuln)
+            vulns.append((pot_vuln, vuln_match_reason))
 
     return vulns
 
@@ -187,7 +188,8 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_
 
     # retrieve more information about the found vulns, e.g. CVSS scores and possible exploits
     detailed_vulns = {}
-    for vuln in vulns:
+    for vuln_info in vulns:
+        vuln, match_reason = vuln_info
         cve_id = vuln[0]
         if cve_id in detailed_vulns:
             continue
@@ -196,7 +198,7 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_
         edb_ids, descr, publ, last_mod, cvss_ver, score, vector = db_cursor.execute(query, (cve_id,)).fetchone()
         detailed_vulns[cve_id] = {"id": cve_id, "description": descr, "published": publ, "modified": last_mod,
                                   "href": "https://nvd.nist.gov/vuln/detail/%s" % cve_id, "cvss_ver": cvss_ver,
-                                  "cvss": score, "cvss_vec": vector}
+                                  "cvss": score, "cvss_vec": vector, 'vuln_match_reason': match_reason}
 
         edb_ids = edb_ids.strip()
         if edb_ids:
