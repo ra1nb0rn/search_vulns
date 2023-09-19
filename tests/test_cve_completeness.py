@@ -52,10 +52,16 @@ class TestSearches(unittest.TestCase):
         expected_cves = ['CVE-2016-1000027', 'CVE-2023-20863']
         self.assertEqual(set(expected_cves), set(list(result.keys())))
 
-    def test_search_zulip_server_48(self):
+    def test_search_zulip_48(self):
         self.maxDiff = None
         result = search_vulns.search_vulns(query='cpe:2.3:a:zulip:zulip:4.8:*:*:*:*:*:*:*', add_other_exploit_refs=True, is_good_cpe=True)
         expected_cves = ['CVE-2022-35962', 'CVE-2022-36048', 'CVE-2023-28623', 'CVE-2021-43799', 'CVE-2023-32677', 'CVE-2022-31017', 'CVE-2022-24751', 'CVE-2021-3967', 'CVE-2021-3866', 'CVE-2022-31168']
+        self.assertEqual(set(expected_cves), set(list(result.keys())))
+
+    def test_search_zulip_server_general(self):
+        self.maxDiff = None
+        result = search_vulns.search_vulns(query='cpe:2.3:a:zulip:zulip_server:*:*:*:*:*:*:*:*', add_other_exploit_refs=True, is_good_cpe=True)
+        expected_cves = ['CVE-2022-41914', 'CVE-2023-33186', 'CVE-2020-12759', 'CVE-2021-30479', 'CVE-2020-9444', 'CVE-2019-16216', 'CVE-2021-30487', 'CVE-2019-19775', 'CVE-2020-14194', 'CVE-2017-0896', 'CVE-2020-14215', 'CVE-2018-9990', 'CVE-2023-22735', 'CVE-2020-10935', 'CVE-2022-31134', 'CVE-2019-18933', 'CVE-2018-9987', 'CVE-2018-9986', 'CVE-2020-9445', 'CVE-2017-0910', 'CVE-2017-0881', 'CVE-2019-16215', 'CVE-2022-23656', 'CVE-2022-21706', 'CVE-2021-30478', 'CVE-2023-32678', 'CVE-2020-15070', 'CVE-2018-9999', 'CVE-2021-30477']
         self.assertEqual(set(expected_cves), set(list(result.keys())))
 
     def test_search_electron_1317(self):

@@ -107,7 +107,8 @@ def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_genera
         general_query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
                          'is_cpe_version_end_including, with_cpes FROM cve_cpe WHERE cpe LIKE ?')
         general_vulns = set(db_cursor.execute(general_query, (':'.join(cpe_parts[:5])+':%%', )))
-        return general_cpe_nvd_data | general_vulns
+        all_general_vulns = [(vuln_data, 'general_cpe_but_ok') for vuln_data in (general_cpe_nvd_data | general_vulns)]
+        return all_general_vulns
 
     # check version information of potential vulns to determine whether given version is actually vulnerable
     vulns = []
