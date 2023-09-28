@@ -23,6 +23,7 @@ DATABASE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'vulnd
 MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
 CPE_SEARCH_THRESHOLD = 0.72
 CPE_DEPRECATIONS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json")
+MAN_EQUIVALENT_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'man_equiv_cpes.json')
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
 DEDUP_LINEBREAKS_RE_1 = re.compile(r'(\r\n)+')
@@ -302,10 +303,8 @@ def load_equivalent_cpes():
                         EQUIVALENT_CPES[deprecatedby_cpe_short].append(cpe_short)
 
         # then manually add further information
-        manual_equivalent_cpes = {
-            'cpe:2.3:a:redis:redis:': ['cpe:2.3:a:redislabs:redis:'],
-            'cpe:2.3:a:jquery:jquery_ui:': ['cpe:2.3:a:jqueryui:jquery_ui:'],
-        }
+        with open(MAN_EQUIVALENT_CPES_FILE) as f:
+            manual_equivalent_cpes = json.loads(f.read())
 
         for man_equiv_cpe, other_equiv_cpes in manual_equivalent_cpes.items():
             if man_equiv_cpe not in EQUIVALENT_CPES:

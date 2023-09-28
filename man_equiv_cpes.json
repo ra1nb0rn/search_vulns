@@ -1,0 +1,4 @@
+{
+    "cpe:2.3:a:redis:redis:": ["cpe:2.3:a:redislabs:redis:"],
+    "cpe:2.3:a:jquery:jquery_ui:": ["cpe:2.3:a:jqueryui:jquery_ui:"]
+}
