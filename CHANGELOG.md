@@ -1,6 +1,22 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.3.0 - 2023-10-12
+### Added
+- A script to run all tests at once.
+- Web UI: Highlight likely false positive if a vulnerability only affect a general CPE.
+- Manually added equivalent CPE entries for multiple Citrix products.
+
+### Changed
+- Changed scheduled workflow for building resources, such that no new release is created. Instead the latest release is updated with the latest artifacts.
+- Changed the test workflow, such that the DB is only rebuilt if its build code has changed.
+- Manual entries for equivalent CPEs are now stored in a separate file.
+- Speed up the search of CPEs by modifying the underlying algorithm. Also remove the memory-based algorithm for CPE search.
+
+### Fixed
+- Some minor bugs
+
+
 ## v0.2.0 - 2023-09-05
 ### Added
 - Various improvements for matching a text query to a CPE via the [cpe_search](https://github.com/ra1nb0rn/cpe_search) submodule, which was updated multiple times.
