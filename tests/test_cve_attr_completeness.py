@@ -49,7 +49,7 @@ class TestSearches(unittest.TestCase):
     def test_search_thingsboard_341(self):
         self.maxDiff = None
         result = search_vulns.search_vulns(query='cpe:2.3:a:thingsboard:thingsboard:3.4.1:*:*:*:*:*:*:*', add_other_exploit_refs=True, is_good_cpe=True)
-        expected_attrs = {'CVE-2022-40004': {'published': '2022-12-15 23:15:10', 'cvss_ver': '3.1', 'cvss': '9.6', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H'}, 'CVE-2022-45608': {'published': '2023-03-01 16:15:09', 'cvss_ver': '3.1', 'cvss': '8.8', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H'}, 'CVE-2022-48341': {'published': '2023-02-23 06:15:10', 'cvss_ver': '3.1', 'cvss': '8.8', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H'}, 'CVE-2023-26462': {'published': '2023-02-23 06:15:10', 'cvss_ver': '3.1', 'cvss': '8.1', 'cvss_vec': 'CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H'}}
+        expected_attrs = {'CVE-2022-40004': {'published': '2022-12-15 23:15:10', 'cvss_ver': '3.1', 'cvss': '9.6', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H'}, 'CVE-2022-45608': {'published': '2023-03-01 16:15:09', 'cvss_ver': '3.1', 'cvss': '8.8', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H'}, 'CVE-2022-48341': {'published': '2023-02-23 06:15:10', 'cvss_ver': '3.1', 'cvss': '8.8', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H'}, 'CVE-2023-26462': {'published': '2023-02-23 06:15:10', 'cvss_ver': '3.1', 'cvss': '8.1', 'cvss_vec': 'CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H'}, 'CVE-2023-45303': {'published': '2023-10-06 19:15:13', 'cvss_ver': '3.1', 'cvss': '8.8', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H'}}
 
         for cve, cve_attrs in result.items():
             self.assertIn(cve, expected_attrs)

@@ -31,7 +31,7 @@ class TestSearches(unittest.TestCase):
     def test_search_thingsboard_341(self):
         self.maxDiff = None
         result = search_vulns.search_vulns(query='cpe:2.3:a:thingsboard:thingsboard:3.4.1:*:*:*:*:*:*:*', add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2022-40004', 'CVE-2022-45608', 'CVE-2022-48341', 'CVE-2023-26462']
+        expected_cves = ['CVE-2022-40004', 'CVE-2022-45608', 'CVE-2022-48341', 'CVE-2023-26462', 'CVE-2023-45303']
         self.assertEqual(set(expected_cves), set(list(result.keys())))
 
     def test_search_redis_323(self):
