@@ -1,6 +1,11 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.0 - 2023-10-14
+### Changed
+- Speed up the search of CPEs even more. To achieve this, more data required by the match algorithm is precomputed now. Also, the file format of the CPE dictionary was changed from CSV to SQLite. Finally, a memory-based variant was brought back for the CPE search.
+
+
 ## v0.3.0 - 2023-10-12
 ### Added
 - A script to run all tests at once.
