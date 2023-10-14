@@ -356,7 +356,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     # if given query is not already a CPE, retrieve a CPE that matches the query
     cpe = query
     if not MATCH_CPE_23_RE.match(query):
-        cpe = search_cpes(query, count=1, threshold=software_match_threshold)
+        cpe = search_cpes(query, count=1, threshold=software_match_threshold, keep_data_in_memory=keep_data_in_memory)
 
         if not cpe or not cpe[query]:
             return None
@@ -367,7 +367,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
 
         cpe = cpe[query][0][0]
     elif not is_good_cpe:
-        pot_matching_cpe = match_cpe23_to_cpe23_from_dict(cpe)
+        pot_matching_cpe = match_cpe23_to_cpe23_from_dict(cpe, keep_data_in_memory=keep_data_in_memory)
         if pot_matching_cpe:
             cpe = pot_matching_cpe
 
@@ -396,7 +396,7 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
     cpe, pot_cpes = query, []
     if not MATCH_CPE_23_RE.match(query):
         is_good_cpe = False
-        cpes = search_cpes(query, count=5, threshold=0.25, zero_extend_versions=zero_extend_versions)
+        cpes = search_cpes(query, count=5, threshold=0.25, zero_extend_versions=zero_extend_versions, keep_data_in_memory=keep_data_in_memory)
 
         if not cpes or not cpes[query]:
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}

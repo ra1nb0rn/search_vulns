@@ -28,9 +28,9 @@ VULNDB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "
 VULNDB_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/vulndb.db3"
 CVE_EDB_MAP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cveid_to_edbid.json")
 
-CPE_DICT_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary_v2.3.csv")
-CPE_DICT_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary_v2.3.csv.bak")
-CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary_v2.3.csv"
+CPE_DICT_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary.db3")
+CPE_DICT_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary.db3.bak")
+CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary.db3"
 CPE_DEPRECATIONS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json")
 CPE_DEPRECATIONS_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json.bak")
 CPE_DEPRECATIONS_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/deprecated-cpes.json"
