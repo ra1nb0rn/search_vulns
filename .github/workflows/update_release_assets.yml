@@ -40,5 +40,5 @@ jobs:
           files: |
             vulndb.db3
             cveid_to_edbid.json
-            cpe_search/cpe-search-dictionary_v2.3.csv
+            cpe_search/cpe-search-dictionary.db3
             cpe_search/deprecated-cpes.json
