@@ -4,7 +4,7 @@
 #include "prepared_statement.h"
 
 inline const std::string CVE_QUERY_FRAGMENT = " INTO cve VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-inline const std::string CVE_CPE_QUERY_FRAGMENT = " INTO cve_cpe VALUES (?, ?, ?, ?, ?, ?)";
+inline const std::string CVE_CPE_QUERY_FRAGMENT = " INTO cve_cpe VALUES (?, ?, ?, ?, ?, ?, ?)";
 inline const std::string NVD_EXPLOIT_REFS_FRAGMENT = " INTO nvd_exploits_refs VALUES (?, ?)";
 inline const std::string CVE_NVD_EXPLOITS_REFS_FRAGMENT = " INTO cve_nvd_exploits_refs VALUES (?, ?)";
 
