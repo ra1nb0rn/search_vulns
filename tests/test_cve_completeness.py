@@ -13,7 +13,7 @@ class TestSearches(unittest.TestCase):
     def test_search_wp_572(self):
         self.maxDiff = None
         result = search_vulns.search_vulns(query='cpe:2.3:a:wordpress:wordpress:5.7.2:*:*:*:*:*:*:*', add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2021-44223', 'CVE-2022-21663', 'CVE-2022-21664', 'CVE-2012-6527', 'CVE-2022-43497', 'CVE-2007-2627', 'CVE-2012-4271', 'CVE-2022-3590', 'CVE-2011-5216', 'CVE-2023-22622', 'CVE-2013-7240', 'CVE-2022-21661', 'CVE-2021-39201', 'CVE-2022-21662', 'CVE-2023-2745', 'CVE-2021-39200', 'CVE-2022-43504', 'CVE-2022-43500']
+        expected_cves = ['CVE-2021-44223', 'CVE-2022-21663', 'CVE-2022-21664', 'CVE-2012-6527', 'CVE-2022-43497', 'CVE-2007-2627', 'CVE-2012-4271', 'CVE-2022-3590', 'CVE-2011-5216', 'CVE-2023-22622', 'CVE-2013-7240', 'CVE-2022-21661', 'CVE-2021-39201', 'CVE-2022-21662', 'CVE-2023-2745', 'CVE-2021-39200', 'CVE-2022-43504', 'CVE-2022-43500', 'CVE-2023-5561', 'CVE-2023-39999']
         self.assertEqual(set(expected_cves), set(list(result.keys())))
 
     def test_search_apache_2425(self):

@@ -1,6 +1,11 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.2 - 2023-10-24
+### Fixed
+- Update test cases with new CVEs and exploits.
+
+
 ## v0.4.1 - 2023-10-16
 ### Fixed
 - The scheduled workflow to update release assets now references the new CPE dictionary file.
