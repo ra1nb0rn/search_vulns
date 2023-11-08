@@ -1,6 +1,11 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.4 - 2023-11-08
+### Fixed
+- Update test cases with new CVE.
+
+
 ## v0.4.3 - 2023-11-01
 ### Fixed
 - Update test cases with new CVEs and CPEs.
