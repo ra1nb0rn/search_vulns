@@ -56,5 +56,6 @@
     "cpe:2.3:a:citrix:netscaler_application_delivery_controller:": ["cpe:2.3:a:citrix:application_delivery_controller:"],
     "cpe:2.3:h:citrix:netscaler_application_delivery_controller:": ["cpe:2.3:h:citrix:application_delivery_controller:"],
     "cpe:2.3:o:citrix:netscaler_application_delivery_controller_firmware:": ["cpe:2.3:o:citrix:application_delivery_controller_firmware:"],
-    "cpe:2.3:a:citrix:provisioning_services:": ["cpe:2.3:a:citrix:provisioning:"]
+    "cpe:2.3:a:citrix:provisioning_services:": ["cpe:2.3:a:citrix:provisioning:"],
+    "cpe:2.3:a:handlebarsjs:handlebars:": ["cpe:2.3:a:handlebars.js_project:handlebars.js:"]
 }

@@ -1,6 +1,15 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.5 - 2023-11-09
+### Added
+- New CPE equivalence for Handlebars.js.
+- New test cases for Handlebars.js.
+
+### Fixed
+- Expand CPE wildcard replacement when searching for vulnerabilities with an exactly matching CPE.
+
+
 ## v0.4.4 - 2023-11-08
 ### Fixed
 - Update test cases with new CVE.

@@ -54,9 +54,36 @@ def printit(text: str = "", end: str = "\n", color=SANE):
 
 def get_exact_vuln_matches(cpe, db_cursor):
     """Get vulns whose cpe entry matches the given one exactly"""
-    query_cpe = ':'.join(cpe.split(':')[:7]) + ':%%'
-    query = "SELECT DISTINCT cpe, cve_id, with_cpes FROM cve_cpe WHERE cpe LIKE ?"
-    pot_vulns = db_cursor.execute(query, (query_cpe, )).fetchall()
+
+    cpe_split = cpe.split(':')
+    query_cpe1 = ':'.join(cpe_split[:7]) + ':%%'
+
+    # create main CPE to query for and alt cpes with wildcards '*' and '-' replaced by each other
+    query_cpes = [query_cpe1]
+    repl_version, repl_update = '', ''
+    if cpe_split[5] == '*':
+        repl_version = '-'
+    elif cpe_split[5] == '-':
+        repl_version = '*'
+
+    if repl_version:
+        query_cpes.append(':'.join(cpe_split[:5]) + ':' + repl_version + ':' + cpe_split[6] + ':%%')
+
+    if cpe_split[6] == '*':
+        repl_update = '-'
+    elif cpe_split[6] == '-':
+        repl_update = '*'
+
+    if repl_update:
+        query_cpes.append(':'.join(cpe_split[:6]) + ':' + repl_update + ':%%')
+
+    if repl_version and repl_update:
+        query_cpes.append(':'.join(cpe_split[:5]) + ':' + repl_version + ':' + repl_update + ':%%')
+
+    # query for vulns with all retrieved variants of the supplied CPE
+    or_str = 'OR cpe LIKE ?' * (len(query_cpes) - 1)
+    query = "SELECT DISTINCT cpe, cve_id, with_cpes FROM cve_cpe WHERE cpe LIKE ? " + or_str
+    pot_vulns = db_cursor.execute(query, query_cpes).fetchall()
     vulns = []
     for vuln_cpe, cve_id, with_cpes in pot_vulns:
         if is_cpe_included_after_version(cpe, vuln_cpe):
@@ -183,10 +210,6 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_
 
     vulns += get_exact_vuln_matches(cpe, db_cursor)
     vulns += get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_general_cpe_vulns)
-
-    if ':-:' in cpe:
-        # use '-' as wildcard and query for additional exact matches
-        vulns += get_exact_vuln_matches(cpe.replace(':-:', ':*:'), db_cursor)
 
     # retrieve more information about the found vulns, e.g. CVSS scores and possible exploits
     detailed_vulns = {}

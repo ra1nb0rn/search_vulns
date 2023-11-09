@@ -142,6 +142,18 @@ class TestSearches(unittest.TestCase):
             self.assertEqual(cve_attrs['cvss'], expected_attrs[cve]['cvss'])
             self.assertEqual(cve_attrs['cvss_vec'], expected_attrs[cve]['cvss_vec'])
 
+    def test_search_handlebars_js_300(self):
+        self.maxDiff = None
+        result = search_vulns.search_vulns(query='cpe:2.3:a:handlebarsjs:handlebars:3.0.0:*:*:*:*:node.js:*:*', add_other_exploit_refs=True, is_good_cpe=False)
+        expected_attrs = {'CVE-2021-23369': {'published': '2021-04-12 14:15:14', 'cvss_ver': '3.1', 'cvss': '9.8', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'}, 'CVE-2019-20920': {'published': '2020-09-30 18:15:17', 'cvss_ver': '3.1', 'cvss': '8.1', 'cvss_vec': 'CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:L/A:L'}, 'CVE-2021-23383': {'published': '2021-05-04 09:15:07', 'cvss_ver': '3.1', 'cvss': '9.8', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'}, 'CVE-2019-19919': {'published': '2019-12-20 23:15:11', 'cvss_ver': '3.1', 'cvss': '9.8', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'}, 'CVE-2015-8861': {'published': '2017-01-23 21:59:00', 'cvss_ver': '3.1', 'cvss': '6.1', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N'}}
+
+        for cve, cve_attrs in result.items():
+            self.assertIn(cve, expected_attrs)
+            self.assertEqual(cve_attrs['published'], expected_attrs[cve]['published'])
+            self.assertEqual(cve_attrs['cvss_ver'], expected_attrs[cve]['cvss_ver'])
+            self.assertEqual(cve_attrs['cvss'], expected_attrs[cve]['cvss'])
+            self.assertEqual(cve_attrs['cvss_vec'], expected_attrs[cve]['cvss_vec'])
+
 
 if __name__ == '__main__':
     unittest.main()

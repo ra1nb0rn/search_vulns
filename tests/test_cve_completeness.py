@@ -76,6 +76,12 @@ class TestSearches(unittest.TestCase):
         expected_cves = ['CVE-2022-4146', 'CVE-2020-36695', 'CVE-2019-17360']
         self.assertEqual(set(expected_cves), set(list(result.keys())))
 
+    def test_search_handlebars_js_300(self):
+        self.maxDiff = None
+        result = search_vulns.search_vulns(query='cpe:2.3:a:handlebarsjs:handlebars:3.0.0:*:*:*:*:node.js:*:*', add_other_exploit_refs=True, is_good_cpe=False)
+        expected_cves = ['CVE-2019-19919', 'CVE-2021-23369', 'CVE-2021-23383', 'CVE-2019-20920', 'CVE-2015-8861']
+        self.assertEqual(set(expected_cves), set(list(result.keys())))
+
 
 if __name__ == '__main__':
     unittest.main()
