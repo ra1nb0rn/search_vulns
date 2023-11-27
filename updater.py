@@ -421,6 +421,7 @@ def run(full=False, nvd_api_key=None):
         print("[+] Updating stored software information")
         error = loop.run_until_complete(handle_cpes_update(nvd_api_key))
         if error:
+            print("[-] Error updating stored software information")
             sys.exit(1)
         print("[+] Updating vulnerability database")
         error = loop.run_until_complete(update_vuln_db(nvd_api_key))

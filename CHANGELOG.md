@@ -1,6 +1,15 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.6 - 2023-11-27
+### Added
+- New CPE equivalence for Swagger UI
+- Update CVE <-> EDB mapping
+
+### Fixed
+- Update test cases with new CVE and exploit.
+
+
 ## v0.4.5 - 2023-11-09
 ### Added
 - New CPE equivalence for Handlebars.js.
