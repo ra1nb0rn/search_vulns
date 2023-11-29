@@ -1,6 +1,12 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.7 - 2023-11-29
+### Fixed
+- Fixed bug in cpe_search if a query with the keyword "for" was made
+- Fixed caching bug in search_vulns web server
+
+
 ## v0.4.6 - 2023-11-27
 ### Added
 - New CPE equivalence for Swagger UI
