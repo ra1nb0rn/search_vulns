@@ -413,13 +413,13 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     return vulns
 
 
-def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploits_refs=False, is_good_cpe=False, zero_extend_versions=False, ignore_general_cpe_vulns=False):
+def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploits_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False):
     """Search for known vulnerabilities based on the given query and return them with their CPE"""
 
     cpe, pot_cpes = query, []
     if not MATCH_CPE_23_RE.match(query):
         is_good_cpe = False
-        cpes = search_cpes(query, count=5, threshold=0.25, zero_extend_versions=zero_extend_versions, keep_data_in_memory=keep_data_in_memory)
+        cpes = search_cpes(query, count=5, threshold=0.25, keep_data_in_memory=keep_data_in_memory)
 
         if not cpes or not cpes[query]:
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
