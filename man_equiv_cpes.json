@@ -58,5 +58,8 @@
     "cpe:2.3:o:citrix:netscaler_application_delivery_controller_firmware:": ["cpe:2.3:o:citrix:application_delivery_controller_firmware:"],
     "cpe:2.3:a:citrix:provisioning_services:": ["cpe:2.3:a:citrix:provisioning:"],
     "cpe:2.3:a:handlebarsjs:handlebars:": ["cpe:2.3:a:handlebars.js_project:handlebars.js:"],
-    "cpe:2.3:a:smartbear:swagger-ui:": ["cpe:2.3:a:smartbear:swagger_ui:"]
+    "cpe:2.3:a:smartbear:swagger-ui:": ["cpe:2.3:a:smartbear:swagger_ui:"],
+    "cpe:2.3:a:canonical:apport:": ["cpe:2.3:a:apport_project:apport:"],
+    "cpe:2.3:a:canonical:apparmor:": ["cpe:2.3:a:apparmor:apparmor:"],
+    "cpe:2.3:a:accountsservice_project:accountsservice:": ["cpe:2.3:a:canonical:accountsservice:", "cpe:2.3:a:freedesktop:accountsservice:"]
 }
