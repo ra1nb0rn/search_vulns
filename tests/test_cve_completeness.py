@@ -67,7 +67,7 @@ class TestSearches(unittest.TestCase):
     def test_search_electron_1317(self):
         self.maxDiff = None
         result = search_vulns.search_vulns(query='cpe:2.3:a:electronjs:electron:13.1.7:*:*:*:*:*:*:*', add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2023-39956', 'CVE-2022-29247', 'CVE-2023-29198', 'CVE-2021-39184', 'CVE-2022-21718', 'CVE-2022-29257', 'CVE-2022-36077']
+        expected_cves = ['CVE-2023-39956', 'CVE-2022-29247', 'CVE-2023-29198', 'CVE-2021-39184', 'CVE-2022-21718', 'CVE-2022-29257', 'CVE-2022-36077', 'CVE-2023-44402']
         self.assertEqual(set(expected_cves), set(list(result.keys())))
 
     def test_search_hitachi_replication_manager_86500(self):

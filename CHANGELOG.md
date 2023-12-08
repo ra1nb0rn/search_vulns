@@ -1,6 +1,17 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.8 - 2023-12-08
+### Added
+- Equivalent CPEs for Amanda Network Backup, Apport, AppArmor and Accountsservice
+
+### Change
+- Update cpe_search and adapt to its updated interface.
+
+### Fixed
+- Update test cases with new CVEs and exploits.
+
+
 ## v0.4.7 - 2023-11-29
 ### Fixed
 - Fixed bug in cpe_search if a query with the keyword "for" was made
