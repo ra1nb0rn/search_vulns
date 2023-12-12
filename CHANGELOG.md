@@ -1,6 +1,17 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.9 - 2023-12-12
+### Added
+- Update cpe_search submodule and adapt search_vulns code to it:
+    - cpe_search uses an improved matching algorithm with weights
+    - create more alternative queries, e.g. for JS packages and Bootstrap
+    - fixes some bugs in cpe_search
+
+### Fixed
+- Update test cases with new exploits.
+
+
 ## v0.4.8 - 2023-12-08
 ### Added
 - Equivalent CPEs for Amanda Network Backup, Apport, AppArmor and Accountsservice
