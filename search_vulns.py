@@ -377,6 +377,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         close_cursor_after = True
 
     # if given query is not already a CPE, retrieve a CPE that matches the query
+    query = query.strip()
     cpe = query
     if not MATCH_CPE_23_RE.match(query):
         cpe = search_cpes(query, count=1, threshold=software_match_threshold, keep_data_in_memory=keep_data_in_memory)
@@ -416,6 +417,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
 def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploits_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False):
     """Search for known vulnerabilities based on the given query and return them with their CPE"""
 
+    query = query.strip()
     cpe, pot_cpes = query, []
     if not MATCH_CPE_23_RE.match(query):
         is_good_cpe = False
@@ -544,6 +546,7 @@ def main():
     out_string = ''
     for query in args.queries:
         # if current query is not already a CPE, retrieve a CPE that matches the query
+        query = query.strip()
         cpe = query
         if not MATCH_CPE_23_RE.match(query):
             cpe = search_cpes(query, count=1, threshold=args.cpe_search_threshold)
