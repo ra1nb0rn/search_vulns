@@ -16,7 +16,7 @@ This file keeps track of all notable changes between the different versions of s
 ### Added
 - Equivalent CPEs for Amanda Network Backup, Apport, AppArmor and Accountsservice
 
-### Change
+### Changed
 - Update cpe_search and adapt to its updated interface.
 
 ### Fixed
