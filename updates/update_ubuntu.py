@@ -12,6 +12,7 @@ sys.path.insert(1, ROOT_PATH)
 
 import aiohttp
 from aiolimiter import AsyncLimiter
+from search_vulns import get_equivalent_cpes
 
 from .update_generic import *
 from .update_distributions_generic import *
@@ -81,7 +82,7 @@ def summarize_statuses_ubuntu(statuses):
     # try to summarize entries with version_end = -1
     for i, (status, distro_version) in enumerate(statuses):
 
-        summarizable_status = status['status'] == 'DNE' or (status['status'] in ('not-affected', 'pending') and not get_clean_version(status['description'], False))
+        summarizable_status = status['status'] == 'DNE' or (status['status'] == 'not-affected' and not get_clean_version(status['description'], False))
         if i == 0 and not summarizable_status:
             possible_min = False
         if not summarizable_status:
@@ -112,12 +113,12 @@ def summarize_statuses_ubuntu(statuses):
         relevant_statuses.append((start_status[0], start_status[1], '>='))
 
     # try to summarize entries with same version_end
-    relevant_statuses = summarize_statuses_with_version(relevant_statuses, fixed_status_names=['released', 'not-affected', 'pending'], version_field='description', dev_distro_name='upstream')
+    relevant_statuses = summarize_statuses_with_version(relevant_statuses, fixed_status_names=['released', 'not-affected'], version_field='description', dev_distro_name='upstream')
 
     return relevant_statuses
 
 
-def download_ubuntu_release_codename_mapping():
+def initialize_ubuntu_release_version_codename():
     '''Download ubuntu release data via Ubuntu Security API'''
       
     global UBUNTU_UPDATE_SUCCESS
@@ -142,13 +143,9 @@ def download_ubuntu_release_codename_mapping():
         communicate_warning('An error occured when making initial request to https://ubuntu.com/security/releases.json; received a non-ok response code.')
         return 'An error occured when making initial request to https://ubuntu.com/security/releases.json; received a non-ok response code.'
 
-    return ubuntu_api_initial_response.json()['releases']
+    releases_json = ubuntu_api_initial_response.json()['releases']
 
-
-def initialize_ubuntu_release_version_codename():
-    '''Add release -> codename mapping to db and dict''' 
     releases_dict = {}
-    releases_json = download_ubuntu_release_codename_mapping()
 
     db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
@@ -236,10 +233,10 @@ def process_cve(cve):
         relevant_statuses = summarize_statuses_ubuntu(statuses)
 
         # highest version needs '>=' as operator
-        if relevant_statuses[-1][1] != 'upstream':
+        if relevant_statuses[-1][2] == '' and relevant_statuses[-1][1] != 'upstream':
             relevant_statuses[-1] = (relevant_statuses[-1][0], relevant_statuses[-1][1], '>=')
-        elif len(relevant_statuses) > 1:
-            relevant_statuses[-2] = (relevant_statuses[-2][0], relevant_statuses[-2][1], '>=')
+
+        all_dne_statuses = len([True for status_info, _, _ in relevant_statuses if status_info['status'] == 'DNE']) == len(relevant_statuses)
 
         for status_infos, ubuntu_version, extra_cpe in relevant_statuses:
             status = status_infos['status']
@@ -254,9 +251,9 @@ def process_cve(cve):
 
             if not matching_cpe:
                 if len(cve['packages']) == 1 and len(general_given_cpes) == 1 and name in general_given_cpes[0] and name != 'linux':
-                    matching_cpe = get_general_cpe(general_given_cpes[0])
+                    matching_cpe = get_general_cpe(cpes[0][1])
                 else:
-                    matching_cpe = get_matching_cpe(name, package['name'], name_version, version, search, cpes)
+                    matching_cpe = get_matching_cpe(name, name_version, version, search, cpes)
                 
                 # linux-* package
                 if not matching_cpe:
@@ -278,18 +275,20 @@ def process_cve(cve):
                     if name == matching_cpe.split(':')[4]:
                         best_match = True
                     packages_cpes.append((matching_cpe, name, best_match))
-                else:
-                    continue
                 
                 # match found cpe to all previous not found packages
                 match_not_found_cpe(cpes, matching_cpe, name)
 
+            # package not relevant, b/c all statuses are does not exist and matching cpe is not in the given ones, 
+            # so ubuntu doesn't correct NVD data, because CVE is already not shown for the given package
+            if all_dne_statuses and get_general_cpe(matching_cpe) not in general_given_cpes and len(get_equivalent_cpes(matching_cpe)) == 1:
+                break
             if status == 'released':
                 # no version given with status released, could happen with 'upstream' as codename
                 if not note:
                     continue
             version_end = get_version_end(status, note)
-            distro_cpe= get_distribution_cpe(ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)
+            distro_cpe= get_distribution_cpe(note, version_end, ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'ubuntu', DB_CURSOR)
 
@@ -325,7 +324,7 @@ def match_not_found_cpe(cpes, matching_cpe, name):
                 clean_version = '-1'
                 note = ''
             version_end = get_version_end(status, note)
-            distro_cpe = get_distribution_cpe(ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)
+            distro_cpe = get_distribution_cpe(note, version_end, ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'ubuntu', DB_CURSOR)
         del UBUNTU_NOT_FOUND_NAME[name]

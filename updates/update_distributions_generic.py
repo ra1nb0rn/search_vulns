@@ -11,7 +11,22 @@ ESCAPE_VERSION = re.compile(r'([\+\-\~\:])')
 CPE_SEARCH_RESULT_DICT = {}
 PACKAGE_CPE_MATCH_THRESHOLD = 0.42
 NEW_CPES_INFOS = []
-NAME_CPE_DICT = {}
+NAME_CPE_DICT = {
+    'abuse-sdl': 'cpe:2.3:a:abuse:abuse-sdl:*:*:*:*:*:*:*:*',
+    'aflplusplus': 'cpe:2.3:a:afl\+\+_project:afl\+\+:*:*:*:*:*:*:*:*',
+    'aom': ' cpe:2.3:a:aomedia:aomedia:*:*:*:*:*:*:*:*',
+    'apcupsd': 'cpe:2.3:a:apcupsd:apc_ups_daemon:*:*:*:*:*:*:*:*',
+    'archvsync': 'cpe:2.3:a:debian:ftpsync:*:*:*:*:*:*:*:*',
+    'adobe-flashplugin': 'cpe:2.3:a:adobe:flash_plugin:*:*:*:*:*:*:*:*', # non existent cpe
+    'armagetronad': 'cpe:2.3:a:armagetron:armagetron_advanced:*:*:*:*:*:*:*:*',
+    'dotnet': 'cpe:2.3:a:microsoft:.net:*:*:*:*:*:*:*:*',
+    'libpgjava': 'cpe:2.3:a:postgresql:postgresql_jdbc_driver:*:*:*:*:*:*:*:*',
+    'bzr': 'cpe:2.3:a:canonical:bazaar:*:*:*:*:*:*:*:*',
+    'mc': 'cpe:2.3:a:midnight_commander:midnight_commander:*:*:*:*:*:*:*:*',
+    'wv': 'cpe:2.3:a:wvware:wvware:*:*:*:*:*:*:*:*',
+    'mozjs': 'cpe:2.3:a:mozilla:firefox_esr:*:*:*:*:*:*:*:*',
+    'nvidia-graphics-drivers': 'cpe:2.3:a:nvidia:gpu_driver:*:-:*:*:unix:*:*:*',
+}
 
 
 def get_general_cpe(cpe):
@@ -219,7 +234,7 @@ def summarize_statuses_with_version(statuses, fixed_status_names, version_field,
 
 
 def get_clean_version(version, is_good_version):
-    '''Get clean version similar to the ones already in the database'''
+    '''Get clean version similar to the ones already in the database, e.g. 1:115.0.2+dfsg~ubuntu16.04 -> 115.0.2'''
     clean_version = SPLIT_VERSION.match(version)
     if clean_version:
         clean_version = clean_version.group(1)
@@ -227,10 +242,12 @@ def get_clean_version(version, is_good_version):
             return ''
     else:
         if is_good_version:
-            split_values = ['dfsg', '+', '~', 'build', 'deb']
+            split_values = ['ubuntu', 'dfsg', '+', '~', 'build', 'deb']
             clean_version = version
             for value in split_values:
                 clean_version = clean_version.split(value)[0]
+            # 'released 0.10.3-1' -> '0.10.3-1'
+            clean_version.replace('released ', '')
         else:
             return ''
     
@@ -278,14 +295,50 @@ def is_cve_rejected(cve_id):
         return False
 
 
+def get_version_end_ubuntu(version_end, status, note, software_version):
+    '''Return version end, considering special ubuntu statuses'''
+    version_end = get_clean_version(software_version, False)
+    if (not version_end and status == 'not-affected') or status == 'DNE' :
+        # no valid version found (occur with status not-affected and DNE)
+        version_end = '-1'
+        software_version = ''
+    elif status == 'pending':
+        if software_version:
+            version_end = get_clean_version(software_version, True)
+        else:
+            version_end = str(sys.maxsize)
+    elif status in ['needed, needs-triage', 'active', 'deferred']:
+        version_end = str(sys.maxsize)
+    elif status == 'ignored':
+        if not note or any(note.startswith(string) for string in ['end of', 'code', 'superseded', 'was not-affected']):
+            version_end = ''
+        elif note.startswith('only'):
+            version_end = '-1'
+        elif not any(x in note for x in ['will not', 'intrusive', 'was', 'fix']):
+            version_end = str(sys.maxsize)
+        else:
+            version_end = ''
+    return version_end
+
+
 def get_version_end(status, software_version):
     '''Return fitting version end'''
     version_end = '-1'
-    if status == 'resolved':
+    if status == 'released':
         version_end = get_clean_version(software_version, True)
+        if not version_end:
+            version_end =  ''
+    elif status == 'resolved':
+        version_end = get_clean_version(software_version, True)
+    # for debian
     elif status in ['open', 'undetermined']:
         version_end = str(sys.maxsize)
         software_version = ''
+    else:
+        # for ubuntu
+        version_end = get_version_end_ubuntu(version_end=version_end, software_version=software_version, status=status, note=software_version)
+    # remove all whitespaces, b/c ubuntu could return versions like ' 1.11.15. 1.12.1'
+    version_end = version_end.replace(' ','')
     return version_end
 
 
@@ -357,7 +410,7 @@ def add_not_found_packages(not_found_cpes, distribution, db_cursor):
             matching_cpe = 'cpe:2.3:a:%s:%s:*:*:*:*:*:*:*:*' % (name, name)
 
         for note, distro_version, cve_id, name_version, _, status, extra_cpe in backport_cpes:
-            if status == 'resolved' and not note:
+            if (status == 'released' or status == 'resolved') and not note:
                 continue
             version_end = get_version_end(status, note)
             distro_cpe= get_distribution_cpe(note, version_end, distro_version, distribution, matching_cpe, extra_cpe)

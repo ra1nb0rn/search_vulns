@@ -24,7 +24,7 @@ CPE_SEARCH_THRESHOLD_MATCH = 0.72
 MATCH_DISTRO_TARGET_SW = re.compile(r'([<>]?=?)(ubuntu|debian|redhat)_([\d\.]{1,5}|inf)')
 MATCH_DISTRO_QUERY = re.compile(r'([Uu]buntu|[Dd]ebian|[Rr]edhat)[ _]?([\w\.]*)')
 MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat)')
-MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|redhat|debian)_([\d\.]+|sid):.*?:.*?$')
+MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|redhat|debian)_([\d\.]+|upstream|sid):.*?:.*?$')
 MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'[\w\s\.\:\-\_\~]{3,}')
 
 EQUIVALENT_CPES = {}
@@ -65,7 +65,7 @@ def is_useful_cpe(cpe, distribution):
     if not MATCH_DISTRO_CPE.match(cpe) or not MATCH_DISTRO.search(target_sw):
         return True
     distro, distro_version = distribution
-    if distro_version == 'sid':
+    if distro_version == 'upstream' or distro_version == 'sid':
         distro_version = 'inf'
     try:
         operator, distro_cpe, distro_version_cpe = MATCH_DISTRO_TARGET_SW.match(target_sw).groups()[0:3]
