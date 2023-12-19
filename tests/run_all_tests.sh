@@ -15,9 +15,12 @@ EXIT_3=$?
 echo '[+] Running cpe_search/test_cpes.py'
 python3 "${SCRIPT_DIR}/../cpe_search/test_cpes.py"
 EXIT_4=$?
+echo '[+] Running test_debian_queries.py'
+python3 "${SCRIPT_DIR}/test_debian_queries.py"
+EXIT_5=$?
 echo '[+] Running cpe_search/test_cpe_suggestions.py'
 python3 "${SCRIPT_DIR}/../cpe_search/test_cpe_suggestions.py"
-EXIT_5=$?
+EXIT_6=$?
 
 # https://stackoverflow.com/a/16358989
-! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_5 ))
+! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_5 || $EXIT_6))
