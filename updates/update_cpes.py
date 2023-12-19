@@ -1,6 +1,5 @@
 import os
 import shutil
-import sqlite3
 import json
 
 try:  # use ujson if available
@@ -10,6 +9,7 @@ except ModuleNotFoundError:
 
 from cpe_search.cpe_search import update as update_cpe
 from .update_generic import *
+from cpe_search.cpe_search import get_all_cpes
 
 async def handle_cpes_update(nvd_api_key=None):
     if os.path.isfile(CONFIG['cpe_search']['DATABASE_NAME']):
@@ -57,3 +57,87 @@ async def handle_cpes_update(nvd_api_key=None):
             os.remove(MARIADB_BACKUP_FILE)
 
     return not success
+
+def add_new_cpes_to_db(new_cpes):
+    if os.path.isfile(CONFIG['cpe_search']['DATABASE_NAME']):
+        shutil.copy(CONFIG['cpe_search']['DATABASE_NAME'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
+    try:
+        add_cpe_infos_to_db(new_cpes)
+    except:
+        if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
+            shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['DATABASE_NAME'])
+        return True
+    if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
+        os.remove(CONFIG['CPE_DATABASE_BACKUP_FILE'])
+    return False
+
+
+def add_cpe_infos_to_db(new_cpes):
+    '''Add all new cpes to the cpe-search database'''
+
+    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['cpe_search']['DATABASE_NAME'])
+    db_cursor = db_conn.cursor()
+    counter_cpe_entries = db_cursor.execute('SELECT COUNT(*) FROM cpe_entries').fetchone()[0]+1
+    db_terms_to_entries = db_cursor.execute('SELECT * FROM terms_to_entries').fetchall()
+    db_cursor.execute('DROP TABLE terms_to_entries;')
+    db_cursor.execute('''CREATE TABLE terms_to_entries (
+                            term TEXT PRIMARY KEY,
+                            entry_ids TEXT NOT NULL
+                      );''')
+    
+    new_cpes.sort(key=lambda cpe: cpe[0].split(':')[10])
+    unique_cpes = []
+    # remove duplicates
+    for cpe_infos in new_cpes:
+        if not cpe_infos in unique_cpes:
+            unique_cpes.append(cpe_infos)
+    new_cpes = unique_cpes
+
+    all_cpes = set(get_all_cpes(False))
+
+    terms_to_entries = {}
+    for term, entry_ids in db_terms_to_entries:
+        terms_to_entries[term] = []
+        for eid in entry_ids.split(','):
+            if '-' in eid:
+                eid = eid.split('-')
+                terms_to_entries[term] += list(range(int(eid[0]), int(eid[1])+1))
+            else:
+                terms_to_entries[term].append(int(eid))
+
+    # add CPE infos to DB
+    for i, cpe_info in enumerate(new_cpes):
+        if cpe_info[0] in all_cpes:       
+            continue
+        counter_cpe_entries += 1
+        db_cursor.execute('INSERT INTO cpe_entries VALUES (?, ?, ?, ?)', (counter_cpe_entries, cpe_info[0], json.dumps(cpe_info[1]), cpe_info[2]))
+        counter_cpe_entries += 1
+        for term in cpe_info[1]:
+            if term not in terms_to_entries:
+                terms_to_entries[term] = []
+            terms_to_entries[term].append(counter_cpe_entries)
+    db_conn.commit()
+    db_cursor.close()
+    db_cursor = db_conn.cursor()
+
+    # add term --> entries translations to DB
+    for term, entry_ids in terms_to_entries.items():
+        if not entry_ids:
+            continue
+
+        i = 0
+        entry_ids_str = str(entry_ids[0])
+        while i < len(entry_ids) - 1:
+            start_i = i
+            while (i < len(entry_ids) - 1) and entry_ids[i] + 1 == entry_ids[i+1]:
+                i += 1
+            if start_i == i:
+                entry_ids_str += ',%d' % entry_ids[i]
+            else:
+                entry_ids_str += ',%d-%d' % (entry_ids[start_i], entry_ids[i])
+            i += 1
+        db_cursor.execute('INSERT INTO terms_to_entries VALUES (?, ?)', (term, entry_ids_str))
+
+    db_conn.commit()
+    db_cursor.close()
+    db_conn.close()

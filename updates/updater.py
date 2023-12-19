@@ -7,9 +7,11 @@ import subprocess
 import sys
 
 from .update_nvd import update_vuln_db
-from .update_cpes import handle_cpes_update
+from .update_cpes import handle_cpes_update, add_new_cpes_to_db
 from .update_generic import *
 from .update_generic import _load_config
+from .update_debian import update_vuln_debian_db
+from .update_distributions_generic import NEW_CPES_INFOS
 
 
 def run(full=False, nvd_api_key=None, config_file=''):
@@ -68,10 +70,19 @@ def run(full=False, nvd_api_key=None, config_file=''):
         if error:
             print(error)
             sys.exit(1)
-
+        print('[+] Updating debian vulnerability database')
+        error = loop.run_until_complete(update_vuln_debian_db())
+        if error:
+            print(error)
+            sys.exit(1)
         # remove backup file on success
         if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
             os.remove(CONFIG['DATABASE_BACKUP_FILE'])
+        print('[+] Add new cpes to database')
+        error = add_new_cpes_to_db(NEW_CPES_INFOS)
+        if error:
+            print('[-] Error adding new cpe information')
+            sys.exit(1)
     else:
         print("[+] Downloading latest versions of resources ...")
 

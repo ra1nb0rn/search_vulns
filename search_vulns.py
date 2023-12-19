@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import threading
+import itertools
 
 from cpe_version import CPEVersion
 from cpe_search.database_wrapper_functions import *
@@ -19,6 +20,13 @@ from cpe_search.cpe_search import _load_config as _load_config_cpe_search
 DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
 DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'debian_equiv_cpes.json')
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
+
+MATCH_DISTRO_TARGET_SW = re.compile(r'([<>]?=?)(ubuntu|debian|redhat)_([\d\.]{1,5}|inf)')
+MATCH_DISTRO_QUERY = re.compile(r'([Uu]buntu|[Dd]ebian|[Rr]edhat)[ _]?([\w\.]*)')
+MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat)')
+MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|redhat|debian)_([\d\.]+|sid):.*?:.*?$')
+MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'[\w\s\.\:\-\_\~]{3,}')
+
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
 DEDUP_LINEBREAKS_RE_1 = re.compile(r'(\r\n)+')
@@ -49,9 +57,43 @@ def printit(text: str = '', end: str = '\n', color=SANE):
     sys.stdout.flush()
 
 
+def is_useful_cpe(cpe, distribution):
+    '''Return whether a given cpe is useful (nvd cpe or suiting distro cpe)'''
+    #if not distribution[0] and MATCH_DISTRO_CPE.match(cpe):
+    #    return False
+    target_sw = cpe.split(':')[10]
+    if not MATCH_DISTRO_CPE.match(cpe) or not MATCH_DISTRO.search(target_sw):
+        return True
+    distro, distro_version = distribution
+    if distro_version == 'sid':
+        distro_version = 'inf'
+    try:
+        operator, distro_cpe, distro_version_cpe = MATCH_DISTRO_TARGET_SW.match(target_sw).groups()[0:3]
+    except:
+        operator, distro_cpe, distro_version_cpe = '', '', ''
+    if distro == distro_cpe or (distribution[0] and distro_version == 'inf'):
+        if not operator and distro_version_cpe == distro_version:
+            return True
+        elif operator == '<=' and float(distro_version) <= float(distro_version_cpe):
+            return True
+        elif operator == '>=' and float(distro_version) >= float(distro_version_cpe):
+            return True
+    if operator == '>=' and float(distro_version) >= float(distro_version_cpe):
+        return True
+    return False
+
+
+def add_distribution_infos_to_cpe(cpe, distribution):
+    cpe_parts = cpe.split(':')
+    if distribution[1] == 'inf':
+        cpe_parts[10] = distribution[0]
+    else:
+        cpe_parts[10] = '%s_%s' %(distribution)
+    return ':'.join(cpe_parts)
+
+
 def is_cpe_included_from_field(cpe1, cpe2, field=6):
     '''Return True if cpe1 is included in cpe2 starting from the provided field'''
-
     cpe1_remainder_fields = cpe1.split(':')[field:]
     cpe2_remainder_fields = cpe2.split(':')[field:]
 
@@ -86,19 +128,126 @@ def is_cpe_included_from_field(cpe1, cpe2, field=6):
     return True
 
 
-def is_cpe_included_after_version(cpe1, cpe2):
-    '''Return True if cpe1 is included in cpe2 starting after the version'''
+def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_general_cpe_vulns):
+    '''Check whether vuln_version is in range '''
+    vuln_cpe = pot_vuln[1]
+    version_start, version_start_incl = pot_vuln[2], pot_vuln[3]
+    version_end, version_end_incl = pot_vuln[4], pot_vuln[5]
+    is_cpe_vuln, vuln_match_reason = False, 'version_in_range'
+
+    if version_start and version_end:
+        if version_start_incl == True and version_end_incl == True:
+            is_cpe_vuln = CPEVersion(version_start) <= cpe_version <= CPEVersion(version_end)
+        elif version_start_incl == True and version_end_incl == False:
+            if version_end == '-1':
+                vuln_match_reason = 'not_affected'
+                is_cpe_vuln = is_useful_cpe(vuln_cpe, distribution) and CPEVersion(version_start) <= cpe_version
+                # filter out distro vulns not relevant b/c of version_start not matching
+                if not is_cpe_vuln:
+                    vuln_match_reason = 'version_start_not_included'
+            else:
+                is_cpe_vuln = CPEVersion(version_start) <= cpe_version < CPEVersion(version_end)
+        elif version_start_incl == False and version_end_incl == True:
+            is_cpe_vuln = CPEVersion(version_start) < cpe_version <= CPEVersion(version_end)
+        else:
+            is_cpe_vuln = CPEVersion(version_start) < cpe_version < CPEVersion(version_end)
+    elif version_start:
+        if version_end_incl == True:
+            is_cpe_vuln = CPEVersion(version_start) <= cpe_version
+        elif version_end_incl == False:
+            is_cpe_vuln = CPEVersion(version_start) < cpe_version
+    elif version_end:
+        if version_end == '-1':
+            vuln_match_reason = 'not_affected'
+            is_cpe_vuln = is_useful_cpe(vuln_cpe, distribution)
+        elif version_end_incl == True:
+            is_cpe_vuln = cpe_version <= CPEVersion(version_end)
+        elif version_end_incl == False:
+            is_cpe_vuln = cpe_version < CPEVersion(version_end)
+    else:
+        # if configured, ignore vulnerabilities that only affect a general CPE
+        if ignore_general_cpe_vulns and all(val in ('*', '-') for val in vuln_cpe.split(':')[5:]):
+            is_cpe_vuln = False
+        is_cpe_vuln = is_cpe_included_after_version(cpe, vuln_cpe)
+        vuln_match_reason = 'general_cpe'
+
+    # check that everything after the version field matches in the CPE
+    if is_cpe_vuln:
+        if cpe.count(':') > 5 and vuln_cpe.count(':') > 5:
+            if not is_cpe_included_after_version(cpe, vuln_cpe, bool(distribution[0])):
+                is_cpe_vuln = False
+
+    return is_cpe_vuln, vuln_match_reason
+
+
+def get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_general_cpe_vulns=False):
+    '''
+    Get vulnerability data that is stored in the DB 
+    with a distribution cpe
+    '''
+    vulns = []
+    if len(cpe_parts) > 5 and cpe_parts[5] not in ('-', '*'):  # for CPE 2.3
+        cpe_version = CPEVersion(cpe_parts[5])
+        cpe_parts[5] = '*'
+    else:
+        cpe_version = None
+    if cpe_parts[5] == '-':
+        cpe_parts[5] = '*'
+    
+    query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
+                         'is_cpe_version_end_including FROM cve_cpe WHERE cpe LIKE ? AND source == ?')
+    
+    # query for all distro cpes
+    query_cpe_parameters = ['%s:>=%s%%' % (':'.join(cpe_parts[:10]), distribution[0])]
+    if distribution[1] != 'inf':
+        query_cpe_parameters.append('%s:%s_%s:%%' % (':'.join(cpe_parts[:10]), distribution[0], distribution[1]))
+        query_cpe_parameters.append('%s:<=%s%%' % (':'.join(cpe_parts[:10]), distribution[0]))
+
+    if cpe_parts[6] == '-':
+        cpe_parts[6] = '*'
+        query_cpe_parameters.append('%s:>=%s%%' % (':'.join(cpe_parts[:10]), distribution[0]))
+        if distribution[1] != 'inf':
+            query_cpe_parameters.append('%s:%s_%s:%%' % (':'.join(cpe_parts[:10]), distribution[0], distribution[1]))
+            query_cpe_parameters.append('%s:<=%s%%' % (':'.join(cpe_parts[:10]), distribution[0]))
+
+
+    pot_vulns = set()
+    for query_cpe_parameter in query_cpe_parameters:
+        pot_vulns |= set(db_cursor.execute(query, (query_cpe_parameter, distribution[0], )))
+    vulns = []
+
+    for pot_vuln in pot_vulns:
+        if cpe_version:
+            is_cpe_vuln, vuln_match_reason = check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_general_cpe_vulns)
+        else:
+            is_cpe_vuln = pot_vuln[4] != '-1'
+            vuln_match_reason = 'general_cpe_but_ok'
+        if not is_useful_cpe(pot_vuln[1], distribution) or  vuln_match_reason == 'version_start_not_included':
+            is_cpe_vuln = False
+        elif not is_cpe_vuln:
+            is_cpe_vuln, vuln_match_reason = True, 'not_affected'
+        if is_cpe_vuln:
+            vulns.append((pot_vuln, vuln_match_reason))            
+    return vulns
+
+
+def is_cpe_included_after_version(cpe1, cpe2, is_distro_query=False):
+    '''Return True if cpe1 is included in cpe2 after the version section'''
 
     return is_cpe_included_from_field(cpe1, cpe2)
 
 
-def has_cpe_lower_versions(cpe1, cpe2):
+def has_cpe_lower_versions(cpe1, cpe2, is_distro_query=False):
     '''Return True if cpe1 is considered to have a lower product version than cpe2'''
 
     cpe1_remainder_fields = cpe1.split(':')[5:]
     cpe2_remainder_fields = cpe2.split(':')[5:]
 
     for i in range(min(len(cpe1_remainder_fields), len(cpe2_remainder_fields))):
+        if i == 4 and is_distro_query and (MATCH_DISTRO_TARGET_SW.match(cpe1_remainder_fields[i]) or MATCH_DISTRO_TARGET_SW.match(cpe2_remainder_fields[i])):
+            continue
+        if i == 6 and is_distro_query:
+            continue
         if cpe1_remainder_fields[i] in ('*', '-'):
             continue
         if cpe2_remainder_fields[i] in ('*', '-'):
@@ -107,6 +256,30 @@ def has_cpe_lower_versions(cpe1, cpe2):
         if CPEVersion(cpe1_remainder_fields[i]) > CPEVersion(cpe2_remainder_fields[i]):
             return False
     return True
+
+
+def get_not_affected_cve_ids(vulns):
+    '''Get cve_ids of not-affected vulns'''
+    not_affected_cve_ids = []
+    for vuln in vulns:
+        if vuln[1] == 'not_affected':
+            not_affected_cve_ids.append(vuln[0][0])
+        else:
+            try:
+                version_end = vuln[0][4]
+                if version_end == '-1':
+                    not_affected_cve_ids.append(vuln[0][0])
+            except:
+                pass
+    return not_affected_cve_ids
+
+
+#def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_refs=False, distribution=('', 'inf')):
+#    '''Get known vulnerabilities for the given CPE 2.3 string'''
+#    vulns += get_exact_vuln_matches(cpe, db_cursor)
+#    vulns += get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, distribution, ignore_general_cpe_vulns)
+#    if distribution[0]:
+#        vulns += get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_general_cpe_vulns)
 
 
 def is_more_specific_cpe_contained(vuln_cpe, cve_cpes):
@@ -187,7 +360,7 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
                             poc_in_github_ref[0] + '.git' not in detailed_vulns[cve_id]['exploits']):
                         detailed_vulns[cve_id]['exploits'].append(poc_in_github_ref[0])
 
-    return detailed_vulns
+    return detailed_vulns, get_not_affected_cve_ids(vulns)
 
 
 def _is_version_start_end_matching(cpe_version, cpe_subversion, version_start, version_start_incl, version_end, version_end_incl):
@@ -428,8 +601,90 @@ def get_equivalent_cpes(cpe, config):
     return equiv_cpes
 
 
+def get_distro_infos_from_query(original_query, config):
+    '''
+    Extract distro version or codename from query and 
+    query in the database for a suiting distro_version
+    '''
+ 
+    db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
+    db_cursor = db_conn.cursor()
+    db_distro_query = 'SELECT version, codename FROM distribution_codename_version_mapping'
+    all_distro_versions_codenames_tuples = db_cursor.execute(db_distro_query).fetchall()
+    # turn list of version_codename tuples in one list
+    all_distro_versions_codenames = [version for distro_version in all_distro_versions_codenames_tuples for version in distro_version]
+    possible_distro_query = MATCH_DISTRO_QUERY.search(original_query)
+    if MATCH_CPE_23_RE.match(original_query):
+        possible_distro_query = MATCH_DISTRO_QUERY.search(original_query.split(':')[10])
+    if possible_distro_query:
+        distro, distro_version = possible_distro_query.groups()
+        if distro_version in all_distro_versions_codenames:
+            for version, codename in all_distro_versions_codenames_tuples:
+                if distro_version == version or distro_version == codename:
+                    distro_version = version
+                    break
+        else:
+            distro_version = 'inf' # float of 'inf' is a value higher than any other value
+    else:
+        return (('', 'inf'))
+    db_conn.close()
+    return (distro.lower(), distro_version)
+
+
+def seperate_distribution_information_from_query(query, config):
+    distribution = get_distro_infos_from_query(query, config)
+    if distribution[0] and not MATCH_CPE_23_RE.match(query):
+        query = re.sub(MATCH_DISTRO_QUERY, '', query, 1)
+    return distribution, query
+
+
+def is_possible_distro_query(query):
+    return MATCH_DISTRO.search(query.lower()) and MATCH_TWO_SOFTWARES_AND_VERSIONS.match(query.lower())
+
+
+def get_distro_infos_from_query(original_query, config):
+    '''
+    Extract distro version or codename from query and 
+    query in the database for a suiting distro_version
+    '''
+ 
+    db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
+    db_cursor = db_conn.cursor()
+    db_distro_query = 'SELECT version, codename FROM distribution_codename_version_mapping'
+    all_distro_versions_codenames_tuples = db_cursor.execute(db_distro_query).fetchall()
+    # turn list of version_codename tuples in one list
+    all_distro_versions_codenames = [version for distro_version in all_distro_versions_codenames_tuples for version in distro_version]
+    possible_distro_query = MATCH_DISTRO_QUERY.search(original_query)
+    if MATCH_CPE_23_RE.match(original_query):
+        possible_distro_query = MATCH_DISTRO_QUERY.search(original_query.split(':')[10])
+    if possible_distro_query:
+        distro, distro_version = possible_distro_query.groups()
+        if distro_version in all_distro_versions_codenames:
+            for version, codename in all_distro_versions_codenames_tuples:
+                if distro_version == version or distro_version == codename:
+                    distro_version = version
+                    break
+        else:
+            distro_version = 'inf' # float of 'inf' is a value higher than any other value
+    else:
+        return (('', 'inf'))
+    db_conn.close()
+    return (distro.lower(), distro_version)
+
+
+def seperate_distribution_information_from_query(query, config):
+    distribution = get_distro_infos_from_query(query, config)
+    if distribution[0] and not MATCH_CPE_23_RE.match(query):
+        query = re.sub(MATCH_DISTRO_QUERY, '', query, 1)
+    return distribution, query
+
+
+def is_possible_distro_query(query):
+    return MATCH_DISTRO.search(query.lower()) and MATCH_TWO_SOFTWARES_AND_VERSIONS.match(query.lower())
+
+
 def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD_MATCH, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, include_single_version_vulns=False, config=None):
-    """Search for known vulnerabilities based on the given query"""
+    '''Search for known vulnerabilities based on the given query'''
 
     # create DB handle if not given
     if not config:
@@ -445,18 +700,27 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     query_stripped = query.strip()
     cpe, pot_cpes = query_stripped, []
     if not MATCH_CPE_23_RE.match(query_stripped):
-        cpe_search_results = search_cpes(query_stripped, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
+        if is_possible_distro_query(query):
+            # remove distro information before searching for a cpe
+            distribution, cpe_search_query = seperate_distribution_information_from_query(query, config)
+        else:
+            distribution, cpe_search_query = (('', 'inf')), query
+        cpe_search_results = search_cpes(cpe_search_query, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
 
         if not cpe_search_results['cpes']:
-            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': cpe_search_results['pot_cpes']}}
+            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': cpe_search_results['pot_cpes']}}, []
 
         cpes = cpe_search_results['cpes']
         pot_cpes = cpe_search_results['pot_cpes']
 
         if not cpes:
-            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': pot_cpes}}
+            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': pot_cpes}}, []
 
         cpe = cpes[0][0]
+
+    distribution = ('', 'inf')
+    if is_possible_distro_query(cpe):
+        distribution = get_distro_infos_from_query(cpe, config)
 
     # use the retrieved CPE to search for known vulnerabilities
     vulns = {}
@@ -464,18 +728,30 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         equivalent_cpes = [cpe]  # only use provided CPE
     else:
         equivalent_cpes = get_equivalent_cpes(cpe, config)  # also search and use equivalent CPEs
+    # change cpes to distribution cpes
+    if distribution[0]:
+        equivalent_cpes = [add_distribution_infos_to_cpe(cpe_, distribution) for cpe_ in equivalent_cpes]
 
+    not_affected_cve_ids = []
     for cur_cpe in equivalent_cpes:
-        cur_vulns = get_vulns(cur_cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, add_other_exploit_refs=add_other_exploit_refs)
+        cur_vulns, not_affected_cve_ids_returned = get_vulns(cur_cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, add_other_exploit_refs=add_other_exploit_refs)
+        not_affected_cve_ids += not_affected_cve_ids_returned
         for cve_id, vuln in cur_vulns.items():
             if cve_id not in vulns:
                 vulns[cve_id] = vuln
+
+    # delete not affected vulns
+    for cve_id in not_affected_cve_ids:
+        try:
+            del vulns[cve_id]
+        except:
+            pass
 
     if close_cursor_after:
         db_cursor.close()
         db_conn.close()
 
-    return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes}}
+    return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes}}, not_affected_cve_ids
 
 
 def parse_args():
@@ -535,6 +811,10 @@ def main():
         # if current query is not already a CPE, retrieve a CPE that matches the query
         query = query.strip()
         cpe = query
+        if is_possible_distro_query(query):
+            distribution, cpe_search_query = seperate_distribution_information_from_query(query, config)
+        else:
+            distribution, cpe_search_query = ('', 'inf'), query
         if not MATCH_CPE_23_RE.match(query):
             cpe_search_results = search_cpes(query, count=1, threshold=args.cpe_search_threshold, config=config['cpe_search'])
             if cpe_search_results.get('cpes', []):
@@ -569,17 +849,31 @@ def main():
         # use the retrieved CPE to search for known vulnerabilities
         vulns[query] = {}
         equivalent_cpes = get_equivalent_cpes(cpe, config)
-
+        
+        # change cpes to distribution cpes
+        if distribution[0]:
+            cpe = add_distribution_infos_to_cpe(cpe, distribution)
+            equivalent_cpes = [add_distribution_infos_to_cpe(cpe_, distribution) for cpe_ in equivalent_cpes]
         if args.format.lower() == 'txt':
             if not args.output:
                 print()
                 printit('[+] %s (%s)' % (query, '/'.join(equivalent_cpes)), color=BRIGHT_BLUE)
 
+        not_affected_cve_ids = []
         for cur_cpe in equivalent_cpes:
-            cur_vulns = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns, args.include_single_version_vulns, config)
-            for cve_id, vuln in cur_vulns[cur_cpe]['vulns'].items():
+            cur_vulns, not_affected_cve_ids_returned = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns, args.include_single_version_vulns, config)
+            not_affected_cve_ids += not_affected_cve_ids_returned
+            
+            for cve_id, vuln in cur_vulns.items():
                 if cve_id not in vulns[query]:
                     vulns[query][cve_id] = vuln
+    
+        # delete not affected vulns
+        for cve_id in not_affected_cve_ids:
+            try:
+                del vulns[cve_id]
+            except:
+                pass
 
         # print found vulnerabilities
         if args.format.lower() == 'txt':

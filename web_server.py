@@ -92,10 +92,10 @@ def search_vulns():
     if cpe_suggestions:
         query_cpe = cpe_suggestions[0][0]
         is_good_cpe = False  # query was never issued as CPE --> use CPE deprecations and equivalences
-        vulns = search_vulns_call(query_cpe, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
+        vulns,_ = search_vulns_call(query_cpe, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
         vulns = {query: {'cpe': vulns[query_cpe]['cpe'], 'vulns': vulns[query_cpe]['vulns'], 'pot_cpes': cpe_suggestions}}
     else:
-        vulns = search_vulns_call(query, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
+        vulns,_ = search_vulns_call(query, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
         query_lower = query.lower()
         if not MATCH_CPE_23_RE.match(query_lower):
             CPE_SUGGESTIONS_CACHE[query_lower] = vulns[query]['pot_cpes']

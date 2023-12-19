@@ -9,11 +9,6 @@ import aiohttp
 from aiolimiter import AsyncLimiter
 from .update_generic import *
 
-try:  # use ujson if available
-    import ujson as json
-except ModuleNotFoundError:
-    import json
-
 def rollback_nvd():
     rollback()
     if os.path.isdir(NVD_DATAFEED_DIR):
@@ -312,9 +307,7 @@ def create_poc_in_github_table():
     # add PoC / exploit information to DB
     db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
-    with open(CREATE_SQL_STATEMENTS_FILE) as f:
-        create_sql_statements = json.loads(f.read())
-    create_poc_in_github_table = create_sql_statements['TABLES']['CVE_POC_IN_GITHUB_MAP'][CONFIG['DATABASE']['TYPE']]
+    create_poc_in_github_table = CREATE_SQL_STATEMENTS['TABLES']['CVE_POC_IN_GITHUB_MAP'][CONFIG['DATABASE']['TYPE']]
     # necessary because SQLite can't handle more than one query a time
     for query in create_poc_in_github_table[:-1].split(';'):
         db_cursor.execute(query+';')

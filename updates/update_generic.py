@@ -7,6 +7,11 @@ from search_vulns import _load_config
 from cpe_search.database_wrapper_functions import get_database_connection
 import subprocess
 
+try:  # use ujson if available
+    import ujson as json
+except ModuleNotFoundError:
+    import json
+
 VULNDB_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/vulndb.db3"
 NVD_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "nvd_data_feeds")
 CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary.db3"
@@ -28,7 +33,8 @@ CONFIG['DATABASE_BACKUP_FILE'] = CONFIG['DATABASE_NAME'] + '.bak'
 CONFIG['CPE_DATABASE_BACKUP_FILE'] = CONFIG['cpe_search']['DATABASE_NAME'] + '.bak'
 CONFIG['DEPRECATED_CPES_BACKUP_FILE'] = CONFIG['cpe_search']['DEPRECATED_CPES_FILE'] + '.bak'
 
-QUIET = False
+with open(CREATE_SQL_STATEMENTS_FILE) as f:
+    CREATE_SQL_STATEMENTS = json.loads(f.read())
 
 
 def rollback():
