@@ -29,23 +29,23 @@ CPE_SEARCH_COUNT = 5
 # define ANSI color escape sequences
 # Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
 # and: http://www.topmudsites.com/forums/showthread.php?t=413
-SANE = "\u001b[0m"
-GREEN = "\u001b[32m"
-BRIGHT_GREEN = "\u001b[32;1m"
-RED = "\u001b[31m"
-YELLOW = "\u001b[33m"
-BRIGHT_BLUE = "\u001b[34;1m"
-MAGENTA = "\u001b[35m"
-BRIGHT_CYAN = "\u001b[36;1m"
+SANE = '\u001b[0m'
+GREEN = '\u001b[32m'
+BRIGHT_GREEN = '\u001b[32;1m'
+RED = '\u001b[31m'
+YELLOW = '\u001b[33m'
+BRIGHT_BLUE = '\u001b[34;1m'
+MAGENTA = '\u001b[35m'
+BRIGHT_CYAN = '\u001b[36;1m'
 
 
-def printit(text: str = "", end: str = "\n", color=SANE):
-    """A small print wrapper function"""
+def printit(text: str = '', end: str = '\n', color=SANE):
+    '''A small print wrapper function'''
 
-    print(color, end="")
+    print(color, end='')
     print(text, end=end)
     if color != SANE:
-        print(SANE, end="")
+        print(SANE, end='')
     sys.stdout.flush()
 
 
@@ -150,9 +150,9 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
 
         edb_ids = edb_ids.strip()
         if edb_ids:
-            detailed_vulns[cve_id]["exploits"] = []
-            for edb_id in edb_ids.split(","):
-                detailed_vulns[cve_id]["exploits"].append("https://www.exploit-db.com/exploits/%s" % edb_id)
+            detailed_vulns[cve_id]['exploits'] = []
+            for edb_id in edb_ids.split(','):
+                detailed_vulns[cve_id]['exploits'].append('https://www.exploit-db.com/exploits/%s' % edb_id)
 
         # add other exploit references
         if add_other_exploit_refs:
@@ -163,13 +163,13 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
             if db_cursor:
                 nvd_exploit_refs = db_cursor.fetchall()
             if nvd_exploit_refs:
-                if "exploits" not in detailed_vulns[cve_id]:
-                    detailed_vulns[cve_id]["exploits"] = []
+                if 'exploits' not in detailed_vulns[cve_id]:
+                    detailed_vulns[cve_id]['exploits'] = []
                 for nvd_exploit_ref in nvd_exploit_refs:
-                    if (nvd_exploit_ref[0] not in detailed_vulns[cve_id]["exploits"] and
-                            nvd_exploit_ref[0] + '/' not in detailed_vulns[cve_id]["exploits"] and
-                            nvd_exploit_ref[0][:-1] not in detailed_vulns[cve_id]["exploits"]):
-                        detailed_vulns[cve_id]["exploits"].append(nvd_exploit_ref[0])
+                    if (nvd_exploit_ref[0] not in detailed_vulns[cve_id]['exploits'] and
+                            nvd_exploit_ref[0] + '/' not in detailed_vulns[cve_id]['exploits'] and
+                            nvd_exploit_ref[0][:-1] not in detailed_vulns[cve_id]['exploits']):
+                        detailed_vulns[cve_id]['exploits'].append(nvd_exploit_ref[0])
 
             # from PoC-in-Github
             query = 'SELECT reference FROM cve_poc_in_github_map WHERE cve_id = ?'
@@ -178,14 +178,14 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
             if db_cursor:
                 poc_in_github_refs = db_cursor.fetchall()
             if poc_in_github_refs:
-                if "exploits" not in detailed_vulns[cve_id]:
-                    detailed_vulns[cve_id]["exploits"] = []
+                if 'exploits' not in detailed_vulns[cve_id]:
+                    detailed_vulns[cve_id]['exploits'] = []
                 for poc_in_github_ref in poc_in_github_refs:
-                    if (poc_in_github_ref[0] not in detailed_vulns[cve_id]["exploits"] and
-                            poc_in_github_ref[0] + '/' not in detailed_vulns[cve_id]["exploits"] and
-                            poc_in_github_ref[0][:-1] not in detailed_vulns[cve_id]["exploits"] and
-                            poc_in_github_ref[0] + '.git' not in detailed_vulns[cve_id]["exploits"]):
-                        detailed_vulns[cve_id]["exploits"].append(poc_in_github_ref[0])
+                    if (poc_in_github_ref[0] not in detailed_vulns[cve_id]['exploits'] and
+                            poc_in_github_ref[0] + '/' not in detailed_vulns[cve_id]['exploits'] and
+                            poc_in_github_ref[0][:-1] not in detailed_vulns[cve_id]['exploits'] and
+                            poc_in_github_ref[0] + '.git' not in detailed_vulns[cve_id]['exploits']):
+                        detailed_vulns[cve_id]['exploits'].append(poc_in_github_ref[0])
 
     return detailed_vulns
 
@@ -292,13 +292,13 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
 
 
 def print_vulns(vulns, to_string=False):
-    """Print the supplied vulnerabilities"""
+    '''Print the supplied vulnerabilities'''
 
     out_string = ''
-    cve_ids_sorted = sorted(list(vulns), key=lambda cve_id: float(vulns[cve_id]["cvss"]), reverse=True)
+    cve_ids_sorted = sorted(list(vulns), key=lambda cve_id: float(vulns[cve_id]['cvss']), reverse=True)
     for cve_id in cve_ids_sorted:
         vuln_node = vulns[cve_id]
-        description = DEDUP_LINEBREAKS_RE_2.sub('\n', DEDUP_LINEBREAKS_RE_1.sub('\r\n', vuln_node["description"].strip()))
+        description = DEDUP_LINEBREAKS_RE_2.sub('\n', DEDUP_LINEBREAKS_RE_1.sub('\r\n', vuln_node['description'].strip()))
 
         if not to_string:
             print_str = GREEN + vuln_node["id"] + SANE
@@ -312,18 +312,18 @@ def print_vulns(vulns, to_string=False):
                 print_str += " (Actively exploited)"
         print_str += ': '+description+'\n'
 
-        if "exploits" in vuln_node:
+        if 'exploits' in vuln_node:
             if not to_string:
-                print_str += YELLOW + "Exploits:  " + SANE + vuln_node["exploits"][0] + "\n"
+                print_str += YELLOW + 'Exploits:  ' + SANE + vuln_node['exploits'][0] + '\n'
             else:
-                print_str += "Exploits:  " + vuln_node["exploits"][0] + "\n"
+                print_str += 'Exploits:  ' + vuln_node['exploits'][0] + '\n'
 
-            if len(vuln_node["exploits"]) > 1:
-                for edb_link in vuln_node["exploits"][1:]:
-                    print_str += len("Exploits:  ") * " " + edb_link + "\n"
+            if len(vuln_node['exploits']) > 1:
+                for edb_link in vuln_node['exploits'][1:]:
+                    print_str += len('Exploits:  ') * ' ' + edb_link + '\n'
 
-        print_str += "Reference: " + vuln_node["href"]
-        print_str += ", " + vuln_node["published"].split(" ")[0]
+        print_str += 'Reference: ' + vuln_node['href']
+        print_str += ', ' + vuln_node['published'].split(' ')[0]
         if not to_string:
             printit(print_str)
         else:
@@ -334,14 +334,14 @@ def print_vulns(vulns, to_string=False):
 
 
 def load_equivalent_cpes(config):
-    """Load dictionary containing CPE equivalences"""
+    '''Load dictionary containing CPE equivalences'''
 
     LOAD_EQUIVALENT_CPES_MUTEX.acquire()
     if not EQUIVALENT_CPES:
         equivalent_cpes_dicts_list, deprecated_cpes = [], {}
 
         # first add official deprecation information from the NVD
-        with open(config['cpe_search']['DEPRECATED_CPES_FILE'], "r") as f:
+        with open(config['cpe_search']['DEPRECATED_CPES_FILE'], 'r') as f:
             cpe_deprecations_raw = json.loads(f.read())
             for cpe, deprecations in cpe_deprecations_raw.items():
                 cpe_short = ':'.join(cpe.split(':')[:5]) + ':'
@@ -479,7 +479,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
 
 
 def parse_args():
-    """Parse command line arguments"""
+    '''Parse command line arguments'''
 
     parser = argparse.ArgumentParser(description="Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)")
     parser.add_argument("-u", "--update", action="store_true", help="Download the latest version of the the local vulnerability and software database")
@@ -514,10 +514,10 @@ def main():
     args = parse_args()
 
     if args.update == True:
-        from updater import run as run_updater
+        from updates.updater import run as run_updater
         run_updater(False, args.api_key, args.config)
     elif args.full_update == True:
-        from updater import run as run_updater
+        from updates.updater import run as run_updater
         run_updater(True, args.api_key, args.config)
 
     if not args.queries:
@@ -590,7 +590,7 @@ def main():
                 out_string += print_vulns(vulns[query], to_string=True)
         else:
             cpe_vulns = vulns[query]
-            cve_ids_sorted = sorted(list(cpe_vulns), key=lambda cve_id: float(cpe_vulns[cve_id]["cvss"]), reverse=True)
+            cve_ids_sorted = sorted(list(cpe_vulns), key=lambda cve_id: float(cpe_vulns[cve_id]['cvss']), reverse=True)
             cpe_vulns_sorted = {}
             for cve_id in cve_ids_sorted:
                 cpe_vulns_sorted[cve_id] = cpe_vulns[cve_id]
@@ -609,5 +609,5 @@ def main():
     db_conn.close()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
