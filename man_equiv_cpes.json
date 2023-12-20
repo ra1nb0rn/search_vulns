@@ -64,5 +64,6 @@
     "cpe:2.3:a:accountsservice_project:accountsservice:": ["cpe:2.3:a:canonical:accountsservice:", "cpe:2.3:a:freedesktop:accountsservice:"],
     "cpe:2.3:a:amanda:amanda:": ["cpe:2.3:a:zmanda:amanda:"],
     "cpe:2.3:a:kubernetes:kube-apiserver:": ["cpe:2.3:a:kubernetes:apiserver:"],
-    "cpe:2.3:a:magento:magento:": ["cpe:2.3:a:adobe:magento:", "cpe:2.3:a:adobe:magento_commerce:", "cpe:2.3:a:adobe:adobe_commerce:", "cpe:2.3:a:adobe:magento_open_source:"]
+    "cpe:2.3:a:magento:magento:": ["cpe:2.3:a:adobe:magento:", "cpe:2.3:a:adobe:magento_commerce:", "cpe:2.3:a:adobe:adobe_commerce:", "cpe:2.3:a:adobe:magento_open_source:"],
+    "cpe:2.3:a:google:chrome:": ["cpe:2.3:a:chromium:chromium:", "cpe:2.3:a:chromium:chromium-browser:"]
 }
