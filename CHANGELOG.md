@@ -1,6 +1,12 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.10 - 2023-12-21
+### Fixed
+- Update test cases with new exploits.
+- Strip user queries before macthing them to a CPE.
+
+
 ## v0.4.9 - 2023-12-12
 ### Added
 - Update cpe_search submodule and adapt search_vulns code to it:
