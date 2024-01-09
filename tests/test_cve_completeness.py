@@ -25,7 +25,7 @@ class TestSearches(unittest.TestCase):
     def test_search_proftpd_133c(self):
         self.maxDiff = None
         result = search_vulns.search_vulns(query='cpe:2.3:a:proftpd:proftpd:1.3.3:c:*:*:*:*:*:*', add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2011-1137', 'CVE-2011-4130', 'CVE-2012-6095', 'CVE-2019-19271', 'CVE-2019-19272', 'CVE-2019-19269', 'CVE-2019-12815', 'CVE-2021-46854', 'CVE-2019-19270', 'CVE-2020-9272', 'CVE-2019-18217', 'CVE-2010-4652']
+        expected_cves = ['CVE-2011-1137', 'CVE-2011-4130', 'CVE-2012-6095', 'CVE-2019-19271', 'CVE-2019-19272', 'CVE-2019-19269', 'CVE-2019-12815', 'CVE-2021-46854', 'CVE-2019-19270', 'CVE-2020-9272', 'CVE-2019-18217', 'CVE-2010-4652', 'CVE-2023-51713', 'CVE-2023-48795']
         self.assertEqual(set(expected_cves), set(list(result.keys())))
 
     def test_search_thingsboard_341(self):
