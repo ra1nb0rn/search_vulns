@@ -12,6 +12,7 @@ from .update_generic import *
 from .update_generic import _load_config
 from .update_debian import update_vuln_debian_db
 from .update_ubuntu import update_vuln_ubuntu_db
+from .update_redhat import update_vuln_redhat_db
 from .update_distributions_generic import NEW_CPES_INFOS
 
 
@@ -78,6 +79,11 @@ def run(full=False, nvd_api_key=None, config_file=''):
             sys.exit(1)
         print('[+] Updating ubuntu vulnerability database')
         error = loop.run_until_complete(update_vuln_ubuntu_db())
+        if error:
+            print(error)
+            sys.exit(1)
+        print('[+] Updating redhat vulnerability database')
+        error = loop.run_until_complete(update_vuln_redhat_db())
         if error:
             print(error)
             sys.exit(1)

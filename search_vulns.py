@@ -22,8 +22,8 @@ DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 
 DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'debian_equiv_cpes.json')
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
 
-MATCH_DISTRO_TARGET_SW = re.compile(r'([<>]?=?)(ubuntu|debian|redhat)_([\d\.]{1,5}|inf)')
-MATCH_DISTRO_QUERY = re.compile(r'([Uu]buntu|[Dd]ebian|[Rr]edhat)[ _]?([\w\.]*)')
+MATCH_DISTRO_TARGET_SW = re.compile(r'([<>]?=?)(ubuntu|debian|rhel)_([\d\.]{1,5}|inf)')
+MATCH_DISTRO_QUERY = re.compile(r'([Uu]buntu|[Dd]ebian|[Rr]ed[Hh]at [Ee]nterprise [Ll]inux|[Rr]ed[Hh]at|[Rr]hel)[ _]?([\w\.]*)')
 MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat)')
 MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|redhat|debian)_([\d\.]+|upstream|sid):.*?:.*?$')
 MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'[\w\s\.\:\-\_\~]{3,}')
@@ -595,7 +595,7 @@ def get_equivalent_cpes(cpe, config):
     equiv_cpes = cpes.copy()
     for cpe in cpes:
         for equivalent_cpe in EQUIVALENT_CPES.get(cpe_prefix, []):
-            equivalent_cpe_prefix = ':'.join(get_cpe_parts(equiv_cpes)[:5]) + ':'
+            equivalent_cpe_prefix = ':'.join(get_cpe_parts(equivalent_cpe)[:5]) + ':'
             if equivalent_cpe != cpe_prefix:
                 equiv_cpes.append(equivalent_cpe_prefix + ':'.join(cpe_split[5:]))
 
@@ -872,7 +872,7 @@ def main():
         # delete not affected vulns
         for cve_id in not_affected_cve_ids:
             try:
-                del vulns[cve_id]
+                del vulns[query][cve_id]
             except:
                 pass
 
