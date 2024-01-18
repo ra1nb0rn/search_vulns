@@ -82,7 +82,7 @@ def summarize_statuses_ubuntu(statuses):
     # try to summarize entries with version_end = -1
     for i, (status, distro_version) in enumerate(statuses):
 
-        summarizable_status = status['status'] == 'DNE' or (status['status'] == 'not-affected' and not get_clean_version(status['description'], False))
+        summarizable_status = status['status'] == 'DNE' or (status['status'] in ('not-affected', 'pending') and not get_clean_version(status['description'], False))
         if i == 0 and not summarizable_status:
             possible_min = False
         if not summarizable_status:
@@ -113,12 +113,12 @@ def summarize_statuses_ubuntu(statuses):
         relevant_statuses.append((start_status[0], start_status[1], '>='))
 
     # try to summarize entries with same version_end
-    relevant_statuses = summarize_statuses_with_version(relevant_statuses, fixed_status_names=['released', 'not-affected'], version_field='description', dev_distro_name='upstream')
+    relevant_statuses = summarize_statuses_with_version(relevant_statuses, fixed_status_names=['released', 'not-affected', 'pending'], version_field='description', dev_distro_name='upstream')
 
     return relevant_statuses
 
 
-def initialize_ubuntu_release_version_codename():
+def download_ubuntu_release_codename_mapping():
     '''Download ubuntu release data via Ubuntu Security API'''
       
     global UBUNTU_UPDATE_SUCCESS
@@ -143,9 +143,13 @@ def initialize_ubuntu_release_version_codename():
         communicate_warning('An error occured when making initial request to https://ubuntu.com/security/releases.json; received a non-ok response code.')
         return 'An error occured when making initial request to https://ubuntu.com/security/releases.json; received a non-ok response code.'
 
-    releases_json = ubuntu_api_initial_response.json()['releases']
+    return ubuntu_api_initial_response.json()['releases']
 
+
+def initialize_ubuntu_release_version_codename():
+    '''Add release -> codename mapping to db and dict''' 
     releases_dict = {}
+    releases_json = download_ubuntu_release_codename_mapping()
 
     db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
@@ -233,8 +237,10 @@ def process_cve(cve):
         relevant_statuses = summarize_statuses_ubuntu(statuses)
 
         # highest version needs '>=' as operator
-        if relevant_statuses[-1][2] == '' and relevant_statuses[-1][1] != 'upstream':
+        if relevant_statuses[-1][1] != 'upstream':
             relevant_statuses[-1] = (relevant_statuses[-1][0], relevant_statuses[-1][1], '>=')
+        elif len(relevant_statuses) > 1:
+            relevant_statuses[-2] = (relevant_statuses[-2][0], relevant_statuses[-2][1], '>=')
 
         all_dne_statuses = len([True for status_info, _, _ in relevant_statuses if status_info['status'] == 'DNE']) == len(relevant_statuses)
 
@@ -275,6 +281,8 @@ def process_cve(cve):
                     if name == matching_cpe.split(':')[4]:
                         best_match = True
                     packages_cpes.append((matching_cpe, name, best_match))
+                else:
+                    continue
                 
                 # match found cpe to all previous not found packages
                 match_not_found_cpe(cpes, matching_cpe, name)

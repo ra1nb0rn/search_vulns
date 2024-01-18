@@ -33,9 +33,9 @@ def rollback_debian():
     rollback()
 
 
-def initialize_debian_release_version_codename():
+def download_debian_release_version_codename_data():
     '''Download debian releases data'''
-      
+
     global DEBIAN_UPDATE_SUCCESS
 
     if not QUIET:
@@ -57,8 +57,14 @@ def initialize_debian_release_version_codename():
     if DEBUG:
         print(f'[+] Successfully received data from {DEBIAN_RELEASES_URL}.')
 
-    releases_list = debian_api_initial_response.text.split('\n')
-    
+    return debian_api_initial_response.text.split('\n')
+
+
+def initialize_debian_release_version_codename():
+    '''Add release -> codename mapping to db and dict''' 
+
+    releases_list = download_debian_release_version_codename_data()
+
     releases_dict = {}
 
     db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
@@ -124,8 +130,10 @@ def process_cve(cve):
     relevant_statuses.sort(key = lambda status:float(status[1]) if status[1].isdigit() else -1.0)
 
     # highest version needs a '>=' as operator
-    if relevant_statuses[-1][2] == '' and relevant_statuses[-1][1] != 'sid':
+    if relevant_statuses[-1][1] != 'sid':
         relevant_statuses[-1] = (relevant_statuses[-1][0], relevant_statuses[-1][1], '>=')
+    elif len(relevant_statuses) > 1:
+        relevant_statuses[-2] = (relevant_statuses[-2][0], relevant_statuses[-2][1], '>=')
 
     for status_infos, debian_version, extra_cpe in relevant_statuses:
         status = status_infos['status']
@@ -204,46 +212,18 @@ def initialize_packagename_cpe_mapping():
             continue
         name, cpe = mapping.split(';')
         NAME_CPE_DICT[name] = transform_cpe_uri_binding_to_formatted_string(cpe)
-    
 
-def process_data(cves_debian):
-    '''Process debian api data''' 
-    
-    if not QUIET:
-        print('[+] Adding debian data to database')
 
-    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
-    db_cursor = db_conn.cursor()
-
-    # get cve data from vuln_db
-    query = 'SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end FROM cve_cpe'
-    cve_cpe_list = db_cursor.execute(query, ()).fetchall()
-    cve_cpe_list.sort(key=lambda cve: cve[0])
-    db_conn.close()
-    
+def merge_nvd_debian_data(cve_cpe_list, all_debian_infos):
+    '''Add cpes from nvd to debian data'''
     cve_cpe_debian = []
  
     pointer_cves_nvd = 0
     pointer_cve_cpe_debian = 0
     found = False   # used for cves which occur more than one time in the cve_cpe_table
     length_cve_cpe_list = len(cve_cpe_list)
-
-    all_debian_infos = []
-
-    for package_name, cves in cves_debian.items():
-        try:
-            cpe = NAME_CPE_DICT[package_name]
-        except:
-            cpe = ''
-        for cve_id, cve_infos in cves.items():
-            if cve_id.startswith('CVE'):
-                all_debian_infos.append((cve_id, package_name, cpe, cve_infos['releases']))
-
-    all_debian_infos.sort(key=lambda cve_id: cve_id[0])
-
     last_cve_id = ''
 
-    # match cve and cpe
     for cve in all_debian_infos:
         cve_id, package_name, cpe, releases = cve
 
@@ -272,6 +252,38 @@ def process_data(cves_debian):
             cve_cpe_debian.append({'cve_id': cve_id, 'cpes': [], 'cpe': cpe, 'package_name': package_name, 'releases': releases})
             pointer_cve_cpe_debian += 1
         last_cve_id = cve_id
+    return cve_cpe_debian
+    
+
+def process_data(cves_debian):
+    '''Process debian api data''' 
+    
+    if not QUIET:
+        print('[+] Adding debian data to database')
+
+    db_conn = get_database_connection(CONFIG['DATBASE'], CONFIG['DATABASE_FILE'])
+    db_cursor = db_conn.cursor()
+
+    # get cve data from vuln_db
+    query = 'SELECT cve_id, cpe, with_cpes, cpe_version_start, is_cpe_version_start_including, cpe_version_end FROM cve_cpe'
+    cve_cpe_list = db_cursor.execute(query, ()).fetchall()
+    cve_cpe_list.sort(key=lambda cve: cve[0])
+    db_conn.close()
+    
+    all_debian_infos = []
+
+    for package_name, cves in cves_debian.items():
+        try:
+            cpe = NAME_CPE_DICT[package_name]
+        except:
+            cpe = ''
+        for cve_id, cve_infos in cves.items():
+            if cve_id.startswith('CVE'):
+                all_debian_infos.append((cve_id, package_name, cpe, cve_infos['releases']))
+
+    all_debian_infos.sort(key=lambda cve_id: cve_id[0])
+
+    cve_cpe_debian = merge_nvd_debian_data(cve_cpe_list, all_debian_infos)
 
     cves_debian = []
     cve_cpe_list = []

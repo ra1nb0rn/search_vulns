@@ -11,6 +11,12 @@ ESCAPE_VERSION = re.compile(r'([\+\-\~\:])')
 CPE_SEARCH_RESULT_DICT = {}
 PACKAGE_CPE_MATCH_THRESHOLD = 0.42
 NEW_CPES_INFOS = []
+GENERAL_DISTRIBUTION_CPES = [
+    'cpe:2.3:o:canonical:ubuntu_linux:*:*:*:*:*:*:*:*', 
+    'cpe:2.3:o:redhat:enterprise_linux:*:*:*:*:*:*:*:*', 
+    'cpe:2.3:o:debian:debian_linux:*:*:*:*:*:*:*:*', 
+    'cpe:2.3:o:fedoraproject:fedora:*:*:*:*:*:*:*:*'
+]
 NAME_CPE_DICT = {
     'abuse-sdl': 'cpe:2.3:a:abuse:abuse-sdl:*:*:*:*:*:*:*:*',
     'aflplusplus': 'cpe:2.3:a:afl\+\+_project:afl\+\+:*:*:*:*:*:*:*:*',
@@ -26,6 +32,8 @@ NAME_CPE_DICT = {
     'wv': 'cpe:2.3:a:wvware:wvware:*:*:*:*:*:*:*:*',
     'mozjs': 'cpe:2.3:a:mozilla:firefox_esr:*:*:*:*:*:*:*:*',
     'nvidia-graphics-drivers': 'cpe:2.3:a:nvidia:gpu_driver:*:-:*:*:unix:*:*:*',
+    'kernel': 'cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*',
+    'kernel-rt': 'cpe:2.3:o:linux:linux_kernel-rt:*:*:*:*:*:*:*:*'
 }
 
 
@@ -52,8 +60,11 @@ def get_matching_cpe(name, name_version, version, search, cpes):
     matching_cpe = ''
     # special handling of linux-* packages
     if name.startswith('kernel-source') or name.startswith('linux-source') or name == 'linux':
-        matching_cpe = 'cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*'
+        return 'cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*'
     elif name.startswith('linux-'):
+        return
+    # skip flatpak b/c it gets updates from software vendor and not os vendor
+    elif 'flatpak' in name:
         return
     # if only one cpe in given cpes
     if len(unique_cpes) == 1:
@@ -74,7 +85,7 @@ def get_matching_cpe(name, name_version, version, search, cpes):
         # name in given cpes
         for cpe in unique_cpes:
             cpe_parts = cpe.split(':')
-            if cpe_parts[4] in name:
+            if cpe_parts[4] in name or name in cpe_parts[4]:
                 matching_cpe = cpe
                 break
         else:
@@ -108,7 +119,7 @@ def get_matching_general_cpe(name, version, cpes, cpe_set, search):
     # stupid way of creating cpes, but it works sometimes
     custom_cpe = f'cpe:2.3:a:{name}:{name}:*:*:*:*:*:*:*:*'
     if len(name.split('-')) > 1:
-        custom_cpe = f"cpe:2.3:a:{name.split('-')[0]}:{'_'.join(name.split('-')[1:])}:*:*:*:*:*:*:*:*"
+        custom_cpe = f"cpe:2.3:a:{name.split('-')[0]}:{'_'.join(name.split('-')[1:]).replace(':', '_')}:*:*:*:*:*:*:*:*"
     if custom_cpe in cpe_set:
         return custom_cpe
      
@@ -130,36 +141,38 @@ def get_matching_general_cpe(name, version, cpes, cpe_set, search):
             return cpe
 
     all_cpes = []
+    # cpe, cpe_version, with_cpes
     all_cpes += [(cpe[1], cpe[4].split('.')[0]) for cpe in cpes]
     if matching_cpes:
-        all_cpes += [(cpe,'0') for cpe in matching_cpes]
+        all_cpes += [(cpe,'0', '') for cpe in matching_cpes]
 
     possible_cpes = ['', '', '']
     highest_value = ('', 0)
-    for cpe in all_cpes:
-        vendor, product = cpe[0].split(':')[3:5]
-        new_ratio =fuzz.token_set_ratio(cpe[0], search)/100.0
-        if new_ratio > 0.24 and (cpe[1] == version or cpe[1].split('.')[0] == version):
+    for cpe_infos in all_cpes:
+        cpe, cpe_version = cpe_infos
+        vendor, product = cpe.split(':')[3:5]
+        new_ratio =fuzz.token_set_ratio(cpe, search)/100.0
+        if new_ratio > 0.24 and (cpe_version == version or cpe_version.split('.')[0] == version):
             new_ratio *= 1.4
         # prefer cpes with no os vendor
-        if vendor in ['debian', 'ubuntu', 'redhat', 'gentoo']:
+        if vendor in ['debian', 'ubuntu', 'redhat', 'gentoo', 'fedora']:
             new_ratio = new_ratio/4
         # prefer unix cpes
-        if cpe[0].split(':')[9] == 'windows':
+        if cpe.split(':')[9] == 'windows':
             new_ratio *= 2/3
         
         if (name == product or search.split(' ')[-1] == product) and not possible_cpes[0]:
-            possible_cpes[0] = cpe[0]
+            possible_cpes[0] = cpe
             new_ratio *= 1.8
         elif equal_name(name, product) and not possible_cpes[1]:
-            possible_cpes[1] = cpe[0]
+            possible_cpes[1] = cpe
             new_ratio *= 1.5
         elif name.split('-')[0] in product and not possible_cpes[2]:
-            possible_cpes[2] = cpe[0]
+            possible_cpes[2] = cpe
             new_ratio *= 1.2
 
         if new_ratio > highest_value[1]:
-            highest_value = (cpe[0], new_ratio)
+            highest_value = (cpe, new_ratio)
     if highest_value[1] > 0.75 and not possible_cpes[0]:
         return highest_value[0]
     for cpe in possible_cpes:
@@ -364,7 +377,7 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
                 if CPEVersion(version_end) > CPEVersion(cpe_version_start) and CPEVersion(cpe_version_start) > CPEVersion(version_start):
                     version_start = cpe_version_start
                     is_cpe_version_start_including = False
-                elif CPEVersion(version_end) > CPEVersion(cpe_version) and CPEVersion(cpe_version) > CPEVersion(version_start):
+                elif CPEVersion(version_end) > CPEVersion(cpe_version) and (CPEVersion(cpe_version) < CPEVersion(version_start) or version_start == '0'):
                     version_start = cpe_version
                     is_cpe_version_start_including = True
     if version_start == '0':
@@ -413,10 +426,12 @@ def add_not_found_packages(not_found_cpes, distribution, db_cursor):
             if (status == 'released' or status == 'resolved') and not note:
                 continue
             version_end = get_version_end(status, note)
-            distro_cpe= get_distribution_cpe(note, version_end, distro_version, distribution, matching_cpe, extra_cpe)
+            distro_in_cpe = distribution
+            if distribution == 'redhat':
+                distro_in_cpe = 'rhel'
+            distro_cpe= get_distribution_cpe(note, version_end, distro_version, distro_in_cpe, matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, [], distribution, db_cursor)
-
 
 
 def are_only_hardware_cpes(cpes):
