@@ -80,9 +80,9 @@ create_vuln_and_software_db() {
     fi
 
     if [ $FULL_RESOURCE_INSTALL != 0 ]; then
-        ./updater.py --full
+        ./search_vulns.py --full-update
     else
-        ./updater.py
+        ./search_vulns.py -u
     fi
 
     if [ $? != 0 ]; then

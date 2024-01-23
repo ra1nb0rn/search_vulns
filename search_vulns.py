@@ -19,11 +19,9 @@ from cpe_search.cpe_search import (
     VERSION_MATCH_CPE_CREATION_RE
 )
 
-DATABASE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'vulndb.db3')
+DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
 MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
 CPE_SEARCH_THRESHOLD = 0.72
-CPE_DEPRECATIONS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json")
-MAN_EQUIVALENT_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'man_equiv_cpes.json')
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
 DEDUP_LINEBREAKS_RE_1 = re.compile(r'(\r\n)+')
@@ -298,13 +296,13 @@ def print_vulns(vulns, to_string=False):
         return out_string
 
 
-def load_equivalent_cpes():
+def load_equivalent_cpes(config):
     """Load dictionary containing CPE equivalences"""
 
     LOAD_EQUIVALENT_CPES_MUTEX.acquire()
     if not EQUIVALENT_CPES:
         # first add official deprecation information from the NVD
-        with open(CPE_DEPRECATIONS_FILE, "r") as f:
+        with open(config['cpe_search']['DEPRECATED_CPES_FILE'], "r") as f:
             cpe_deprecations_raw = json.loads(f.read())
             for cpe, deprecations in cpe_deprecations_raw.items():
                 cpe_short = ':'.join(cpe.split(':')[:5]) + ':'
@@ -326,7 +324,7 @@ def load_equivalent_cpes():
                         EQUIVALENT_CPES[deprecatedby_cpe_short].append(cpe_short)
 
         # then manually add further information
-        with open(MAN_EQUIVALENT_CPES_FILE) as f:
+        with open(config['MAN_EQUIVALENT_CPES_FILE']) as f:
             manual_equivalent_cpes = json.loads(f.read())
 
         for man_equiv_cpe, other_equiv_cpes in manual_equivalent_cpes.items():
@@ -344,10 +342,10 @@ def load_equivalent_cpes():
     LOAD_EQUIVALENT_CPES_MUTEX.release()
 
 
-def get_equivalent_cpes(cpe):
+def get_equivalent_cpes(cpe, config):
 
     # make sure equivalent CPEs are loaded
-    load_equivalent_cpes()
+    load_equivalent_cpes(config)
 
     cpes = [cpe]
     cpe_split = cpe.split(':')
@@ -361,13 +359,15 @@ def get_equivalent_cpes(cpe):
     return cpes
 
 
-def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False):
+def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, config=None):
     """Search for known vulnerabilities based on the given query"""
 
     # create DB handle if not given
+    if not config:
+        config = _load_config()
     close_cursor_after = False
     if not db_cursor:
-        db_conn_file = sqlite3.connect(DATABASE_FILE)
+        db_conn_file = sqlite3.connect(config['DATABASE_FILE'])
         if keep_data_in_memory:
             db_conn_mem = sqlite3.connect(':memory:')
             db_conn_file.backup(db_conn_mem)
@@ -380,7 +380,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     query = query.strip()
     cpe = query
     if not MATCH_CPE_23_RE.match(query):
-        cpe = search_cpes(query, count=1, threshold=software_match_threshold, keep_data_in_memory=keep_data_in_memory)
+        cpe = search_cpes(query, count=1, threshold=software_match_threshold, keep_data_in_memory=keep_data_in_memory, config=config['cpe_search'])
 
         if not cpe or not cpe[query]:
             return None
@@ -391,7 +391,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
 
         cpe = cpe[query][0][0]
     elif not is_good_cpe:
-        pot_matching_cpe = match_cpe23_to_cpe23_from_dict(cpe, keep_data_in_memory=keep_data_in_memory)
+        pot_matching_cpe = match_cpe23_to_cpe23_from_dict(cpe, keep_data_in_memory=keep_data_in_memory, config=config['cpe_search'])
         if pot_matching_cpe:
             cpe = pot_matching_cpe
 
@@ -400,7 +400,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     if is_good_cpe:
         equivalent_cpes = [cpe]  # only use provided CPE
     else:
-        equivalent_cpes = get_equivalent_cpes(cpe)  # also search and use equivalent CPEs
+        equivalent_cpes = get_equivalent_cpes(cpe, config)  # also search and use equivalent CPEs
 
     for cur_cpe in equivalent_cpes:
         cur_vulns = get_vulns(cur_cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns, add_other_exploit_refs=add_other_exploit_refs)
@@ -414,14 +414,17 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     return vulns
 
 
-def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploits_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False):
+def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploits_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, config=None):
     """Search for known vulnerabilities based on the given query and return them with their CPE"""
+
+    if not config:
+        config = _load_config()
 
     query = query.strip()
     cpe, pot_cpes = query, []
     if not MATCH_CPE_23_RE.match(query):
         is_good_cpe = False
-        cpes = search_cpes(query, count=5, threshold=0.25, keep_data_in_memory=keep_data_in_memory)
+        cpes = search_cpes(query, count=5, threshold=0.25, keep_data_in_memory=keep_data_in_memory, config=config['cpe_search'])
 
         if not cpes or not cpes[query]:
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
@@ -493,10 +496,10 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
     if is_good_cpe:
         equivalent_cpes = [cpe]  # only use provided CPE
     else:
-        equivalent_cpes = get_equivalent_cpes(cpe)  # also search and use equivalent CPEs
+        equivalent_cpes = get_equivalent_cpes(cpe, config)  # also search and use equivalent CPEs
 
     for cur_cpe in equivalent_cpes:
-        cur_vulns = search_vulns(cur_cpe, db_cursor, software_match_threshold, keep_data_in_memory, add_other_exploits_refs, True, ignore_general_cpe_vulns)
+        cur_vulns = search_vulns(cur_cpe, db_cursor, software_match_threshold, keep_data_in_memory, add_other_exploits_refs, True, ignore_general_cpe_vulns, config)
         for cve_id, vuln in cur_vulns.items():
             if cve_id not in vulns:
                 vulns[cve_id] = vuln
@@ -516,11 +519,36 @@ def parse_args():
     parser.add_argument("-q", "--query", dest="queries", metavar="QUERY", action="append", help="A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string")
     parser.add_argument("--cpe-search-threshold", type=float, default=CPE_SEARCH_THRESHOLD, help="Similarity threshold used for retrieving a CPE via the cpe_search tool")
     parser.add_argument("--ignore-general-cpe-vulns", action="store_true", help="Ignore vulnerabilities that only affect a general CPE (i.e. without version)")
+    parser.add_argument("-c", "--config", type=str, default=DEFAULT_CONFIG_FILE, help="A config file to use (default: config.json)")
 
     args = parser.parse_args()
     if not args.update and not args.queries and not args.full_update:
         parser.print_help()
     return args
+
+
+def _load_config(config_file=DEFAULT_CONFIG_FILE):
+    """Load config from file"""
+
+    def load_config_dict(_dict):
+        config = {}
+        for key, val in _dict.items():
+            if isinstance(val, dict):
+                val = load_config_dict(val)
+            elif 'file' in key.lower():
+                if not os.path.isabs(val):
+                    if val != os.path.expanduser(val):  # home-relative path was given
+                        val = os.path.expanduser(val)
+                    else:
+                        val = os.path.join(os.path.dirname(os.path.abspath(config_file)), val)
+            config[key] = val
+        return config
+
+    with open(config_file) as f:  # default: config.json
+        config_raw = json.loads(f.read())
+        config = load_config_dict(config_raw)
+
+    return config
 
 
 def main():
@@ -538,7 +566,8 @@ def main():
         return
 
     # get handle for vulnerability database
-    db_conn_file = sqlite3.connect(DATABASE_FILE)
+    config = _load_config(args.config)
+    db_conn_file = sqlite3.connect(config['DATABASE_FILE'])
     db_cursor = db_conn_file.cursor()
 
     # retrieve known vulnerabilities for every query and print them
@@ -549,7 +578,7 @@ def main():
         query = query.strip()
         cpe = query
         if not MATCH_CPE_23_RE.match(query):
-            cpe = search_cpes(query, count=1, threshold=args.cpe_search_threshold)
+            cpe = search_cpes(query, count=1, threshold=args.cpe_search_threshold, config=config['cpe_search'])
 
             found_cpe = True
             if not cpe or not cpe[query]:
@@ -573,13 +602,13 @@ def main():
 
             cpe = cpe[query][0][0]
         else:
-            matching_cpe = match_cpe23_to_cpe23_from_dict(cpe)
+            matching_cpe = match_cpe23_to_cpe23_from_dict(cpe, config=config['cpe_search'])
             if matching_cpe:
                 cpe = matching_cpe
 
         # use the retrieved CPE to search for known vulnerabilities
         vulns[query] = {}
-        equivalent_cpes = get_equivalent_cpes(cpe)
+        equivalent_cpes = get_equivalent_cpes(cpe, config)
 
         if args.format.lower() == 'txt':
             if not args.output:
@@ -587,7 +616,7 @@ def main():
                 printit('[+] %s (%s)' % (query, '/'.join(equivalent_cpes)), color=BRIGHT_BLUE)
 
         for cur_cpe in equivalent_cpes:
-            cur_vulns = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, False, True, args.ignore_general_cpe_vulns)
+            cur_vulns = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, False, True, args.ignore_general_cpe_vulns, config)
             for cve_id, vuln in cur_vulns.items():
                 if cve_id not in vulns[query]:
                     vulns[query][cve_id] = vuln

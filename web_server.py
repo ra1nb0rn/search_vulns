@@ -8,17 +8,18 @@ import time
 from flask import Flask, request
 from flask import render_template
 
-from search_vulns import search_vulns_return_cpe as search_vulns_call
+from search_vulns import _load_config, search_vulns_return_cpe as search_vulns_call
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))
 TEMPLATE_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "templates"))
-DATABASE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'vulndb.db3')
+CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
 DB_URI = 'file:vuln_db?mode=memory&cache=shared'
 RESULTS_CACHE = {}
 
 
 app = Flask(__name__, static_folder=STATIC_FOLDER, template_folder=TEMPLATE_FOLDER)
+config = _load_config(CONFIG_FILE)
 
 @app.route("/search_vulns")
 def search_vulns():
@@ -45,7 +46,7 @@ def search_vulns():
 
     conn = sqlite3.connect(DB_URI, uri=True)
     db_cursor = conn.cursor()
-    vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, add_other_exploits_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, is_good_cpe=is_good_cpe)
+    vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, add_other_exploits_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, is_good_cpe=is_good_cpe, config=config)
 
     if vulns is None:
         RESULTS_CACHE[url_query_string] = {}
@@ -60,7 +61,7 @@ def version():
     with open('version.txt') as f:
         search_vulns_version = f.read()
 
-    db_modified_ts = os.path.getmtime(DATABASE_FILE)
+    db_modified_ts = os.path.getmtime(config['DATABASE_FILE'])
     db_modified_datetime = datetime.datetime.fromtimestamp(db_modified_ts)
 
     result = {'version': search_vulns_version,
@@ -79,7 +80,7 @@ def index():
 if __name__ == '__main__':
     print('[+] Loading resources')
 
-DB_CONN_FILE = sqlite3.connect(DATABASE_FILE)
+DB_CONN_FILE = sqlite3.connect(config['DATABASE_FILE'])
 DB_CONN_MEM = sqlite3.connect(DB_URI, uri=True)
 DB_CONN_FILE.backup(DB_CONN_MEM)
 DB_CONN_FILE.close()

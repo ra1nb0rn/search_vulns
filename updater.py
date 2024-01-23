@@ -16,6 +16,7 @@ import time
 import aiohttp
 from aiolimiter import AsyncLimiter
 from cpe_search.cpe_search import update as update_cpe
+from search_vulns import _load_config
 
 try:  # use ujson if available
     import ujson as json
@@ -23,18 +24,15 @@ except ModuleNotFoundError:
     import json
 
 NVD_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "nvd_data_feeds")
-VULNDB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb.db3")
-VULNDB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vulndb.db3.bak")
 VULNDB_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/vulndb.db3"
-CVE_EDB_MAP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cveid_to_edbid.json")
-
-CPE_DICT_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary.db3")
-CPE_DICT_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/cpe-search-dictionary.db3.bak")
 CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary.db3"
-CPE_DEPRECATIONS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json")
-CPE_DEPRECATIONS_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cpe_search/deprecated-cpes.json.bak")
 CPE_DEPRECATIONS_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/deprecated-cpes.json"
+CVE_EDB_MAP_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cveid_to_edbid.json"
 
+CONFIG = _load_config()
+CONFIG['DATABASE_BACKUP_FILE'] = CONFIG['DATABASE_FILE'] + '.bak'
+CONFIG['CPE_DATABASE_BACKUP_FILE'] = CONFIG['cpe_search']['CPE_DATABASE_FILE'] + '.bak'
+CONFIG['DEPRECATED_CPES_BACKUP_FILE'] = CONFIG['cpe_search']['DEPRECATED_CPES_FILE'] + '.bak'
 POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
 POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PoC-in-GitHub")
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
@@ -102,8 +100,8 @@ async def update_vuln_db(nvd_api_key=None):
 
     global NVD_UPDATE_SUCCESS
 
-    if os.path.isfile(VULNDB_FILE):
-        shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
+    if os.path.isfile(CONFIG['DATABASE_FILE']):
+        shutil.move(CONFIG['DATABASE_FILE'], CONFIG['DATABASE_BACKUP_FILE'])
 
     if nvd_api_key:
         if not QUIET:
@@ -174,7 +172,7 @@ async def update_vuln_db(nvd_api_key=None):
 
     # build local NVD copy with downloaded data feeds
     print('[+] Building vulnerability database')
-    create_db_call = ["./create_db", NVD_DATAFEED_DIR, VULNDB_FILE]
+    create_db_call = ["./create_db", NVD_DATAFEED_DIR, CONFIG['DATABASE_FILE']]
     with open(os.devnull, "w") as outfile:
         return_code = subprocess.call(create_db_call, stdout=outfile, stderr=subprocess.STDOUT)
 
@@ -199,27 +197,27 @@ async def update_vuln_db(nvd_api_key=None):
         return 'Building PoCs in GitHub table failed'
 
     # remove backup file on success
-    if os.path.isfile(VULNDB_BACKUP_FILE):
-        os.remove(VULNDB_BACKUP_FILE)
+    if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
+        os.remove(CONFIG['DATABASE_BACKUP_FILE'])
 
 
 async def handle_cpes_update(nvd_api_key=None):
-    if os.path.isfile(CPE_DICT_FILE):
-        shutil.move(CPE_DICT_FILE, CPE_DICT_BACKUP_FILE)
-    if os.path.isfile(CPE_DEPRECATIONS_FILE):
-        shutil.move(CPE_DEPRECATIONS_FILE, CPE_DEPRECATIONS_BACKUP_FILE)
+    if os.path.isfile(CONFIG['cpe_search']['CPE_DATABASE_FILE']):
+        shutil.move(CONFIG['cpe_search']['CPE_DATABASE_FILE'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
+    if os.path.isfile(CONFIG['cpe_search']['DEPRECATED_CPES_FILE']):
+        shutil.move(CONFIG['cpe_search']['DEPRECATED_CPES_FILE'], CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
 
-    success = await update_cpe(nvd_api_key)
+    success = await update_cpe(nvd_api_key, CONFIG['cpe_search'])
     if not success:
-        if os.path.isfile(CPE_DICT_BACKUP_FILE):
-            shutil.move(CPE_DICT_BACKUP_FILE, CPE_DICT_FILE)
-        if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
-            shutil.move(CPE_DEPRECATIONS_BACKUP_FILE, CPE_DEPRECATIONS_FILE)
+        if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
+            shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['CPE_DATABASE_FILE'])
+        if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
+            shutil.move(CONFIG['DEPRECATED_CPES_BACKUP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'])
     else:
-        if os.path.isfile(CPE_DICT_BACKUP_FILE):
-            os.remove(CPE_DICT_BACKUP_FILE)
-        if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
-            os.remove(CPE_DEPRECATIONS_BACKUP_FILE)
+        if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
+            os.remove(CONFIG['CPE_DATABASE_BACKUP_FILE'])
+        if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
+            os.remove(CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
 
     return not success
 
@@ -228,10 +226,10 @@ def rollback():
     """Rollback the DB / module update"""
 
     communicate_warning('An error occured, rolling back database update')
-    if os.path.isfile(VULNDB_FILE):
-        os.remove(VULNDB_FILE)
-    if os.path.isfile(VULNDB_BACKUP_FILE):
-        shutil.move(VULNDB_BACKUP_FILE, VULNDB_FILE)
+    if os.path.isfile(CONFIG['DATABASE_FILE']):
+        os.remove(CONFIG['DATABASE_FILE'])
+    if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
+        shutil.move(CONFIG['DATABASE_BACKUP_FILE'], CONFIG['DATABASE_FILE'])
     if os.path.isdir(NVD_DATAFEED_DIR):
         shutil.rmtree(NVD_DATAFEED_DIR)
 
@@ -255,15 +253,15 @@ def create_cveid_edbid_mapping():
 
     # get all unknown EDB IDs
     all_edbids, edbids_no_cveid = set(get_all_edbids()), set()
-    if os.path.isfile(CVE_EDB_MAP_FILE):
-        with open(CVE_EDB_MAP_FILE) as f:
+    if os.path.isfile(CONFIG['CVE_EDB_MAP_FILE']):
+        with open(CONFIG['CVE_EDB_MAP_FILE']) as f:
             cve_edb_map = json.load(f)
         mapped_edbids = set()
         edbids_no_cveid = set(cve_edb_map["N/A"])
         for ebdids in cve_edb_map.values():
             mapped_edbids |= set(ebdids)
         remaining_edbids = all_edbids - mapped_edbids
-    elif os.path.isfile(VULNDB_BACKUP_FILE):
+    elif os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
         # if the DB is updated and previously built map is not available, build
         # incremental CVE ID --> EDB ID mapping based on previous version of DB
         cve_edb_map = recover_map_data_from_db()
@@ -319,7 +317,7 @@ def create_cveid_edbid_mapping():
             cve_edb_map[cveid].append(edbid)
 
     cve_edb_map["N/A"] = list(edbids_no_cveid)  # store all EDBIDs without CVE
-    with open(CVE_EDB_MAP_FILE, "w") as f:
+    with open(CONFIG['CVE_EDB_MAP_FILE'], "w") as f:
         f.write(json.dumps(cve_edb_map))
 
     while NVD_UPDATE_SUCCESS is None:
@@ -332,7 +330,7 @@ def create_cveid_edbid_mapping():
 def fill_database_with_mapinfo(cve_edb_map):
     """ Put the given mapping data into the database specified by the given cursor """
 
-    db_conn = sqlite3.connect(VULNDB_FILE)
+    db_conn = sqlite3.connect(CONFIG['DATABASE_FILE'])
     db_cursor = db_conn.cursor()
 
     update_statement = "UPDATE cve SET edb_ids=? WHERE cve_id=?"
@@ -350,7 +348,7 @@ def fill_database_with_mapinfo(cve_edb_map):
 def recover_map_data_from_db():
     """ Return stored CVE ID <--> EDB ID mapping from DB backup file """
 
-    db_conn = sqlite3.connect(VULNDB_BACKUP_FILE)
+    db_conn = sqlite3.connect(CONFIG['DATABASE_BACKUP_FILE'])
     db_cursor = db_conn.cursor()
 
     # recover CVE ID --> EDB ID data
@@ -382,7 +380,7 @@ def create_poc_in_github_table():
         raise (Exception("Could not download latest resources of PoC-in-GitHub"))
 
     # add PoC / exploit information to DB
-    db_conn = sqlite3.connect(VULNDB_FILE)
+    db_conn = sqlite3.connect(CONFIG['DATABASE_FILE'])
     db_cursor = db_conn.cursor()
     db_cursor.execute('CREATE TABLE cve_poc_in_github_map (cve_id VARCHAR(25), reference text, PRIMARY KEY (cve_id, reference));')
     db_conn.commit()
@@ -412,9 +410,28 @@ def create_poc_in_github_table():
 
 
 def run(full=False, nvd_api_key=None):
+    # create file dirs as needed
+    update_files = [CONFIG['DATABASE_FILE'], CONFIG['cpe_search']['CPE_DATABASE_FILE'],
+                    CONFIG['CVE_EDB_MAP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'],
+                    CONFIG['MAN_EQUIVALENT_CPES_FILE']]
+    for file in update_files:
+        os.makedirs(os.path.dirname(file), exist_ok=True)
+
     if full:
         if not nvd_api_key:
             nvd_api_key = os.getenv('NVD_API_KEY')
+            if (not nvd_api_key) and CONFIG:
+                nvd_api_key = CONFIG.get('NVD_API_KEY', None)
+
+        # always try get to get an old CVEID<->EDBID mapping to speed up update
+        if not os.path.isfile(CONFIG['CVE_EDB_MAP_FILE']):
+            try:
+                with open(os.devnull, 'w') as f:
+                    subprocess.call("wget -q %s -O %s" % (shlex.quote(CVE_EDB_MAP_ARTIFACT_URL),
+                                     shlex.quote(CONFIG['CVE_EDB_MAP_FILE'])), shell=True, stdout=f,
+                                     stderr=subprocess.STDOUT)
+            except:
+                pass
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -431,12 +448,12 @@ def run(full=False, nvd_api_key=None):
     else:
         print("[+] Downloading latest versions of resources ...")
 
-        if os.path.isfile(CPE_DICT_FILE):
-            shutil.move(CPE_DICT_FILE, CPE_DICT_BACKUP_FILE)
-        if os.path.isfile(CPE_DEPRECATIONS_FILE):
-            shutil.move(CPE_DEPRECATIONS_FILE, CPE_DEPRECATIONS_BACKUP_FILE)
-        if os.path.isfile(VULNDB_FILE):
-            shutil.move(VULNDB_FILE, VULNDB_BACKUP_FILE)
+        if os.path.isfile(CONFIG['cpe_search']['CPE_DATABASE_FILE']):
+            shutil.move(CONFIG['cpe_search']['CPE_DATABASE_FILE'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
+        if os.path.isfile(CONFIG['cpe_search']['DEPRECATED_CPES_FILE']):
+            shutil.move(CONFIG['cpe_search']['DEPRECATED_CPES_FILE'], CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
+        if os.path.isfile(CONFIG['DATABASE_FILE']):
+            shutil.move(CONFIG['DATABASE_FILE'], CONFIG['DATABASE_BACKUP_FILE'])
 
         try:
             quiet_flag = ""
@@ -446,36 +463,36 @@ def run(full=False, nvd_api_key=None):
                 quiet_flag = "-q --show-progress"
 
             return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(CPE_DICT_ARTIFACT_URL),
-                                          shlex.quote(CPE_DICT_FILE)), shell=True)
+                                          shlex.quote(CONFIG['cpe_search']['CPE_DATABASE_FILE'])), shell=True)
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
 
             return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(CPE_DEPRECATIONS_ARTIFACT_URL),
-                                          shlex.quote(CPE_DEPRECATIONS_FILE)), shell=True)
+                                          shlex.quote(CONFIG['cpe_search']['DEPRECATED_CPES_FILE'])), shell=True)
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
 
             return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(VULNDB_ARTIFACT_URL),
-                                          shlex.quote(VULNDB_FILE)), shell=True)
+                                          shlex.quote(CONFIG['DATABASE_FILE'])), shell=True)
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
 
-            if os.path.isfile(CPE_DICT_BACKUP_FILE):
-                os.remove(CPE_DICT_BACKUP_FILE)
-            if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
-                os.remove(CPE_DEPRECATIONS_BACKUP_FILE)
-            if os.path.isfile(VULNDB_BACKUP_FILE):
-                os.remove(VULNDB_BACKUP_FILE)
+            if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
+                os.remove(CONFIG['CPE_DATABASE_BACKUP_FILE'])
+            if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
+                os.remove(CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
+            if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
+                os.remove(CONFIG['DATABASE_BACKUP_FILE'])
         except Exception as e:
             print("[!] Encountered an error: %s" % str(e))
-            if os.path.isfile(CPE_DICT_BACKUP_FILE):
-                shutil.move(CPE_DICT_BACKUP_FILE, CPE_DICT_FILE)
+            if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
+                shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['CPE_DATABASE_FILE'])
                 print("[+] Restored software infos from backup")
-            if os.path.isfile(CPE_DEPRECATIONS_BACKUP_FILE):
-                shutil.move(CPE_DEPRECATIONS_BACKUP_FILE, CPE_DEPRECATIONS_FILE)
+            if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
+                shutil.move(CONFIG['DEPRECATED_CPES_BACKUP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'])
                 print("[+] Restored software deprecation infos from backup")
-            if os.path.isfile(VULNDB_BACKUP_FILE):
-                shutil.move(VULNDB_BACKUP_FILE, VULNDB_FILE)
+            if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
+                shutil.move(CONFIG['DATABASE_BACKUP_FILE'], CONFIG['DATABASE_FILE'])
                 print("[+] Restored vulnerability infos from backup")
 
 
