@@ -14,9 +14,9 @@ from cpe_search.cpe_search import (
     is_cpe_equal,
     search_cpes,
     match_cpe23_to_cpe23_from_dict,
-    create_cpe_from_base_cpe_and_query,
+    create_cpes_from_base_cpe_and_query,
     create_base_cpe_if_versionless_query,
-    VERSION_MATCH_CPE_CREATION_RE
+    get_possible_versions_in_query
 )
 
 DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
@@ -430,10 +430,17 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
             return {query: {'cpe': None, 'vulns': None, 'pot_cpes': []}}
 
         # always create related queries with supplied version number
+        versions_in_query = get_possible_versions_in_query(query)
         for cpe, sim in cpes[query]:
-            new_cpe = create_cpe_from_base_cpe_and_query(cpe, query)
-            if new_cpe and not any(is_cpe_equal(new_cpe, other[0]) for other in pot_cpes):
-                pot_cpes.append((new_cpe, -1))
+            new_cpes = create_cpes_from_base_cpe_and_query(cpe, query)
+            for new_cpe in new_cpes:
+                # do not overwrite sim score of an existing CPE
+                if any(is_cpe_equal(new_cpe, existing_cpe[0]) for existing_cpe in cpes[query]):
+                    continue
+                # only add CPE if it was not seen before
+                if new_cpe and not any(is_cpe_equal(new_cpe, other[0]) for other in pot_cpes):
+                    pot_cpes.append((new_cpe, -1))
+
             if not any(is_cpe_equal(cpe, other[0]) for other in pot_cpes):
                 pot_cpes.append((cpe, sim))
 
@@ -463,12 +470,14 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
             bad_match = True
 
         # if a version number is clearly detectable in query, ensure this version is somewhat reflected in the CPE
-        simple_query_version = VERSION_MATCH_CPE_CREATION_RE.search(query)
-        if simple_query_version:
-            for char in simple_query_version.group(1):
-                if char.isdigit() and char not in check_str:
-                    bad_match = True
-                    break
+        cpe_has_matching_version = False
+        for possible_version in versions_in_query:
+            if any(char.isdigit() and char not in check_str for char in possible_version):
+                continue
+            cpe_has_matching_version = True
+            break
+        if not cpe_has_matching_version:
+            bad_match = True
 
         if bad_match:
             if cpes[query][0][1] > software_match_threshold:
