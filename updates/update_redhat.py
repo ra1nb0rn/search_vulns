@@ -29,6 +29,7 @@ DB_CURSOR = None
 
 REDHAT_UPDATE_SUCCESS = None
 MATCH_RELEVANT_RHEL_CPE = re.compile(r'cpe:\/[ao]:redhat:(?:enterprise_linux|rhel_eus|rhel_els|rhel_aus):([0-9\.]{1,3})')
+MATCH_RHEL_VERSION_IN_PACKAGE = re.compile(r'\.[Ee][Ll](\d{1,2}[_\.]\d{1,2})[_\.]?\d{0,2}')
 CVE_REDHAT_API_URL = 'https://access.redhat.com/hydra/rest/securitydata'
 GITHUB_REDHAT_API_DATA_URL = 'https://github.com/aquasecurity/vuln-list-redhat.git'
 REQUEST_HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0'}
@@ -75,6 +76,9 @@ def summarize_statuses_redhat(statuses):
     # try to summarize entries with version_end = -1
     for i, (status, distro_version, _) in enumerate(statuses):
 
+        # skip out of support scope
+        if not status['version']:
+            continue
         if i == 0 and not status['version'] == '-1':
             possible_min = False
         if not status['version'] == '-1':
@@ -100,11 +104,10 @@ def summarize_statuses_redhat(statuses):
     if possible_min:
         start_status = (statuses[0][0], statuses[0][1])
         relevant_statuses.append((statuses[0][0], statuses[0][1], '<='))
-    if start_status:
-        relevant_statuses.append((start_status[0], start_status[1], '>='))
 
     # try to summarize entries with same version_end
-    relevant_statuses = summarize_statuses_with_version(relevant_statuses, fixed_status_names=['Fixed', 'Will not fix'], version_field='version', dev_distro_name='upstream')
+    if relevant_statuses:
+        relevant_statuses = summarize_statuses_with_version(relevant_statuses, fixed_status_names=['Fixed', 'Will not fix'], version_field='version', dev_distro_name='upstream')
 
     return relevant_statuses
 
@@ -232,18 +235,21 @@ def process_cve(cve):
     relevant_packages = {}
 
     for package_name in package_names:
-        relevant_packages[package_name] = [package_info for package_info in relevant_package_infos if package_info[2] == package_name]
+        relevant_packages[package_name] = [(package_info[0], package_info[1], '') for package_info in relevant_package_infos if package_info[2] == package_name]
 
     for package_name, relevant_package_info in relevant_packages.items():
 
         relevant_package_info.sort(key = lambda status:float(status[1]))
-        
+
         # only try to summarize if more than 2 infos are given
         if len(relevant_package_info) > 2:
             relevant_package_info = summarize_statuses_redhat(relevant_package_info)
+        
+            relevant_package_info.sort(key = lambda status:float(status[1]))
 
             # highest version needs a '>=' as operator 
-            relevant_package_info[-1] = (relevant_package_info[-1][0], relevant_package_info[-1][1], '>=')
+            if relevant_package_info:
+                relevant_package_info[-1] = (relevant_package_info[-1][0], relevant_package_info[-1][1], '>=')
 
         all_dne_statuses = len([True for status_info, _, _ in relevant_package_info if status_info['version'] == '-1']) == len(relevant_package_info)
             
@@ -331,6 +337,9 @@ def process_relevant_package_infos(packages):
             # remove attached '-0' to some package names
             if package_name[-2:] == '-0':
                 package_name = package_name[:-2]
+            # get exact redhat version from package
+            if MATCH_RHEL_VERSION_IN_PACKAGE.search(version):
+                redhat_version = MATCH_RHEL_VERSION_IN_PACKAGE.search(version).group(1).replace('_', '.')
             package_fix_state = 'Fixed'
         except:
             try:
@@ -347,11 +356,13 @@ def process_relevant_package_infos(packages):
                     version = package.split(':')[5]
             else:
                 package_name = package['package_name']
-                # Out of support scope doesn't mean a software doesn't get new security fixes for other vulns
-                if package_fix_state in ['Affected', 'Fix deferred', 'New', 'Will not fix', 'Under investigation', 'Out of support scope']:
+                if package_fix_state in ['Affected', 'Fix deferred', 'New', 'Will not fix', 'Under investigation']:
                     version = str(sys.maxsize)
                 elif package_fix_state == 'Not affected':
                     version = '-1'
+                else:
+                    version = ''
+                # Missing state: 'Out of support scope' -> a product could be fixed by Extended life cycle support (ELS, paid), but not with the standard license
             
         relevant_package_infos.append(({'status': package_fix_state, 'version': version}, redhat_version, package_name.lower()))
     return relevant_package_infos
@@ -381,7 +392,7 @@ def match_not_found_cpe(cpes, matching_cpe, name):
         backport_cpes = REDHAT_NOT_FOUND_NAME[name]
         for version, redhat_version, cve_id, name_version, _, status, extra_cpe in backport_cpes:
             version_end = get_version_end(status, version)
-            distro_cpe = get_distribution_cpe(version, version_end, redhat_version, 'redhat', matching_cpe, extra_cpe)
+            distro_cpe = get_distribution_cpe(version, version_end, redhat_version, 'rhel', matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', DB_CURSOR)
         del REDHAT_NOT_FOUND_NAME[name]
