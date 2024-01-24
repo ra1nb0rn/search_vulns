@@ -296,7 +296,7 @@ def process_cve(cve):
                 if not note:
                     continue
             version_end = get_version_end(status, note)
-            distro_cpe= get_distribution_cpe(note, version_end, ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)
+            distro_cpe= get_distribution_cpe(ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'ubuntu', DB_CURSOR)
 
@@ -332,7 +332,7 @@ def match_not_found_cpe(cpes, matching_cpe, name):
                 clean_version = '-1'
                 note = ''
             version_end = get_version_end(status, note)
-            distro_cpe = get_distribution_cpe(note, version_end, ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)
+            distro_cpe = get_distribution_cpe(ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'ubuntu', DB_CURSOR)
         del UBUNTU_NOT_FOUND_NAME[name]

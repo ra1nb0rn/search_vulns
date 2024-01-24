@@ -311,7 +311,7 @@ def process_cve(cve):
             if all_dne_statuses and get_general_cpe(matching_cpe) not in general_given_cpes and len(get_equivalent_cpes(matching_cpe, CONFIG)) == 1:
                 break
             version_end = get_clean_version(version, True)
-            distro_cpe= get_distribution_cpe(version, version_end, redhat_version, 'rhel', matching_cpe, extra_cpe)
+            distro_cpe= get_distribution_cpe(redhat_version, 'rhel', matching_cpe, extra_cpe)
             add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', DB_CURSOR)
 
 
@@ -392,7 +392,7 @@ def match_not_found_cpe(cpes, matching_cpe, name):
         backport_cpes = REDHAT_NOT_FOUND_NAME[name]
         for version, redhat_version, cve_id, name_version, _, status, extra_cpe in backport_cpes:
             version_end = get_version_end(status, version)
-            distro_cpe = get_distribution_cpe(version, version_end, redhat_version, 'rhel', matching_cpe, extra_cpe)
+            distro_cpe = get_distribution_cpe(redhat_version, 'rhel', matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', DB_CURSOR)
         del REDHAT_NOT_FOUND_NAME[name]

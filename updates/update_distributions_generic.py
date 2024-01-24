@@ -429,7 +429,7 @@ def add_not_found_packages(not_found_cpes, distribution, db_cursor):
             distro_in_cpe = distribution
             if distribution == 'redhat':
                 distro_in_cpe = 'rhel'
-            distro_cpe= get_distribution_cpe(note, version_end, distro_version, distro_in_cpe, matching_cpe, extra_cpe)
+            distro_cpe= get_distribution_cpe(distro_version, distro_in_cpe, matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, [], distribution, db_cursor)
 

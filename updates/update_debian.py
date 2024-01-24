@@ -167,7 +167,7 @@ def process_cve(cve):
             # match found cpe to all previous not found packages
             match_not_found_cpe(cpes, matching_cpe, name)
         version_end = get_version_end(status, version)
-        distro_cpe= get_distribution_cpe(version, version_end, debian_version, 'debian', matching_cpe, extra_cpe)
+        distro_cpe= get_distribution_cpe(debian_version, 'debian', matching_cpe, extra_cpe)
         if version_end:
             add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'debian', DB_CURSOR)
 
@@ -185,7 +185,7 @@ def match_not_found_cpe(cpes, matching_cpe, name):
                 clean_version = '-1'
                 note = ''
             version_end = get_version_end(status, note)
-            distro_cpe = get_distribution_cpe(note, version_end, debian_version, 'debian', matching_cpe, extra_cpe)
+            distro_cpe = get_distribution_cpe(debian_version, 'debian', matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'debian', DB_CURSOR)
         del DEBIAN_NOT_FOUND_NAME[name]

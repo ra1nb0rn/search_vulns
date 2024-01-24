@@ -22,10 +22,10 @@ DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 
 DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'debian_equiv_cpes.json')
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
 
-MATCH_DISTRO_TARGET_SW = re.compile(r'([<>]?=?)(ubuntu|debian|rhel)_?([\d\.]{1,5}|inf)')
-MATCH_DISTRO_QUERY = re.compile(r'([Uu]buntu|[Dd]ebian|[Rr]ed[Hh]at [Ee]nterprise [Ll]inux|[Rr]ed[Hh]at|[Rr]hel)[ _]?([\w\.]*)')
+MATCH_DISTRO_CPE_OTHER_FIELD = re.compile(r'([<>]?=?)(ubuntu|debian|rhel)_?([\d\.]{1,5}|inf|upstream|sid)?')
+MATCH_DISTRO_QUERY = re.compile(r'([Uu]buntu|[Dd]ebian|[Rr]ed[Hh]at [Ee]nterprise [Ll]inux|[Rr]ed[Hh]at|[Rr][Hh][Ee][Ll])[ _]?([\w\.]*)')
 MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat|rhel)')
-MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|rhel|debian)_([\d\.]+|upstream|sid):.*?:.*?$')
+MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|rhel|debian)_([\d\.]+|upstream|sid)$')
 MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'[\w\s\.\:\-\_\~]{3,}')
 
 EQUIVALENT_CPES = {}
@@ -60,14 +60,14 @@ def printit(text: str = '', end: str = '\n', color=SANE):
 
 def is_useful_cpe(cpe, version_end, distribution):
     '''Return whether a given cpe is useful (nvd cpe or suiting distro cpe)'''
-    target_sw = get_cpe_parts(cpe)[10]
-    if not MATCH_DISTRO_CPE.match(cpe) or not MATCH_DISTRO.search(target_sw):
+    cpe_other_field = get_cpe_parts(cpe)[12]
+    if not MATCH_DISTRO_CPE.match(cpe) or not MATCH_DISTRO.search(cpe_other_field):
         return True
     distro, distro_version = distribution
     if distro_version == 'upstream' or distro_version == 'sid':
         distro_version = 'inf'
     try:
-        operator, distro_cpe, distro_version_cpe = MATCH_DISTRO_TARGET_SW.match(target_sw).groups()[0:3]
+        operator, distro_cpe, distro_version_cpe = MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe_other_field).groups()[0:3]
     except:
         operator, distro_cpe, distro_version_cpe = '', '', ''
     if distro == distro_cpe or (distribution[0] and distro_version == 'inf'):
@@ -85,9 +85,9 @@ def is_useful_cpe(cpe, version_end, distribution):
 def add_distribution_infos_to_cpe(cpe, distribution):
     cpe_parts = get_cpe_parts(cpe)
     if distribution[1] == 'inf':
-        cpe_parts[10] = distribution[0]
+        cpe_parts[12] = distribution[0]
     else:
-        cpe_parts[10] = '%s_%s' %(distribution)
+        cpe_parts[12] = '%s_%s' %(distribution)
     return ':'.join(cpe_parts)
 
 
@@ -198,7 +198,9 @@ def get_most_specific_cpe(vuln_cpes_distro, distribution, cpe_version, vuln_cpes
     for cpe_infos in vuln_cpes_distro:
         cpe_parts = cpe_infos[0].split(':')
         cpe_version_start = cpe_infos[2]
-        cpe_operator, distro, distro_version = MATCH_DISTRO_TARGET_SW.match(cpe_parts[10]).groups()
+        cpe_operator, distro, distro_version = MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe_parts[12]).groups()
+        if distro_version in ('upstream', 'sid'):
+            distro_version = '-1'
         # cpe not relevant because version_start < given cpe_version
         if cpe_version_start and cpe_version and cpe_version < CPEVersion(cpe_version_start):
             continue
@@ -223,17 +225,17 @@ def query_distribution_matches(cpe_parts, distribution, db_cursor):
                          'is_cpe_version_end_including FROM cve_cpe WHERE cpe LIKE ?')
     
     # query for all distro cpes
-    query_cpe_parameters = ['%s:>=%s%%' % (':'.join(cpe_parts[:10]), '%%')]
+    query_cpe_parameters = ['%s:>=%s%%' % (':'.join(cpe_parts[:12]), '%%')]
     if distribution[1] != 'inf':
-        query_cpe_parameters.append('%s:%s_%s:%%' % (':'.join(cpe_parts[:10]), distribution[0], distribution[1]))
-        query_cpe_parameters.append('%s:<=%s%%' % (':'.join(cpe_parts[:10]), distribution[0]))
+        query_cpe_parameters.append('%s:%s_%s:%%' % (':'.join(cpe_parts[:12]), distribution[0], distribution[1]))
+        query_cpe_parameters.append('%s:<=%s%%' % (':'.join(cpe_parts[:12]), distribution[0]))
 
     if cpe_parts[6] == '-':
         cpe_parts[6] = '*'
-        query_cpe_parameters.append('%s:>=%s%%' % (':'.join(cpe_parts[:10]), '%%'))
+        query_cpe_parameters.append('%s:>=%s%%' % (':'.join(cpe_parts[:12]), '%%'))
         if distribution[1] != 'inf':
-            query_cpe_parameters.append('%s:%s_%s:%%' % (':'.join(cpe_parts[:10]), distribution[0], distribution[1]))
-            query_cpe_parameters.append('%s:<=%s%%' % (':'.join(cpe_parts[:10]), distribution[0]))
+            query_cpe_parameters.append('%s:%s_%s:%%' % (':'.join(cpe_parts[:12]), distribution[0], distribution[1]))
+            query_cpe_parameters.append('%s:<=%s%%' % (':'.join(cpe_parts[:12]), distribution[0]))
 
 
     pot_vulns = set()
@@ -270,8 +272,9 @@ def get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_gen
             found_vulns_cpes[cve_id] = query_vuln_cpes(cpe_parts, db_cursor, distribution, cpe_version, cve_id)
 
         vuln_cpes_nvd, vuln_cpes_distro, most_specific_cpe = found_vulns_cpes[cve_id]
-        cpe_operator = vuln_cpe.split(':')[10][0:2] if vuln_cpe.split(':')[10][0:2] in ('<=', '>=') else ''
-        same_distro = distribution[0] == MATCH_DISTRO.search(vuln_cpe.split(':')[10]).group(1)
+        vuln_cpe_parts = get_cpe_parts(vuln_cpe)
+        cpe_operator = vuln_cpe_parts[12][0:2] if vuln_cpe_parts[12][0:2] in ('<=', '>=') else ''
+        same_distro = distribution[0] == MATCH_DISTRO.search(vuln_cpe_parts[12]).group(1)
 
         if most_specific_cpe and most_specific_cpe != vuln_cpe:
             continue
@@ -335,10 +338,10 @@ def has_cpe_lower_versions(cpe1, cpe2, is_distro_query=False):
     cpe2_remainder_fields = get_cpe_parts(cpe2)[5:]
 
     for i in range(min(len(cpe1_remainder_fields), len(cpe2_remainder_fields))):
-        # same distro for distributions in target_sw field
+        # same distro for distributions in other field
         if i ==4 and is_distro_query and \
-            MATCH_DISTRO_TARGET_SW.match(cpe1_remainder_fields[i]) and MATCH_DISTRO_TARGET_SW.match(cpe2_remainder_fields[i]) \
-            and (MATCH_DISTRO_TARGET_SW.match(cpe1_remainder_fields[i]).group(2) == MATCH_DISTRO_TARGET_SW.match(cpe2_remainder_fields[i]).group(2)):
+            MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe1_remainder_fields[i]) and MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe2_remainder_fields[i]) \
+            and (MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe1_remainder_fields[i]).group(2) == MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe2_remainder_fields[i]).group(2)):
             continue
         if i == 6 and is_distro_query:
             continue
@@ -547,7 +550,7 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
                 vulns.append((cve_id, match_reason))
                 break
     
-    if cpe_parts[10] in ('-', '*') or MATCH_DISTRO_TARGET_SW.match(cpe_parts[10]):
+    if cpe_parts[12] in ('-', '*') or MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe_parts[12]):
         vulns += get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_general_cpe_vulns)
 
     # reverse the list b/c distro information should be considered first
@@ -730,7 +733,7 @@ def get_distro_infos_from_query(original_query, config):
     all_distro_versions_codenames = [version for distro_version in all_distro_versions_codenames_tuples for version in distro_version]
     possible_distro_query = MATCH_DISTRO_QUERY.search(original_query)
     if MATCH_CPE_23_RE.match(original_query):
-        possible_distro_query = MATCH_DISTRO_QUERY.search(get_cpe_parts(original_query)[10])
+        possible_distro_query = MATCH_DISTRO_QUERY.search(get_cpe_parts(original_query)[12])
     if possible_distro_query:
         distro, distro_version = possible_distro_query.groups()
         distro, distro_version = handle_subversion_of_distro_version(distro.lower(), distro_version)
@@ -775,7 +778,7 @@ def get_distro_infos_from_query(original_query, config):
     all_distro_versions_codenames = [version for distro_version in all_distro_versions_codenames_tuples for version in distro_version]
     possible_distro_query = MATCH_DISTRO_QUERY.search(original_query)
     if MATCH_CPE_23_RE.match(original_query):
-        possible_distro_query = MATCH_DISTRO_QUERY.search(get_cpe_parts(original_query)[10])
+        possible_distro_query = MATCH_DISTRO_QUERY.search(get_cpe_parts(original_query)[12])
     if possible_distro_query:
         distro, distro_version = possible_distro_query.groups()
         if distro_version in all_distro_versions_codenames:
