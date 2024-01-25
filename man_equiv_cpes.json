@@ -62,5 +62,6 @@
     "cpe:2.3:a:canonical:apport:": ["cpe:2.3:a:apport_project:apport:"],
     "cpe:2.3:a:canonical:apparmor:": ["cpe:2.3:a:apparmor:apparmor:"],
     "cpe:2.3:a:accountsservice_project:accountsservice:": ["cpe:2.3:a:canonical:accountsservice:", "cpe:2.3:a:freedesktop:accountsservice:"],
-    "cpe:2.3:a:amanda:amanda:": ["cpe:2.3:a:zmanda:amanda:"]
+    "cpe:2.3:a:amanda:amanda:": ["cpe:2.3:a:zmanda:amanda:"],
+    "cpe:2.3:a:kubernetes:kube-apiserver:": ["cpe:2.3:a:kubernetes:apiserver:"]
 }
