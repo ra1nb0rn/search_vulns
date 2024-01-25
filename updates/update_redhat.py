@@ -28,7 +28,7 @@ REDHAT_RELEASES = {}
 DB_CURSOR = None
 
 REDHAT_UPDATE_SUCCESS = None
-MATCH_RELEVANT_RHEL_CPE = re.compile(r'cpe:\/[ao]:redhat:(?:enterprise_linux|rhel_eus|rhel_els|rhel_aus):([0-9\.]{1,3})')
+MATCH_RELEVANT_RHEL_CPE = re.compile(r'cpe:\/[ao]:redhat:(?:enterprise_linux|rhel_[\w]{3}):([0-9\.]{1,3})')
 MATCH_RHEL_VERSION_IN_PACKAGE = re.compile(r'\.[Ee][Ll](\d{1,2}[_\.]\d{1,2})[_\.]?\d{0,2}')
 CVE_REDHAT_API_URL = 'https://access.redhat.com/hydra/rest/securitydata'
 GITHUB_REDHAT_API_DATA_URL = 'https://github.com/aquasecurity/vuln-list-redhat.git'
@@ -323,16 +323,16 @@ def process_relevant_package_infos(packages):
             continue
         redhat_version = MATCH_RELEVANT_RHEL_CPE.match(redhat_cpe).group(1)
         # extend redhat version
-        if len(redhat_version.split('.')) == 1:
-            redhat_version += '.0'
         try:
             package_name, version = package['package'].split(':', maxsplit=1)
             # remove attached '-0' to some package names
             if package_name[-2:] == '-0':
                 package_name = package_name[:-2]
-            # get exact redhat version from package
-            if MATCH_RHEL_VERSION_IN_PACKAGE.search(version):
-                redhat_version = MATCH_RHEL_VERSION_IN_PACKAGE.search(version).group(1).replace('_', '.')
+            # get exact redhat version from package if something like 'RedHat Enterprise Linux 7' is given
+            # add two entries to database, one general and one specific
+            if len(redhat_version.split('.')) == 1 and MATCH_RHEL_VERSION_IN_PACKAGE.search(version):
+                redhat_version_specific = MATCH_RHEL_VERSION_IN_PACKAGE.search(version).group(1).replace('_', '.')
+                relevant_package_infos.append(({'status': 'Fixed', 'version': version}, redhat_version_specific, package_name.lower()))
             package_fix_state = 'Fixed'
         except:
             try:

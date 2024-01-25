@@ -127,7 +127,7 @@ def is_cpe_included_from_field(cpe1, cpe2, field=6):
     return True
 
 
-def check_version_start_end(cpe, cpe_parts, cpe_version, pot_vuln, distribution, ignore_general_cpe_vulns):
+def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_general_cpe_vulns):
     '''Check whether vuln_version is in range '''
     vuln_cpe = pot_vuln[1]
     version_start, version_start_incl = pot_vuln[2], pot_vuln[3]
@@ -144,7 +144,7 @@ def check_version_start_end(cpe, cpe_parts, cpe_version, pot_vuln, distribution,
                 # filter out distro vulns not relevant b/c of version_start not matching
                 if not is_cpe_vuln:
                     vuln_match_reason = 'version_start_not_included'
-            elif version_end == str(sys.maxsize) or (version_end == str(sys.maxsize-1) and distribution[0] != MATCH_DISTRO(cpe_parts[12])):
+            elif version_end == str(sys.maxsize) or (version_end == str(sys.maxsize-1) and distribution[0] != MATCH_DISTRO.search(re.split(r'(?<!\\):', vuln_cpe)[12]).group(1)):
                 # handle sys.maxsize or not-fixed from another distro as general info
                 vuln_match_reason = 'general_cpe'
                 is_cpe_vuln = is_useful_cpe(vuln_cpe, version_end, distribution) and not ignore_general_cpe_vulns
@@ -163,7 +163,7 @@ def check_version_start_end(cpe, cpe_parts, cpe_version, pot_vuln, distribution,
         if version_end == '-1':
             vuln_match_reason = 'not_affected'
             is_cpe_vuln = True
-        elif version_end == str(sys.maxsize) or (version_end == str(sys.maxsize-1) and distribution[0] != MATCH_DISTRO(cpe_parts[12])):
+        elif version_end == str(sys.maxsize) or (version_end == str(sys.maxsize-1) and distribution[0] != MATCH_DISTRO.search(re.split(r'(?<!\\):', vuln_cpe)[12]).group(1)):
             # handle sys.maxsize or not-fixed from another distro as general info
             vuln_match_reason = 'general_cpe'
             is_cpe_vuln = is_useful_cpe(vuln_cpe, version_end, distribution) and not ignore_general_cpe_vulns
@@ -193,8 +193,9 @@ def check_version_start_end(cpe, cpe_parts, cpe_version, pot_vuln, distribution,
 
 
 def get_most_specific_cpe(vuln_cpes_distro, distribution, cpe_version, vuln_cpes_nvd):
-    query_distro = distribution[1] if not distribution[1] in ('upstream', 'sid') else 'inf'
+    query_distro_version = distribution[1] if not distribution[1] in ('upstream', 'sid') else 'inf'
     greater_than_cpe = ''
+    minor_version_cpe = ''
     for cpe_infos in vuln_cpes_distro:
         cpe_parts = cpe_infos[0].split(':')
         cpe_version_start = cpe_infos[2]
@@ -205,16 +206,27 @@ def get_most_specific_cpe(vuln_cpes_distro, distribution, cpe_version, vuln_cpes
         if cpe_version_start and cpe_version and cpe_version < CPEVersion(cpe_version_start):
             continue
         if not cpe_operator:
-            if distro_version == distribution[1]:
+            if distro_version == query_distro_version:
                 return cpe_infos[0] 
+            # use closest minor version if no entry for queried distro version
+            # e.g. '7' is no minor version of '7.9', but '7.0' is
+            split_distro_version = distro_version.split('.')
+            split_query_distro_version = query_distro_version.split('.')
+            if len(split_distro_version) > 1 and len(split_query_distro_version) > 1 and split_distro_version[0] == split_query_distro_version[0] and int(split_distro_version[1]) < int(split_query_distro_version[1]):
+                if not minor_version_cpe:
+                    minor_version_cpe = cpe_infos[0]
+                elif float(MATCH_DISTRO_CPE_OTHER_FIELD.match(re.split(r'(?<!\\):', minor_version_cpe)[12]).group(3)) < float(distro_version):
+                    minor_version_cpe = cpe_infos[0]
         elif cpe_operator == '<=':
-            if float(query_distro) <= float(distro_version):
+            if float(query_distro_version) <= float(distro_version):
                 return cpe_infos[0]
         else:
-            if float(query_distro) >= float(distro_version):
+            if float(query_distro_version) >= float(distro_version):
                 return cpe_infos[0] 
             else:
                 greater_than_cpe = cpe_infos[0]
+    if minor_version_cpe:
+        return minor_version_cpe
     if vuln_cpes_nvd:
         return ''
     return greater_than_cpe
@@ -229,6 +241,8 @@ def query_distribution_matches(cpe_parts, distribution, db_cursor):
     if distribution[1] != 'inf':
         query_cpe_parameters.append('%s:%%:%s_%s' % (':'.join(cpe_parts[:5]), distribution[0], distribution[1]))
         query_cpe_parameters.append('%s:%%:<=%s%%' % (':'.join(cpe_parts[:5]), distribution[0]))
+        # query with same main release
+        query_cpe_parameters.append('%s:%%:%s_%s.%%' % (':'.join(cpe_parts[:5]), distribution[0], distribution[1].split('.')[0]))
 
     pot_vulns = set()
     for query_cpe_parameter in query_cpe_parameters:
@@ -287,7 +301,7 @@ def get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_gen
             continue
 
         if cpe_version:
-            is_cpe_vuln, vuln_match_reason = check_version_start_end(cpe, cpe_parts, cpe_version, pot_vuln, distribution, ignore_general_cpe_vulns)
+            is_cpe_vuln, vuln_match_reason = check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_general_cpe_vulns)
         else:
             is_cpe_vuln = pot_vuln[4] != '-1'
             vuln_match_reason = 'general_cpe_but_ok'
@@ -304,7 +318,7 @@ def query_vuln_cpes(cpe_parts, db_cursor, distribution, cpe_version, cve_id):
     '''Return all cpes for a given cve_id (nvd_cpes, given distro_cpes, most_specific_distro_cpe)'''
     get_cpes_query = 'SELECT cpe, source, cpe_version_start FROM cve_cpe WHERE cpe LIKE ? AND cve_id = ?'
     vuln_cpes = set(db_cursor.execute(get_cpes_query, (':'.join(cpe_parts[:5])+'%%', cve_id)))
-            # use '-' and '*' as equal wildcards
+    # use '-' and '*' as equal wildcards
     if cpe_parts[5] == '-':
         cpe_parts[5] = '*'
         vuln_cpes |= set(db_cursor.execute(get_cpes_query, (':'.join(cpe_parts[:5])+'%%', cve_id)))
@@ -704,9 +718,9 @@ def handle_subversion_of_distro_version(distro, distro_version):
             # versions >= 7 -> e.g. 7.3
             elif len(distro_version_parts) == 2:
                 distro_version = distro_version_parts[0]
-    elif distro == 'redhat' or distro == 'rhel':
-        if len(distro_version.split('.')) == 1:
-            distro_version += '.0'
+    #elif distro == 'redhat' or distro == 'rhel':
+    #    if len(distro_version.split('.')) == 1:
+    #        distro_version += '.0'
 
     return (distro, distro_version)
 
