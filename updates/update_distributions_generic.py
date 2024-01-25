@@ -33,7 +33,8 @@ NAME_CPE_DICT = {
     'mozjs': 'cpe:2.3:a:mozilla:firefox_esr:*:*:*:*:*:*:*:*',
     'nvidia-graphics-drivers': 'cpe:2.3:a:nvidia:gpu_driver:*:-:*:*:unix:*:*:*',
     'kernel': 'cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*',
-    'kernel-rt': 'cpe:2.3:o:linux:linux_kernel-rt:*:*:*:*:*:*:*:*'
+    'kernel-rt': 'cpe:2.3:o:linux:linux_kernel-rt:*:*:*:*:*:*:*:*',
+    'httpd': 'cpe:2.3:a:apache:http_server:*:*:*:*:*:*:*:*',
 }
 
 
@@ -319,8 +320,10 @@ def get_version_end_ubuntu(version_end, status, note, software_version):
         if software_version:
             version_end = get_clean_version(software_version, True)
         else:
-            version_end = str(sys.maxsize)
-    elif status in ['needed, needs-triage', 'active', 'deferred']:
+            version_end = str(sys.maxsize-1)
+    elif status in ['needed', 'active', 'deferred']:
+        version_end = str(sys.maxsize-1)
+    elif status == 'needs-triage':
         version_end = str(sys.maxsize)
     elif status == 'ignored':
         if not note or any(note.startswith(string) for string in ['end of', 'code', 'superseded', 'was not-affected']):
@@ -328,7 +331,7 @@ def get_version_end_ubuntu(version_end, status, note, software_version):
         elif note.startswith('only'):
             version_end = '-1'
         elif not any(x in note for x in ['will not', 'intrusive', 'was', 'fix']):
-            version_end = str(sys.maxsize)
+            version_end = str(sys.maxsize-1)
         else:
             version_end = ''
     return version_end
@@ -344,7 +347,10 @@ def get_version_end(status, software_version):
     elif status == 'resolved':
         version_end = get_clean_version(software_version, True)
     # for debian
-    elif status in ['open', 'undetermined']:
+    elif status == 'open':
+        version_end = str(sys.maxsize-1)
+        software_version = ''
+    elif status == 'undetermined':
         version_end = str(sys.maxsize)
         software_version = ''
     else:

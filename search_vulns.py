@@ -127,7 +127,7 @@ def is_cpe_included_from_field(cpe1, cpe2, field=6):
     return True
 
 
-def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_general_cpe_vulns):
+def check_version_start_end(cpe, cpe_parts, cpe_version, pot_vuln, distribution, ignore_general_cpe_vulns):
     '''Check whether vuln_version is in range '''
     vuln_cpe = pot_vuln[1]
     version_start, version_start_incl = pot_vuln[2], pot_vuln[3]
@@ -144,8 +144,8 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
                 # filter out distro vulns not relevant b/c of version_start not matching
                 if not is_cpe_vuln:
                     vuln_match_reason = 'version_start_not_included'
-            elif version_end == str(sys.maxsize):
-                # handle sys.maxsize as general info
+            elif version_end == str(sys.maxsize) or (version_end == str(sys.maxsize-1) and distribution[0] != MATCH_DISTRO(cpe_parts[12])):
+                # handle sys.maxsize or not-fixed from another distro as general info
                 vuln_match_reason = 'general_cpe'
                 is_cpe_vuln = is_useful_cpe(vuln_cpe, version_end, distribution) and not ignore_general_cpe_vulns
             else:
@@ -162,9 +162,9 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
     elif version_end:
         if version_end == '-1':
             vuln_match_reason = 'not_affected'
-            is_cpe_vuln = is_useful_cpe(vuln_cpe, version_end, distribution)
-        elif version_end == str(sys.maxsize):
-            # handle sys.maxsize as general info
+            is_cpe_vuln = True
+        elif version_end == str(sys.maxsize) or (version_end == str(sys.maxsize-1) and distribution[0] != MATCH_DISTRO(cpe_parts[12])):
+            # handle sys.maxsize or not-fixed from another distro as general info
             vuln_match_reason = 'general_cpe'
             is_cpe_vuln = is_useful_cpe(vuln_cpe, version_end, distribution) and not ignore_general_cpe_vulns
         elif version_end_incl == True:
@@ -227,16 +227,8 @@ def query_distribution_matches(cpe_parts, distribution, db_cursor):
     # query for all distro cpes
     query_cpe_parameters = ['%s:>=%s%%' % (':'.join(cpe_parts[:12]), '%%')]
     if distribution[1] != 'inf':
-        query_cpe_parameters.append('%s:%s_%s:%%' % (':'.join(cpe_parts[:12]), distribution[0], distribution[1]))
-        query_cpe_parameters.append('%s:<=%s%%' % (':'.join(cpe_parts[:12]), distribution[0]))
-
-    if cpe_parts[6] == '-':
-        cpe_parts[6] = '*'
-        query_cpe_parameters.append('%s:>=%s%%' % (':'.join(cpe_parts[:12]), '%%'))
-        if distribution[1] != 'inf':
-            query_cpe_parameters.append('%s:%s_%s:%%' % (':'.join(cpe_parts[:12]), distribution[0], distribution[1]))
-            query_cpe_parameters.append('%s:<=%s%%' % (':'.join(cpe_parts[:12]), distribution[0]))
-
+        query_cpe_parameters.append('%s:%%:%s_%s' % (':'.join(cpe_parts[:5]), distribution[0], distribution[1]))
+        query_cpe_parameters.append('%s:%%:<=%s%%' % (':'.join(cpe_parts[:5]), distribution[0]))
 
     pot_vulns = set()
     for query_cpe_parameter in query_cpe_parameters:
@@ -295,7 +287,7 @@ def get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_gen
             continue
 
         if cpe_version:
-            is_cpe_vuln, vuln_match_reason = check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_general_cpe_vulns)
+            is_cpe_vuln, vuln_match_reason = check_version_start_end(cpe, cpe_parts, cpe_version, pot_vuln, distribution, ignore_general_cpe_vulns)
         else:
             is_cpe_vuln = pot_vuln[4] != '-1'
             vuln_match_reason = 'general_cpe_but_ok'

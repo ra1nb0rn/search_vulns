@@ -319,13 +319,6 @@ def process_relevant_package_infos(packages):
     relevant_package_infos = []
     for package in packages:
         redhat_cpe = package['cpe']
-        # only use RHEL cpes
-        #is_rhel_product_name = MATCH_RHEL_PRODUCT_NAME.match(package['product_name'])
-        # skip all with no RHEL product name
-        #if not is_rhel_product_name:
-        #    continue
-        #redhat_version = is_rhel_product_name.group(1)
-        #redhat_cpe = 'cpe:2.3:o:redhat:enterprise_linux:%s:*:*:*:*:*:*:*' % (redhat_version)
         if not MATCH_RELEVANT_RHEL_CPE.match(redhat_cpe):
             continue
         redhat_version = MATCH_RELEVANT_RHEL_CPE.match(redhat_cpe).group(1)
@@ -356,7 +349,9 @@ def process_relevant_package_infos(packages):
                     version = package.split(':')[5]
             else:
                 package_name = package['package_name']
-                if package_fix_state in ['Affected', 'Fix deferred', 'New', 'Will not fix', 'Under investigation']:
+                if package_fix_state in ['Affected', 'Fix deferred', 'New', 'Will not fix']:
+                    version = str(sys.maxsize-1)
+                elif package_fix_state == 'Under investigation':
                     version = str(sys.maxsize)
                 elif package_fix_state == 'Not affected':
                     version = '-1'
