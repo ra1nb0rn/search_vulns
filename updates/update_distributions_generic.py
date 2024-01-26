@@ -40,12 +40,12 @@ NAME_CPE_DICT = {
 
 def get_general_cpe(cpe):
     '''Return general cpe with no version set'''
-    return ':'.join(cpe.split(':')[:5]+['*' for _ in range(8)])
+    return ':'.join(get_cpe_parts(cpe)[:5]+['*' for _ in range(8)])
 
 
 def get_versionless_cpe(cpe):
     '''Return general cpe with no version set'''
-    cpe_parts = cpe.split(':')
+    cpe_parts = get_cpe_parts(cpe)
     cpe_parts[5] = '*'
     return ':'.join(cpe_parts)
 
@@ -55,7 +55,7 @@ def equal_name(name1, name2):
     return name1.replace('-', ' ').replace('_', ' ') == name2.replace('-', ' ').replace('_', ' ')
 
 
-def get_matching_cpe(name, name_version, version, search, cpes):
+def get_matching_cpe(name, original_package_name, name_version, version, search, cpes):
     '''Get matching cpe for a given package '''
     unique_cpes = set([get_versionless_cpe(cpe[1]) for cpe in cpes])
     matching_cpe = ''
@@ -76,7 +76,7 @@ def get_matching_cpe(name, name_version, version, search, cpes):
     else:
         count_name_matches = 0
         for cpe_ in unique_cpes:
-            if name in cpe_:
+            if original_package_name in cpe_:
                 matching_cpe = cpe_
                 count_name_matches += 1
         if count_name_matches > 1:
@@ -85,19 +85,19 @@ def get_matching_cpe(name, name_version, version, search, cpes):
     if not matching_cpe:
         # name in given cpes
         for cpe in unique_cpes:
-            cpe_parts = cpe.split(':')
+            cpe_parts = get_cpe_parts(cpe)
             if cpe_parts[4] in name or name in cpe_parts[4]:
                 matching_cpe = cpe
                 break
         else:
-            matching_cpe = get_matching_general_cpe(name, version, cpes, unique_cpes, search)
+            matching_cpe = get_matching_general_cpe(name, original_package_name, version, cpes, unique_cpes, search)
             if not matching_cpe:
                 return
             if len(unique_cpes) > 1:
                 NAME_CPE_DICT[name] = get_versionless_cpe(matching_cpe)
     
     # used for subpackages of a package
-    cpe_parts = matching_cpe.split(':')
+    cpe_parts = get_cpe_parts(matching_cpe)
     name_cpe = cpe_parts[4]
     if name_version != '-1' and name != name_cpe and name_cpe in name:
         cpe_parts[4] = name.replace(name+'-', '')
@@ -106,7 +106,7 @@ def get_matching_cpe(name, name_version, version, search, cpes):
     return matching_cpe
 
 
-def get_matching_general_cpe(name, version, cpes, cpe_set, search):
+def get_matching_general_cpe(name, original_package_name, version, cpes, cpe_set, search):
     '''Get matching cpe for a given name '''
     # return hardcoded/ already found cpe for given name
     try:
@@ -140,6 +140,8 @@ def get_matching_general_cpe(name, version, cpes, cpe_set, search):
     for cpe in matching_cpes:
         if  cpe in cpe_set:
             return cpe
+        if get_cpe_parts(cpe)[4] == original_package_name:
+            return cpe
 
     all_cpes = []
     # cpe, cpe_version, with_cpes
@@ -151,7 +153,7 @@ def get_matching_general_cpe(name, version, cpes, cpe_set, search):
     highest_value = ('', 0)
     for cpe_infos in all_cpes:
         cpe, cpe_version = cpe_infos
-        vendor, product = cpe.split(':')[3:5]
+        vendor, product = get_cpe_parts(cpe)[3:5]
         new_ratio =fuzz.token_set_ratio(cpe, search)/100.0
         if new_ratio > 0.24 and (cpe_version == version or cpe_version.split('.')[0] == version):
             new_ratio *= 1.4
@@ -159,7 +161,7 @@ def get_matching_general_cpe(name, version, cpes, cpe_set, search):
         if vendor in ['debian', 'ubuntu', 'redhat', 'gentoo', 'fedora']:
             new_ratio = new_ratio/4
         # prefer unix cpes
-        if cpe.split(':')[9] == 'windows':
+        if get_cpe_parts(cpe)[9] == 'windows':
             new_ratio *= 2/3
         
         if (name == product or search.split(' ')[-1] == product) and not possible_cpes[0]:
@@ -276,12 +278,9 @@ def get_clean_version(version, is_good_version):
 
 def get_distribution_cpe(version, version_end, distro_version, source, cpe, extra_cpe=''):
     '''Transform given cpe to cpe with distribution infos in target_sw and other'''
-    cpe_parts = cpe.split(':')
-    if not version_end or version_end == '-1' or version_end == str(sys.maxsize):
-        version = '*'
-    cpe_parts[12] = re.sub(ESCAPE_VERSION, r'\\\1', version)
-    # target_sw
-    cpe_parts[10] = '%s%s_%s' % (extra_cpe, source, distro_version)
+    cpe_parts = get_cpe_parts(cpe)
+    # distribution_data in 'otherÄ field of cpe
+    cpe_parts[12] = '%s%s_%s' % (extra_cpe, source, distro_version)
 
     cpe = ':'.join(cpe_parts)
     return cpe
@@ -361,18 +360,28 @@ def get_version_end(status, software_version):
     return version_end
 
 
+def get_cpe_parts(cpe):
+    return re.split(r'(?<!\\):', cpe)
+
+
 def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, source, db_cursor):
     '''Add cve with new cpe to vuln_db'''
     
     version_start = '0'
     is_cpe_version_start_including = False
+    version_start_nvd_lt_version_end = None
 
     for cpe_ in cpes:
         if get_versionless_cpe(cpe_[1]) == matching_cpe:
-            if CPEVersion(cpe_[4]) == CPEVersion(version_end) or CPEVersion(cpe_[1].split(':')[5]) == CPEVersion(version_end):
-                return
+            if version_start_nvd_lt_version_end == None:
+                version_start_nvd_lt_version_end = True
             cpe_version_start, is_cpe_version_start_including = cpe_[2:4]
-            cpe_version = cpe_[1].split(':')[5]
+            # version_end < version_start of nvd
+            if version_start_nvd_lt_version_end and CPEVersion(cpe_version_start) < CPEVersion(version_end) and CPEVersion(get_cpe_parts(cpe_[1])[5]) < CPEVersion(version_end):
+                version_start_nvd_lt_version_end = False
+            if CPEVersion(cpe_[5]) == CPEVersion(version_end) or CPEVersion(get_cpe_parts(cpe_[1])[5]) == CPEVersion(version_end):
+                return
+            cpe_version = get_cpe_parts(cpe_[1])[5]
             if cpe_version in ('*', '-'):
                 cpe_version = ''
             if is_cpe_version_start_including:
@@ -386,6 +395,9 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
                 elif CPEVersion(version_end) > CPEVersion(cpe_version) and (CPEVersion(cpe_version) < CPEVersion(version_start) or version_start == '0'):
                     version_start = cpe_version
                     is_cpe_version_start_including = True
+    # version_end < version_start of nvd
+    if version_start_nvd_lt_version_end:
+        return
     if version_start == '0':
         version_start = ''
     if name_version and name_version != '-1' and not version_start:
@@ -404,7 +416,7 @@ def add_not_found_packages(not_found_cpes, distribution, db_cursor):
     for name, backport_cpes in not_found_cpes.items(): 
         possible_cpes = [cpe_[5] for cpe_ in backport_cpes if cpe_ == '']
         for cpe in possible_cpes:
-            if name in cpe.split(':')[4] or equal_name(name, cpe.split(':')[4]):
+            if name in get_cpe_parts(cpe)[4] or equal_name(name, get_cpe_parts(cpe)[4]):
                 matching_cpe = get_versionless_cpe(cpe)
         else:
             split_name = SPLIT_STRING_LETTERS_NUMBERS.match(name)
@@ -473,7 +485,7 @@ def get_search_version_string(name, name_version, version):
 
 def cpe_matching_score(name, cpe):
     '''Calculate matching score between given name and cpe'''
-    infos_cpe = ' '.join([attr for attr in cpe.split(':')[3:] if not attr in ['*', '-']])                    
+    infos_cpe = ' '.join([attr for attr in get_cpe_parts(cpe)[3:] if not attr in ['*', '-']])                    
     sim_score = fuzz.token_set_ratio(infos_cpe, name)/100.0
     return sim_score
 
@@ -482,7 +494,7 @@ def transform_cpe_uri_binding_to_formatted_string(cpe):
     '''Create formatted string out of uri binding'''
     cpe_parts = ['cpe', '2.3']
     # remove 'cpe:/' and get cpe_parts
-    cpe_parts += cpe[5:].split(':')
+    cpe_parts += get_cpe_parts(cpe[5:])
     # formatted string has 11 components
     cpe_parts += ['']*(13-len(cpe_parts))
     return ':'.join([cpe_part if cpe_part else '*' for cpe_part in cpe_parts])

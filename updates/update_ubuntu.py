@@ -242,8 +242,6 @@ def process_cve(cve):
         elif len(relevant_statuses) > 1:
             relevant_statuses[-2] = (relevant_statuses[-2][0], relevant_statuses[-2][1], '>=')
 
-        all_dne_statuses = len([True for status_info, _, _ in relevant_statuses if status_info['status'] == 'DNE']) == len(relevant_statuses)
-
         for status_infos, ubuntu_version, extra_cpe in relevant_statuses:
             status = status_infos['status']
             note = status_infos['description']
@@ -257,9 +255,9 @@ def process_cve(cve):
 
             if not matching_cpe:
                 if len(cve['packages']) == 1 and len(general_given_cpes) == 1 and name in general_given_cpes[0] and name != 'linux':
-                    matching_cpe = get_general_cpe(cpes[0][1])
+                    matching_cpe = get_general_cpe(general_given_cpes[0])
                 else:
-                    matching_cpe = get_matching_cpe(name, name_version, version, search, cpes)
+                    matching_cpe = get_matching_cpe(name, package['name'], name_version, version, search, cpes)
                 
                 # linux-* package
                 if not matching_cpe:
@@ -287,10 +285,6 @@ def process_cve(cve):
                 # match found cpe to all previous not found packages
                 match_not_found_cpe(cpes, matching_cpe, name)
 
-            # package not relevant, b/c all statuses are does not exist and matching cpe is not in the given ones, 
-            # so ubuntu doesn't correct NVD data, because CVE is already not shown for the given package
-            if all_dne_statuses and get_general_cpe(matching_cpe) not in general_given_cpes and len(get_equivalent_cpes(matching_cpe)) == 1:
-                break
             if status == 'released':
                 # no version given with status released, could happen with 'upstream' as codename
                 if not note:

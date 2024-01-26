@@ -251,9 +251,8 @@ def process_cve(cve):
             if relevant_package_info:
                 relevant_package_info[-1] = (relevant_package_info[-1][0], relevant_package_info[-1][1], '>=')
 
-        all_dne_statuses = len([True for status_info, _, _ in relevant_package_info if status_info['version'] == '-1']) == len(relevant_package_info)
-            
         matching_cpe = ''
+        original_package_name = package_name
         package_name, name_version = split_name(package_name)
         add_to_vuln_db_bool = True
 
@@ -276,9 +275,9 @@ def process_cve(cve):
                     package_name = package_name.split('/')[1]
                 name_version, search = get_search_version_string(package_name, name_version, version)
                 if len(package_names) == 1 and len(general_given_cpes) == 1 and package_name in general_given_cpes[0] and package_name != 'linux':
-                    matching_cpe = get_general_cpe(cpes[0][1])
+                    matching_cpe = get_general_cpe(general_given_cpes[0])
                 else:
-                    matching_cpe = get_matching_cpe(package_name, name_version, version, search, cpes)
+                    matching_cpe = get_matching_cpe(package_name, original_package_name, name_version, version, search, cpes)
                 
                 # linux-* package
                 if not matching_cpe:
@@ -306,10 +305,13 @@ def process_cve(cve):
                 # match found cpe to all previous not found packages
                 match_not_found_cpe(cpes, matching_cpe, package_name)
 
+<<<<<<< HEAD
             # package not relevant, b/c all statuses are 'not affected' and matching cpe is not in the given ones, 
             # so redhat doesn't correct NVD data, because CVE is already not shown for the given package
             if all_dne_statuses and get_general_cpe(matching_cpe) not in general_given_cpes and len(get_equivalent_cpes(matching_cpe, CONFIG)) == 1:
                 break
+=======
+>>>>>>> 3976123 (Improve process of distribution data)
             version_end = get_clean_version(version, True)
             distro_cpe= get_distribution_cpe(redhat_version, 'rhel', matching_cpe, extra_cpe)
             add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', DB_CURSOR)

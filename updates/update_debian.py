@@ -150,7 +150,7 @@ def process_cve(cve):
             continue
 
         if not matching_cpe:
-            matching_cpe = get_matching_cpe(name, name_version, version, search=name, cpes=cpes)
+            matching_cpe = get_matching_cpe(name, cve['package_name'], name_version, version, search=name, cpes=cpes)
             
             # linux-* package
             if not matching_cpe:
