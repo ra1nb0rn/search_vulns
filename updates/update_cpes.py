@@ -93,7 +93,7 @@ def add_cpe_infos_to_db(new_cpes):
             unique_cpes.append(cpe_infos)
     new_cpes = unique_cpes
 
-    all_cpes = set(get_all_cpes(False))
+    all_cpes = set(get_all_cpes(False, CONFIG['cpe_search']))
 
     terms_to_entries = {}
     for term, entry_ids in db_terms_to_entries:

@@ -190,7 +190,9 @@ def initialize_redhat_release_version_codename():
         latest_version = str(release['latest'])
         for i in range(int(latest_version.split('.')[1])+1):
             version =  main_version+'.'+str(i)
-            db_cursor.execute(query, ('redhat', version, codename, support_expires, esm_expires))
+            # codename to empty string b/c only base entry gets a codename
+            db_cursor.execute(query, ('redhat', version, '', support_expires, esm_expires))
+        db_cursor.execute(query, ('redhat', main_version, codename, support_expires, esm_expires))
 
     # add versions with no eol data
     for main_version, codename in REDHAT_RELEASES.items():
