@@ -1,13 +1,17 @@
-from cpe_search.cpe_search import search_cpes, perform_calculations
+from cpe_search.cpe_search import search_cpes, perform_calculations, VERSION_MATCH_CPE_CREATION_RE, escape_string
 from thefuzz import  fuzz
 import re
 import sys
+import os
+import requests
+import string
 from cpe_version import CPEVersion
 from .update_generic import *
 
 SPLIT_VERSION = re.compile(r'^([v\d\~:]{0,2}[\d\.\-]+\w{0,2}[\d\.\-]+)(?<=\w)')
 SPLIT_STRING_LETTERS_NUMBERS = re.compile(r'([a-z\-]+)([0-9]+[\.]?[0-9]*)(?:[^a-zA-Z0-9]+|$)')
 ESCAPE_VERSION = re.compile(r'([\+\-\~\:])')
+MAN_MAPPING_JSON_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'man_mapping.json')
 CPE_SEARCH_RESULT_DICT = {}
 PACKAGE_CPE_MATCH_THRESHOLD = 0.42
 NEW_CPES_INFOS = []
@@ -17,25 +21,15 @@ GENERAL_DISTRIBUTION_CPES = [
     'cpe:2.3:o:debian:debian_linux:*:*:*:*:*:*:*:*', 
     'cpe:2.3:o:fedoraproject:fedora:*:*:*:*:*:*:*:*'
 ]
-NAME_CPE_DICT = {
-    'abuse-sdl': 'cpe:2.3:a:abuse:abuse-sdl:*:*:*:*:*:*:*:*',
-    'aflplusplus': 'cpe:2.3:a:afl\+\+_project:afl\+\+:*:*:*:*:*:*:*:*',
-    'aom': ' cpe:2.3:a:aomedia:aomedia:*:*:*:*:*:*:*:*',
-    'apcupsd': 'cpe:2.3:a:apcupsd:apc_ups_daemon:*:*:*:*:*:*:*:*',
-    'archvsync': 'cpe:2.3:a:debian:ftpsync:*:*:*:*:*:*:*:*',
-    'adobe-flashplugin': 'cpe:2.3:a:adobe:flash_plugin:*:*:*:*:*:*:*:*', # non existent cpe
-    'armagetronad': 'cpe:2.3:a:armagetron:armagetron_advanced:*:*:*:*:*:*:*:*',
-    'dotnet': 'cpe:2.3:a:microsoft:.net:*:*:*:*:*:*:*:*',
-    'libpgjava': 'cpe:2.3:a:postgresql:postgresql_jdbc_driver:*:*:*:*:*:*:*:*',
-    'bzr': 'cpe:2.3:a:canonical:bazaar:*:*:*:*:*:*:*:*',
-    'mc': 'cpe:2.3:a:midnight_commander:midnight_commander:*:*:*:*:*:*:*:*',
-    'wv': 'cpe:2.3:a:wvware:wvware:*:*:*:*:*:*:*:*',
-    'mozjs': 'cpe:2.3:a:mozilla:firefox_esr:*:*:*:*:*:*:*:*',
-    'nvidia-graphics-drivers': 'cpe:2.3:a:nvidia:gpu_driver:*:-:*:*:unix:*:*:*',
-    'kernel': 'cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*',
-    'kernel-rt': 'cpe:2.3:o:linux:linux_kernel-rt:*:*:*:*:*:*:*:*',
-    'httpd': 'cpe:2.3:a:apache:http_server:*:*:*:*:*:*:*:*',
-}
+NAME_CPE_DICT = {}
+
+
+def init_manual_mapping():
+    with open(MAN_MAPPING_JSON_FILE, 'r') as f:
+        global NAME_CPE_DICT
+        man_mappings = json.loads(f.read())
+        for name, cpe in man_mappings.items():
+            NAME_CPE_DICT[name] = cpe
 
 
 def get_general_cpe(cpe):
@@ -74,6 +68,8 @@ def get_matching_cpe(name, original_package_name, name_version, version, search,
                 matching_cpe = get_versionless_cpe(cpes[0][1])
                 break
     else:
+        # count occurences of product name in given cpes
+        # if only one entry. return this entry
         count_name_matches = 0
         for cpe_ in unique_cpes:
             if original_package_name in cpe_:
@@ -86,7 +82,7 @@ def get_matching_cpe(name, original_package_name, name_version, version, search,
         # name in given cpes
         for cpe in unique_cpes:
             cpe_parts = get_cpe_parts(cpe)
-            if cpe_parts[4] in name or name in cpe_parts[4]:
+            if cpe_parts[4] == name or name == cpe_parts[4]:
                 matching_cpe = cpe
                 break
         else:
@@ -124,6 +120,7 @@ def get_matching_general_cpe(name, original_package_name, version, cpes, cpe_set
     if custom_cpe in cpe_set:
         return custom_cpe
      
+    # check whether we already queried for the given search string
     try:
         matching_cpes = CPE_SEARCH_RESULT_DICT[search]
     except:
@@ -186,6 +183,40 @@ def get_matching_general_cpe(name, original_package_name, version, cpes, cpe_set
     return 'cpe:2.3:a:*:*:*:*:*:*:*:*:*:*'
 
 
+def get_clean_version(version, is_good_version):
+    '''Get clean version similar to the ones already in the database, e.g. 1:115.0.2+dfsg~ubuntu16.04 -> 115.0.2+dfsg~'''
+    version_str_match = VERSION_MATCH_CPE_CREATION_RE.search(version)
+    if version_str_match:
+        # version_str_match(-1) = 1 -> hardcode version == '-1' to -1
+        clean_version = version_str_match.group(0).strip() if version != '-1' else '-1'
+        if ' ' in version:
+            return ''
+    else:
+        if is_good_version:
+            clean_version = version
+            # 'released 0.10.3-1' -> '0.10.3-1'
+            clean_version.replace('released ', '')
+        else:
+            return ''
+
+    # split at distribution name
+    for distro_name in ['ubuntu', 'debian', 'deb', '.rhel', '.el']:
+        clean_version = clean_version.split(distro_name)[0]
+
+    # remove special char at end of string
+    if clean_version and clean_version[-1] in string.punctuation:
+        clean_version = clean_version[:-1]
+    
+    # split at colon, e.g. '1:115.3.1' -> '115.3.1'
+    split_colon = clean_version.split(':')
+    if len(split_colon) == 2:
+        if len(split_colon[0]) > len(split_colon[1]):
+            clean_version = split_colon[0]
+        else:
+            clean_version = split_colon[1]
+    return clean_version.lower()
+
+
 def is_next_distro_version(version1,version2):
     '''Evaluates whether version2 is the next distro version after version1'''
     try:
@@ -205,6 +236,7 @@ def is_next_distro_version(version1,version2):
     elif int(major1) == int(major2)-1:
         if not month1 and not month2:
             return True
+        # only works because ubuntu has only two main releases per year
         if month2 < month1:
             return True
         else:
@@ -213,7 +245,7 @@ def is_next_distro_version(version1,version2):
         return False
 
 
-def summarize_statuses_with_version(statuses, fixed_status_names, version_field, dev_distro_name):
+def summarize_statuses_with_version(statuses, dev_distro_name):
     '''Summarize statuses with same version to one entry'''
     relevant_statuses = []
 
@@ -222,28 +254,54 @@ def summarize_statuses_with_version(statuses, fixed_status_names, version_field,
         relevant_statuses.append((statuses[0][0], dev_distro_name, ''))
         statuses = statuses[1:]
 
-    # try to summarize entries with same version_end
-    start_status = ({version_field: ''}, '', '')
+    start_status = None
+    # only use '<=' for version_end == '-1' and not all statuses have version_end == '-1'
+    possible_min = len(statuses) > 1 and statuses[0][0] == '-1' and not all(status[0] == '-1' for  status in statuses)
     temp_statuses = []
     last_distro_version = ''
-    for (status, distro_version, operator) in statuses:
-        if operator or status['status'] not in  fixed_status_names \
-                or distro_version == dev_distro_name \
-                or (last_distro_version and not is_next_distro_version(last_distro_version, distro_version)) \
-                or (start_status[0][version_field] and status[version_field]
-                    and CPEVersion(get_clean_version(start_status[0][version_field], False)) != CPEVersion(get_clean_version(status[version_field], False))):
-            relevant_statuses.append((status, distro_version, operator))
-            start_status = ({version_field: ''},'','')
+    
+    # try to summarize statuses until a certain status (<=) (possible_min)
+    # and try the same from a certain status to the end (>=) (start_status)
+    # summarizable if same version_end
+    for i, (version_end, distro_version, operator) in enumerate(statuses):
+        summarizable_status = True
+        #check if last version == current version
+        if temp_statuses:
+            summarizable_status = version_end == temp_statuses[-1][0]
+        elif relevant_statuses and relevant_statuses[-1][1] != dev_distro_name:
+            summarizable_status = version_end == relevant_statuses[-1][0]
+        # check if current distribution is the next after the last one or if current distro is not affected, undetermined or will not fix, 
+        # b/c these statuses can be summarized no matter if it is the next distro version or not 
+        summarizable_status = summarizable_status and ((last_distro_version and is_next_distro_version(last_distro_version, distro_version)) or version_end in ('-1', str(sys.maxsize), str(sys.maxsize-1)))
+        if not summarizable_status:
+            # use '<=' not only for one entry
+            if possible_min:
+                possible_min = False
+                if i > 1:
+                    relevant_statuses.append((statuses[i-1][0], statuses[i-1][1], '<='))
+                else:
+                    relevant_statuses.append((statuses[i-1][0], statuses[i-1][1], ''))
+                # relevant_statuses.append((version_end, distro_version, ''))
+                temp_statuses = []
+                # continue
+            elif start_status:
+                for temp_status in temp_statuses:
+                    relevant_statuses.append(temp_status)
+                temp_statuses = []
+                start_status = None
+            else:
+                relevant_statuses.append((version_end, distro_version, ''))
             last_distro_version = ''
-            for temp_status in temp_statuses:
-                relevant_statuses.append(temp_status)
-            temp_statuses = []
-            continue
-        elif not start_status[1]:
-            start_status = (status, distro_version, '>=')
-        temp_statuses.append((status, distro_version, operator))
+        if not start_status and not possible_min:
+            start_status = (version_end, distro_version, '>=')
+        temp_statuses.append((version_end, distro_version, operator))
         last_distro_version = distro_version
-    if start_status[1]:
+    
+    if possible_min and statuses:
+        start_status = (statuses[0][0], statuses[0][1], '')
+        relevant_statuses.append((statuses[0][0], statuses[0][1], '<='))
+    
+    if start_status:
         relevant_statuses.append(start_status)
 
     return relevant_statuses
@@ -279,7 +337,7 @@ def get_clean_version(version, is_good_version):
 def get_distribution_cpe(version, version_end, distro_version, source, cpe, extra_cpe=''):
     '''Transform given cpe to cpe with distribution infos in target_sw and other'''
     cpe_parts = get_cpe_parts(cpe)
-    # distribution_data in 'otherÄ field of cpe
+    # distribution_data in 'other' field of cpe
     cpe_parts[12] = '%s%s_%s' % (extra_cpe, source, distro_version)
 
     cpe = ':'.join(cpe_parts)
@@ -308,58 +366,6 @@ def is_cve_rejected(cve_id):
         return False
 
 
-def get_version_end_ubuntu(version_end, status, note, software_version):
-    '''Return version end, considering special ubuntu statuses'''
-    version_end = get_clean_version(software_version, False)
-    if (not version_end and status == 'not-affected') or status == 'DNE' :
-        # no valid version found (occur with status not-affected and DNE)
-        version_end = '-1'
-        software_version = ''
-    elif status == 'pending':
-        if software_version:
-            version_end = get_clean_version(software_version, True)
-        else:
-            version_end = str(sys.maxsize-1)
-    elif status in ['needed', 'active', 'deferred']:
-        version_end = str(sys.maxsize-1)
-    elif status == 'needs-triage':
-        version_end = str(sys.maxsize)
-    elif status == 'ignored':
-        if not note or any(note.startswith(string) for string in ['end of', 'code', 'superseded', 'was not-affected']):
-            version_end = ''
-        elif note.startswith('only'):
-            version_end = '-1'
-        elif not any(x in note for x in ['will not', 'intrusive', 'was', 'fix']):
-            version_end = str(sys.maxsize-1)
-        else:
-            version_end = ''
-    return version_end
-
-
-def get_version_end(status, software_version):
-    '''Return fitting version end'''
-    version_end = '-1'
-    if status == 'released':
-        version_end = get_clean_version(software_version, True)
-        if not version_end:
-            version_end =  ''
-    elif status == 'resolved':
-        version_end = get_clean_version(software_version, True)
-    # for debian
-    elif status == 'open':
-        version_end = str(sys.maxsize-1)
-        software_version = ''
-    elif status == 'undetermined':
-        version_end = str(sys.maxsize)
-        software_version = ''
-    else:
-        # for ubuntu
-        version_end = get_version_end_ubuntu(version_end=version_end, software_version=software_version, status=status, note=software_version)
-    # remove all whitespaces, b/c ubuntu could return versions like ' 1.11.15. 1.12.1'
-    version_end = version_end.replace(' ','')
-    return version_end
-
-
 def get_cpe_parts(cpe):
     return re.split(r'(?<!\\):', cpe)
 
@@ -371,6 +377,7 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
     is_cpe_version_start_including = False
     version_start_nvd_lt_version_end = None
 
+    # try to get with_cpes and version_start from matching cpe entries for the given package and cve
     for cpe_ in cpes:
         if get_versionless_cpe(cpe_[1]) == matching_cpe:
             if version_start_nvd_lt_version_end == None:
@@ -395,14 +402,20 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
                 elif CPEVersion(version_end) > CPEVersion(cpe_version) and (CPEVersion(cpe_version) < CPEVersion(version_start) or version_start == '0'):
                     version_start = cpe_version
                     is_cpe_version_start_including = True
-    # version_end < version_start of nvd
+
+    # version_end < version_start of nvd -> not-affected, so use '-1' as version_end
     if version_start_nvd_lt_version_end:
-        return
+        version_end = '-1'
+
     if version_start == '0':
         version_start = ''
+
+    # set name_version as version_start, e.g. openssh097 -> version_start = 0.9.7
     if name_version and name_version != '-1' and not version_start:
         version_start = name_version
         is_cpe_version_start_including = True
+
+    # remove start_version if start_version greater or equal to version_end
     if version_end != '-1' and CPEVersion(version_start) >= CPEVersion(version_end):
         version_start = ''
         is_cpe_version_start_including = False
@@ -413,12 +426,15 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
 
 def add_not_found_packages(not_found_cpes, distribution, db_cursor):
     '''Add all not found packages to the db with a more or less suiting cpe'''
+    # iterate through all not found names
     for name, backport_cpes in not_found_cpes.items(): 
         possible_cpes = [cpe_[5] for cpe_ in backport_cpes if cpe_ == '']
+        # try to find product name in cpe
         for cpe in possible_cpes:
             if name in get_cpe_parts(cpe)[4] or equal_name(name, get_cpe_parts(cpe)[4]):
                 matching_cpe = get_versionless_cpe(cpe)
         else:
+            # prepare search statement
             split_name = SPLIT_STRING_LETTERS_NUMBERS.match(name)
             if split_name:
                 search = ' '.join(split_name.groups())
@@ -437,19 +453,19 @@ def add_not_found_packages(not_found_cpes, distribution, db_cursor):
                     matching_cpe = get_versionless_cpe(matching_cpe)
                 except:
                     matching_cpe = ''
+        # create an own cpe if no cpe could be found
         if not matching_cpe or matching_cpe == 'cpe:2.3:a:*:*:*:*:*:*:*:*:*:*':
             matching_cpe = 'cpe:2.3:a:%s:%s:*:*:*:*:*:*:*:*' % (name, name)
 
-        for note, distro_version, cve_id, name_version, _, status, extra_cpe in backport_cpes:
-            if (status == 'released' or status == 'resolved') and not note:
+        # iterate through all not found entries for the current name and add an entry with the found cpe to the db
+        for version_end, distro_version, cve_id, name_version, _, extra_cpe in backport_cpes:
+            if not version_end:
                 continue
-            version_end = get_version_end(status, note)
             distro_in_cpe = distribution
             if distribution == 'redhat':
                 distro_in_cpe = 'rhel'
             distro_cpe= get_distribution_cpe(distro_version, distro_in_cpe, matching_cpe, extra_cpe)
-            if version_end:
-                add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, [], distribution, db_cursor)
+            add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, [], distribution, db_cursor)
 
 
 def are_only_hardware_cpes(cpes):
@@ -494,7 +510,7 @@ def transform_cpe_uri_binding_to_formatted_string(cpe):
     '''Create formatted string out of uri binding'''
     cpe_parts = ['cpe', '2.3']
     # remove 'cpe:/' and get cpe_parts
-    cpe_parts += get_cpe_parts(cpe[5:])
+    cpe_parts += [escape_string(cpe_part) for cpe_part in get_cpe_parts(cpe[5:])]
     # formatted string has 11 components
     cpe_parts += ['']*(13-len(cpe_parts))
     return ':'.join([cpe_part if cpe_part else '*' for cpe_part in cpe_parts])

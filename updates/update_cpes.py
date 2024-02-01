@@ -12,6 +12,7 @@ from .update_generic import *
 from cpe_search.cpe_search import get_all_cpes
 
 async def handle_cpes_update(nvd_api_key=None):
+    # backup database and deprecated cpes file
     if os.path.isfile(CONFIG['cpe_search']['DATABASE_NAME']):
         shutil.move(CONFIG['cpe_search']['DATABASE_NAME'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
     if os.path.isfile(CONFIG['cpe_search']['DEPRECATED_CPES_FILE']):
@@ -59,6 +60,7 @@ async def handle_cpes_update(nvd_api_key=None):
     return not success
 
 def add_new_cpes_to_db(new_cpes):
+    # backup database
     if os.path.isfile(CONFIG['cpe_search']['DATABASE_NAME']):
         shutil.copy(CONFIG['cpe_search']['DATABASE_NAME'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
     try:
@@ -67,6 +69,7 @@ def add_new_cpes_to_db(new_cpes):
         if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
             shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['DATABASE_NAME'])
         return True
+    # remove database backup on success
     if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
         os.remove(CONFIG['CPE_DATABASE_BACKUP_FILE'])
     return False

@@ -23,10 +23,10 @@ DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
 
 MATCH_DISTRO_CPE_OTHER_FIELD = re.compile(r'([<>]?=?)(ubuntu|debian|rhel)_?([\d\.]{1,5}|inf|upstream|sid)?')
-MATCH_DISTRO_QUERY = re.compile(r'([Uu]buntu|[Dd]ebian|[Rr]ed[Hh]at [Ee]nterprise [Ll]inux|[Rr]ed[Hh]at|[Rr][Hh][Ee][Ll])[ _]?([\w\.]*)')
-MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat|rhel)')
-MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|rhel|debian)_([\d\.]+|upstream|sid)$')
-MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'[\w\s\.\:\-\_\~]{3,}')
+MATCH_DISTRO_QUERY = re.compile(r'(ubuntu|debian|redhat enterprise linux|redhat|rhel)[ _]?([\w\.]*)')
+MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat|rhel)(?:[^\d]|$)')
+MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|rhel|debian)_?([\d\.]+|upstream|sid)?$')
+MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'([\w\.\:\-\_\~]*\s){2,}')
 
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
@@ -144,7 +144,7 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
                 # filter out distro vulns not relevant b/c of version_start not matching
                 if not is_cpe_vuln:
                     vuln_match_reason = 'version_start_not_included'
-            elif version_end == str(sys.maxsize) or (version_end == str(sys.maxsize-1) and distribution[0] != MATCH_DISTRO.search(re.split(r'(?<!\\):', vuln_cpe)[12]).group(1)):
+            elif version_end == str(sys.maxsize) or (version_end == str(sys.maxsize-1) and distribution[0] != MATCH_DISTRO.search(get_cpe_parts(vuln_cpe)[12]).group(1)):
                 # handle sys.maxsize or not-fixed from another distro as general info
                 vuln_match_reason = 'general_cpe'
                 is_cpe_vuln = is_useful_cpe(vuln_cpe, version_end, distribution) and not ignore_general_cpe_vulns
@@ -163,7 +163,7 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
         if version_end == '-1':
             vuln_match_reason = 'not_affected'
             is_cpe_vuln = True
-        elif version_end == str(sys.maxsize) or (version_end == str(sys.maxsize-1) and distribution[0] != MATCH_DISTRO.search(re.split(r'(?<!\\):', vuln_cpe)[12]).group(1)):
+        elif version_end == str(sys.maxsize) or (version_end == str(sys.maxsize-1) and distribution[0] != MATCH_DISTRO.search(get_cpe_parts(vuln_cpe)[12]).group(1)):
             # handle sys.maxsize or not-fixed from another distro as general info
             vuln_match_reason = 'general_cpe'
             is_cpe_vuln = is_useful_cpe(vuln_cpe, version_end, distribution) and not ignore_general_cpe_vulns
@@ -193,11 +193,12 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
 
 
 def get_most_specific_cpe(vuln_cpes_distro, distribution, cpe_version, vuln_cpes_nvd):
+    '''Return the best suiting cpe'''
     query_distro_version = distribution[1] if not distribution[1] in ('upstream', 'sid') else 'inf'
     greater_than_cpe = ''
     minor_version_cpe = ''
     for cpe_infos in vuln_cpes_distro:
-        cpe_parts = cpe_infos[0].split(':')
+        cpe_parts = get_cpe_parts(cpe_infos[0])
         cpe_version_start = cpe_infos[2]
         cpe_operator, distro, distro_version = MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe_parts[12]).groups()
         if distro_version in ('upstream', 'sid'):
@@ -215,7 +216,7 @@ def get_most_specific_cpe(vuln_cpes_distro, distribution, cpe_version, vuln_cpes
             if len(split_distro_version) > 1 and len(split_query_distro_version) > 1 and split_distro_version[0] == split_query_distro_version[0] and int(split_distro_version[1]) < int(split_query_distro_version[1]):
                 if not minor_version_cpe:
                     minor_version_cpe = cpe_infos[0]
-                elif float(MATCH_DISTRO_CPE_OTHER_FIELD.match(re.split(r'(?<!\\):', minor_version_cpe)[12]).group(3)) < float(distro_version):
+                elif float(MATCH_DISTRO_CPE_OTHER_FIELD.match(get_cpe_parts(minor_version_cpe)[12]).group(3)) < float(distro_version):
                     minor_version_cpe = cpe_infos[0]
         elif cpe_operator == '<=':
             if float(query_distro_version) <= float(distro_version):
@@ -225,7 +226,8 @@ def get_most_specific_cpe(vuln_cpes_distro, distribution, cpe_version, vuln_cpes
                 return cpe_infos[0] 
             else:
                 greater_than_cpe = cpe_infos[0]
-    if minor_version_cpe:
+    # minor version handling only for RedHat
+    if minor_version_cpe and distribution[0] in ('rhel', 'redhat'):
         return minor_version_cpe
     if vuln_cpes_nvd:
         return ''
@@ -233,6 +235,7 @@ def get_most_specific_cpe(vuln_cpes_distro, distribution, cpe_version, vuln_cpes
 
 
 def query_distribution_matches(cpe_parts, distribution, db_cursor):
+    '''Return useful distribution matches'''
     query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
                          'is_cpe_version_end_including FROM cve_cpe WHERE cpe LIKE ?')
     
@@ -316,7 +319,7 @@ def get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_gen
 
 def query_vuln_cpes(cpe_parts, db_cursor, distribution, cpe_version, cve_id):
     '''Return all cpes for a given cve_id (nvd_cpes, given distro_cpes, most_specific_distro_cpe)'''
-    get_cpes_query = 'SELECT cpe, source, cpe_version_start FROM cve_cpe WHERE cpe LIKE ? AND cve_id = ?'
+    get_cpes_query = 'SELECT cpe, source, cpe_version_start FROM cve_cpe WHERE cpe LIKE ? AND cve_id == ?'
     vuln_cpes = set(db_cursor.execute(get_cpes_query, (':'.join(cpe_parts[:5])+'%%', cve_id)))
     # use '-' and '*' as equal wildcards
     if cpe_parts[5] == '-':
@@ -718,32 +721,27 @@ def handle_subversion_of_distro_version(distro, distro_version):
             # versions >= 7 -> e.g. 7.3
             elif len(distro_version_parts) == 2:
                 distro_version = distro_version_parts[0]
-    #elif distro == 'redhat' or distro == 'rhel':
-    #    if len(distro_version.split('.')) == 1:
-    #        distro_version += '.0'
 
     return (distro, distro_version)
 
 
-def get_distro_infos_from_query(original_query, config):
+def get_distro_infos_from_query(original_query, db_cursor):
     '''
     Extract distro version or codename from query and 
     query in the database for a suiting distro_version
     '''
  
-    db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
-    db_cursor = db_conn.cursor()
     db_distro_query = 'SELECT version, codename FROM distribution_codename_version_mapping'
     all_distro_versions_codenames_tuples = db_cursor.execute(db_distro_query).fetchall()
     # turn list of version_codename tuples in one list
     all_distro_versions_codenames = [version for distro_version in all_distro_versions_codenames_tuples for version in distro_version]
-    possible_distro_query = MATCH_DISTRO_QUERY.search(original_query)
+    possible_distro_query = MATCH_DISTRO_QUERY.search(original_query.lower())
     if MATCH_CPE_23_RE.match(original_query):
         possible_distro_query = MATCH_DISTRO_QUERY.search(get_cpe_parts(original_query)[12])
     if possible_distro_query:
         distro, distro_version = possible_distro_query.groups()
         distro, distro_version = handle_subversion_of_distro_version(distro.lower(), distro_version)
-        if distro_version in all_distro_versions_codenames:
+        if distro_version and distro_version in all_distro_versions_codenames:
             for version, codename in all_distro_versions_codenames_tuples:
                 if distro_version == version or distro_version == codename:
                     distro_version = version
@@ -752,22 +750,61 @@ def get_distro_infos_from_query(original_query, config):
             distro_version = 'inf' # float of 'inf' is a value higher than any other value
     else:
         return (('', 'inf'))    
-    db_conn.close()
     return (distro, distro_version)
 
 
-def seperate_distribution_information_from_query(query, config):
-    distribution = get_distro_infos_from_query(query, config)
+def seperate_distribution_information_from_query(query, db_cursor):
+    distribution = get_distro_infos_from_query(query, db_cursor)
     if distribution[0] and not MATCH_CPE_23_RE.match(query):
-        query = re.sub(MATCH_DISTRO_QUERY, '', query, 1)
+        query = re.sub(MATCH_DISTRO_QUERY, '', query.lower(), 1)
     # special handling of redhat
     if distribution[0] == 'redhat':
         distribution = ('rhel', distribution[1])
     return distribution, query
 
 
+def is_known_distribution_version(distribution, db_cursor):
+    db_distro_query = 'SELECT version, codename FROM distribution_codename_version_mapping WHERE source = ? AND version = ?'
+    return bool(db_cursor.execute(db_distro_query, distribution).fetchone())
+
+
+def get_distribution_data_from_version(version, db_cursor):
+    '''Extract distribution data from version if version is clearly '''
+    distribution = ('', 'inf')
+    # get ubuntu data
+    split_version = version.split('ubuntu')
+    if len(split_version) == 2:
+        split_ubuntu_version = split_version[1].split('.')
+        if len(split_ubuntu_version) == 4 and not '~' in split_ubuntu_version[1]:
+            distribution = ('ubuntu', '.'.join(split_ubuntu_version[1:-1]))
+        else:
+            split_ubuntu_version = split_version[1].split('~')[0].split('.')
+            distribution = ('ubuntu', '.'.join(split_ubuntu_version[:-1]))
+    # get build data -> only nvd and ubuntu has it in the version
+    split_version = version.split('build')
+    if len(split_version) == 2:
+        split_ubuntu_version = split_version[1].split('.')
+        if len(split_ubuntu_version) == 4 and not '~' in split_ubuntu_version[1]:
+            distribution = ('ubuntu', '.'.join(split_ubuntu_version[1:-1]))
+        else:
+            split_ubuntu_version = split_version[1].split('~')[0].split('.')
+            distribution = ('ubuntu', '.'.join(split_ubuntu_version[:-1]))
+    # get debian data
+    split_version = version.split('deb')
+    if len(split_version) == 2 and not distribution[0] and not 'debian' in version:
+        distribution = ('debian', '.'.join(split_version[1].split('u')))
+    # get redhat data
+    split_version = version.split('el')
+    if len(split_version) == 2 and not distribution[0]:
+        distribution = ('redhat', '.'.join(split_version[1].split('.')[0].split('_')))
+    if distribution[0] and is_known_distribution_version(distribution, db_cursor):
+        return distribution
+    else:
+        return ('', 'inf')
+
+
 def is_possible_distro_query(query):
-    return MATCH_DISTRO.search(query.lower()) and MATCH_TWO_SOFTWARES_AND_VERSIONS.match(query.lower())
+    return (MATCH_DISTRO.search(query.lower()) and MATCH_TWO_SOFTWARES_AND_VERSIONS.match(query.lower())) or MATCH_DISTRO_CPE.match(query)
 
 
 def get_distro_infos_from_query(original_query, config):
@@ -830,7 +867,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     if not MATCH_CPE_23_RE.match(query_stripped):
         if is_possible_distro_query(query):
             # remove distro information before searching for a cpe
-            distribution, cpe_search_query = seperate_distribution_information_from_query(query, config)
+            distribution, cpe_search_query = seperate_distribution_information_from_query(query, db_cursor)
         else:
             distribution, cpe_search_query = (('', 'inf')), query
         cpe_search_results = search_cpes(cpe_search_query, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
@@ -848,7 +885,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
 
     distribution = ('', 'inf')
     if is_possible_distro_query(cpe):
-        distribution = get_distro_infos_from_query(cpe, config)
+        distribution = get_distro_infos_from_query(cpe, db_cursor)
 
     # use the retrieved CPE to search for known vulnerabilities
     vulns = {}
@@ -940,7 +977,7 @@ def main():
         query = query.strip()
         cpe = query
         if is_possible_distro_query(query):
-            distribution, cpe_search_query = seperate_distribution_information_from_query(query, config)
+            distribution, cpe_search_query = seperate_distribution_information_from_query(query, db_cursor)
         else:
             distribution, cpe_search_query = ('', 'inf'), query
         if not MATCH_CPE_23_RE.match(query):
@@ -978,7 +1015,7 @@ def main():
         vulns[query] = {}
         equivalent_cpes = get_equivalent_cpes(cpe, config)
         
-        # change cpes to distribution cpes
+        # add distribution info to all found cpes
         if distribution[0]:
             cpe = add_distribution_infos_to_cpe(cpe, distribution)
             equivalent_cpes = [add_distribution_infos_to_cpe(cpe_, distribution) for cpe_ in equivalent_cpes]

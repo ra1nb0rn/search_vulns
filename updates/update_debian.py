@@ -10,11 +10,10 @@ sys.path.insert(1, ROOT_PATH)
 
 from .update_generic import *
 from .update_distributions_generic import *
+from urllib.parse import unquote
 
-try:  # use ujson if available
-    import ujson as json
-except ModuleNotFoundError:
-    import json
+ROOT_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.insert(1, ROOT_PATH)
 
 DEBIAN_NOT_FOUND_NAME = {}
 DEBIAN_RELEASES = {}
@@ -92,12 +91,12 @@ def initialize_debian_release_version_codename():
     DEBIAN_RELEASES = releases_dict
     
 
-def add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, status, debian_version, note, extra_cpe):
+def add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, debian_version, version_end, extra_cpe):
     '''Add given debian version in a package to DEBIAN_NOT_FOUND_NAME'''
     try:
-        DEBIAN_NOT_FOUND_NAME[name].append((note, debian_version, cve_id, name_version, matching_cpe, status, extra_cpe))
+        DEBIAN_NOT_FOUND_NAME[name].append((version_end, debian_version, cve_id, name_version, matching_cpe, extra_cpe))
     except:
-        DEBIAN_NOT_FOUND_NAME[name] = [(note, debian_version, cve_id, name_version, matching_cpe, status, extra_cpe)]
+        DEBIAN_NOT_FOUND_NAME[name] = [(version_end, debian_version, cve_id, name_version, matching_cpe, extra_cpe)]
 
 
 def get_debian_version_for_codename(codename):
@@ -105,6 +104,30 @@ def get_debian_version_for_codename(codename):
     if codename == 'sid':
         return '-1'
     return DEBIAN_RELEASES[codename]['version']
+
+
+def get_version_end_debian(status_infos):
+    status = status_infos['status']
+    if status == 'resolved':
+        version = status_infos['fixed_version']
+    else:
+        version = ''
+    # urgency == unimportant -> version not affected (https://salsa.debian.org/security-tracker-team/security-tracker/-/blame/master/bin/tracker_data.py#L181)
+    if version == '0':
+        version = '-1'
+    
+    version_end = '-1'
+
+    if status == 'resolved':
+        version_end = get_clean_version(version, True)
+    elif status == 'open':
+        # sys.maxsize-1 is the highest value for us
+        version_end = str(sys.maxsize-1)
+    elif status == 'undetermined':
+        # sys.maxsize -> could be a general info
+        version_end = str(sys.maxsize)
+        
+    return version_end
 
         
 def process_cve(cve):
@@ -122,35 +145,27 @@ def process_cve(cve):
     if cpes and are_only_hardware_cpes(cpes):
         return
 
-    statuses = [(status, get_debian_version_for_codename(codename), '') for codename, status in cve['releases'].items()]
+    # build list of statuses with (version_end, debian_version, '') for every entry
+    statuses = [(get_version_end_debian(status), get_debian_version_for_codename(codename), '') for codename, status in cve['releases'].items()]
     statuses.sort(key = lambda status:float(status[1]))
     add_to_vuln_db_bool = True
 
-    relevant_statuses = summarize_statuses_with_version(statuses, fixed_status_names=['resolved'], version_field='fixed_version', dev_distro_name='sid')
+    # try to summarize statuses to decrease the size of the db
+    relevant_statuses = summarize_statuses_with_version(statuses, dev_distro_name='sid')
     relevant_statuses.sort(key = lambda status:float(status[1]) if status[1].isdigit() else -1.0)
 
-    # highest version needs a '>=' as operator
-    if relevant_statuses[-1][1] != 'sid':
-        relevant_statuses[-1] = (relevant_statuses[-1][0], relevant_statuses[-1][1], '>=')
-    elif len(relevant_statuses) > 1:
-        relevant_statuses[-2] = (relevant_statuses[-2][0], relevant_statuses[-2][1], '>=')
+    for version_end, debian_version, extra_cpe in relevant_statuses:
 
-    for status_infos, debian_version, extra_cpe in relevant_statuses:
-        status = status_infos['status']
-        if status == 'resolved':
-            version = status_infos['fixed_version']
-        else:
-            version = ''
-        # urgency == unimportant -> ignore the vuln (https://salsa.debian.org/security-tracker-team/security-tracker/-/blame/master/bin/tracker_data.py#L181)
-        if version == '0':
-            version = '-1'
+        if not version_end:
+            continue
+
         # add to not found if initial cpe search wasn't successful
         if not add_to_vuln_db_bool:
-            add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, status, debian_version, version, extra_cpe)
+            add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, debian_version, version_end, extra_cpe)
             continue
 
         if not matching_cpe:
-            matching_cpe = get_matching_cpe(name, cve['package_name'], name_version, version, search=name, cpes=cpes)
+            matching_cpe = get_matching_cpe(name, cve['package_name'], name_version, version_end, search=name, cpes=cpes)
             
             # linux-* package
             if not matching_cpe:
@@ -159,32 +174,22 @@ def process_cve(cve):
             # check whether similarity between name and cpe is high enough
             sim_score = cpe_matching_score(name, matching_cpe)
             if sim_score < PACKAGE_CPE_MATCH_THRESHOLD:
-                add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, status, debian_version, version, extra_cpe) 
+                add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, debian_version, version_end, extra_cpe) 
                 add_to_vuln_db_bool = False
                 matching_cpe = ''
                 continue
 
             # match found cpe to all previous not found packages
             match_not_found_cpe(cpes, matching_cpe, name)
-        version_end = get_version_end(status, version)
         distro_cpe= get_distribution_cpe(debian_version, 'debian', matching_cpe, extra_cpe)
-        if version_end:
-            add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'debian', DB_CURSOR)
+        add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'debian', DB_CURSOR)
 
 
 def match_not_found_cpe(cpes, matching_cpe, name):
     '''Add all entries with the same package name to vuln_db after a matching cpe was found'''
     try:
         backport_cpes = DEBIAN_NOT_FOUND_NAME[name]
-        for note, debian_version, cve_id, name_version, _, status, extra_cpe in backport_cpes:
-            if status == 'resolved':
-                clean_version = get_clean_version(note, True)
-            else:
-                clean_version = get_clean_version(note, False)
-            if not clean_version:
-                clean_version = '-1'
-                note = ''
-            version_end = get_version_end(status, note)
+        for version_end, debian_version, cve_id, name_version, _, extra_cpe in backport_cpes:
             distro_cpe = get_distribution_cpe(debian_version, 'debian', matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'debian', DB_CURSOR)
@@ -211,7 +216,8 @@ def initialize_packagename_cpe_mapping():
         if len(mapping.split(';')) != 2:
             continue
         name, cpe = mapping.split(';')
-        NAME_CPE_DICT[name] = transform_cpe_uri_binding_to_formatted_string(cpe)
+        # url decode and escape cpe before transforming to cpe 2.3 formatted string
+        NAME_CPE_DICT[name] = transform_cpe_uri_binding_to_formatted_string(unquote(cpe))
 
 
 def merge_nvd_debian_data(cve_cpe_list, all_debian_infos):
@@ -320,6 +326,8 @@ async def update_vuln_debian_db():
             communicate_warning('An error occured when downloading data from %s' % (CVE_DEBIAN_API_URL))
             rollback_debian()
             return 'An error occured when downloading data from %s' % (CVE_DEBIAN_API_URL)
+
+    init_manual_mapping()
 
     try:
         process_data(cves_debian)

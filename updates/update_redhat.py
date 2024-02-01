@@ -190,9 +190,7 @@ def initialize_redhat_release_version_codename():
         latest_version = str(release['latest'])
         for i in range(int(latest_version.split('.')[1])+1):
             version =  main_version+'.'+str(i)
-            # codename to empty string b/c only base entry gets a codename
-            db_cursor.execute(query, ('redhat', version, '', support_expires, esm_expires))
-        db_cursor.execute(query, ('redhat', main_version, codename, support_expires, esm_expires))
+            db_cursor.execute(query, ('redhat', version, codename, support_expires, esm_expires))
 
     # add versions with no eol data
     for main_version, codename in REDHAT_RELEASES.items():
@@ -307,13 +305,6 @@ def process_cve(cve):
                 # match found cpe to all previous not found packages
                 match_not_found_cpe(cpes, matching_cpe, package_name)
 
-<<<<<<< HEAD
-            # package not relevant, b/c all statuses are 'not affected' and matching cpe is not in the given ones, 
-            # so redhat doesn't correct NVD data, because CVE is already not shown for the given package
-            if all_dne_statuses and get_general_cpe(matching_cpe) not in general_given_cpes and len(get_equivalent_cpes(matching_cpe, CONFIG)) == 1:
-                break
-=======
->>>>>>> 3976123 (Improve process of distribution data)
             version_end = get_clean_version(version, True)
             distro_cpe= get_distribution_cpe(redhat_version, 'rhel', matching_cpe, extra_cpe)
             add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', DB_CURSOR)
@@ -389,14 +380,14 @@ def match_not_found_cpe(cpes, matching_cpe, name):
     '''Add all not found entries with the same package name to vuln_db after a matching cpe was found'''
     try:
         backport_cpes = REDHAT_NOT_FOUND_NAME[name]
-        for version, redhat_version, cve_id, name_version, _, status, extra_cpe in backport_cpes:
-            version_end = get_version_end(status, version)
+        for version_end, redhat_version, cve_id, name_version, _, extra_cpe in backport_cpes:
             distro_cpe = get_distribution_cpe(redhat_version, 'rhel', matching_cpe, extra_cpe)
             if version_end:
                 add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', DB_CURSOR)
         del REDHAT_NOT_FOUND_NAME[name]
     except:
         pass
+ 
 
 
 def get_redhat_data_from_files():
