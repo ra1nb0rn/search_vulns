@@ -14,6 +14,7 @@ from .update_debian import update_vuln_debian_db
 from .update_ubuntu import update_vuln_ubuntu_db
 from .update_redhat import update_vuln_redhat_db
 from .update_distributions_generic import NEW_CPES_INFOS
+from config import get_config, update_config_generic
 
 
 def run(full=False, nvd_api_key=None, config_file=''):
@@ -73,17 +74,17 @@ def run(full=False, nvd_api_key=None, config_file=''):
             print(error)
             sys.exit(1)
         print('[+] Updating debian vulnerability database')
-        error = loop.run_until_complete(update_vuln_debian_db())
+        error = loop.run_until_complete(update_vuln_debian_db(CONFIG))
         if error:
             print(error)
             sys.exit(1)
         print('[+] Updating ubuntu vulnerability database')
-        error = loop.run_until_complete(update_vuln_ubuntu_db())
+        error = loop.run_until_complete(update_vuln_ubuntu_db(CONFIG))
         if error:
             print(error)
             sys.exit(1)
         print('[+] Updating redhat vulnerability database')
-        error = loop.run_until_complete(update_vuln_redhat_db())
+        error = loop.run_until_complete(update_vuln_redhat_db(CONFIG))
         if error:
             print(error)
             sys.exit(1)
@@ -91,7 +92,7 @@ def run(full=False, nvd_api_key=None, config_file=''):
         if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
             os.remove(CONFIG['DATABASE_BACKUP_FILE'])
         print('[+] Add new cpes to database')
-        error = add_new_cpes_to_db(NEW_CPES_INFOS)
+        error = add_new_cpes_to_db(NEW_CPES_INFOS, CONFIG)
         if error:
             print('[-] Error adding new cpe information')
             sys.exit(1)

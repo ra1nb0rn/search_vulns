@@ -18,6 +18,7 @@ sys.path.insert(1, ROOT_PATH)
 DEBIAN_NOT_FOUND_NAME = {}
 DEBIAN_RELEASES = {}
 DB_CURSOR = None
+CONFIG = None
 
 REQUEST_HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0'}
 DEBIAN_UPDATE_SUCCESS = None
@@ -238,7 +239,7 @@ def merge_nvd_debian_data(cve_cpe_list, all_debian_infos):
             cve_cpe_debian[pointer_cve_cpe_debian]['cpes'] = cve_cpe_debian[pointer_cve_cpe_debian-1]['cpes']
             pointer_cve_cpe_debian += 1
             continue
-        if is_cve_rejected(cve_id):
+        if is_cve_rejected(cve_id, CONFIG):
             continue
         # iterate through all cves from nvd
         for i in range(pointer_cves_nvd, length_cve_cpe_list):
@@ -306,12 +307,15 @@ def process_data(cves_debian):
     db_conn.close()
 
 
-async def update_vuln_debian_db():
+async def update_vuln_debian_db(config):
     '''Update the vulnerability database for debian'''
 
     global DEBIAN_UPDATE_SUCCESS
-    
-    create_table_distribution_codename_version_mapping()
+
+    global CONFIG
+    CONFIG = config
+
+    create_table_distribution_codename_version_mapping(config)
     initialize_debian_release_version_codename()
     initialize_packagename_cpe_mapping()
 

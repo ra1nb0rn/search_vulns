@@ -1,4 +1,10 @@
-from cpe_search.cpe_search import search_cpes, perform_calculations, VERSION_MATCH_CPE_CREATION_RE, escape_string
+from cpe_search.cpe_search import (
+    search_cpes,
+    perform_calculations,
+    escape_string,
+    get_cpe_parts
+    )
+from cpe_search.cpe_search import VERSION_MATCH_CPE_CREATION_RE
 from thefuzz import  fuzz
 import re
 import sys
@@ -350,7 +356,7 @@ def get_cpe_infos(cpe):
     return perform_calculations([calculations_string], -1)[0]
 
 
-def is_cve_rejected(cve_id):
+def is_cve_rejected(cve_id, config):
     '''Return True if cve is rejected from MITRE'''
     db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
@@ -516,7 +522,7 @@ def transform_cpe_uri_binding_to_formatted_string(cpe):
     return ':'.join([cpe_part if cpe_part else '*' for cpe_part in cpe_parts])
 
 
-def create_table_distribution_codename_version_mapping():
+def create_table_distribution_codename_version_mapping(config):
     '''Create table for mapping codename to distribution version'''
     db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
     db_cursor = db_conn.cursor()

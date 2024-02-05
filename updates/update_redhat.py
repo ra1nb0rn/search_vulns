@@ -26,6 +26,7 @@ REDHAT_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 
 REDHAT_NOT_FOUND_NAME = {}
 REDHAT_RELEASES = {}
 DB_CURSOR = None
+CONFIG = None
 
 REDHAT_UPDATE_SUCCESS = None
 MATCH_RELEVANT_RHEL_CPE = re.compile(r'cpe:\/[ao]:redhat:(?:enterprise_linux|rhel_[\w]{3}):([0-9\.]{1,3})')
@@ -460,7 +461,7 @@ def process_data():
                 break
         # cve_id not found in cve_cpe
         else:
-            if is_cve_rejected(cve_id):
+            if is_cve_rejected(cve_id, CONFIG):
                 continue
             else:
                 cve_cpe_redhat.append({'cve_id': cve_id, 'cpes': [], 'affected_release': affected_release, 'package_state': package_state})
@@ -482,10 +483,13 @@ def process_data():
     db_conn.close()
 
 
-async def update_vuln_redhat_db():
+async def update_vuln_redhat_db(config):
     '''Update the vulnerability database for redhat'''
 
     global REDHAT_UPDATE_SUCCESS
+
+    global CONFIG
+    CONFIG = config
     
     if not QUIET:
         print('[+] Downloading RedHat data feeds')

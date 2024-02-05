@@ -24,6 +24,7 @@ UBUNTU_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 
 
 UBUNTU_NOT_FOUND_NAME = {}
 DB_CURSOR = None
+CONFIG = None
 
 UBUNTU_UPDATE_SUCCESS = None
 CVE_UBUNTU_API_URL = 'https://ubuntu.com/security/cves.json'
@@ -357,7 +358,7 @@ def process_data():
                 break
         # cve_id not found in cve_cpe
         else:
-            if is_cve_rejected(cve_id):
+            if is_cve_rejected(cve_id, CONFIG):
                 continue
             else:
                 cve_cpe_ubuntu.append({'cve_id': cve_id, 'cpes': [], 'packages': cve['packages']})#'infos_ubuntu': cve, 'infos_nvd': cve_cpe_list[i]})
@@ -380,11 +381,13 @@ def process_data():
 
 
 
-async def update_vuln_ubuntu_db():
+async def update_vuln_ubuntu_db(config):
     '''Update the vulnerability database for ubuntu'''
 
     global UBUNTU_UPDATE_SUCCESS
 
+    global CONFIG
+    CONFIG = config
     rate_limit = AsyncLimiter(5.0, 1.0)
 
     # download vulnerability data via Ubuntu Security API

@@ -16,10 +16,8 @@ from cpe_search.cpe_search import (
     get_cpe_parts,
     MATCH_CPE_23_RE
 )
-from cpe_search.cpe_search import _load_config as _load_config_cpe_search
+from config import _load_config, DEFAULT_CONFIG_FILE
 
-DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
-DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'debian_equiv_cpes.json')
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
 
 MATCH_DISTRO_CPE_OTHER_FIELD = re.compile(r'([<>]?=?)(ubuntu|debian|rhel)_?([\d\.]{1,5}|inf|upstream|sid)?')
@@ -27,6 +25,7 @@ MATCH_DISTRO_QUERY = re.compile(r'(ubuntu|debian|redhat enterprise linux|redhat|
 MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat|rhel)(?:[^\d]|$)')
 MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|rhel|debian)_?([\d\.]+|upstream|sid)?$')
 MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'([\w\.\:\-\_\~]*\s){2,}')
+DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'debian_equiv_cpes.json')
 
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
@@ -938,16 +937,6 @@ def parse_args():
     if not args.update and not args.queries and not args.full_update:
         parser.print_help()
     return args
-
-
-def _load_config(config_file=DEFAULT_CONFIG_FILE):
-    """Load config from file"""
-
-    config = _load_config_cpe_search(config_file)
-    config['cpe_search']['DATABASE'] = config['DATABASE']
-    config['cpe_search']['NVD_API_KEY'] = config['NVD_API_KEY']
-
-    return config
 
 
 def main():

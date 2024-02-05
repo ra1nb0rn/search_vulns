@@ -3,9 +3,9 @@
 import os
 import asyncio
 import shutil
-from search_vulns import _load_config
 from cpe_search.database_wrapper_functions import get_database_connection
 import subprocess
+from config import CONFIG
 
 try:  # use ujson if available
     import ujson as json
@@ -28,14 +28,8 @@ QUIET = False
 DEBUG = False
 API_RESULTS_PER_PAGE = 2000
 
-CONFIG = _load_config()
-CONFIG['DATABASE_BACKUP_FILE'] = CONFIG['DATABASE_NAME'] + '.bak'
-CONFIG['CPE_DATABASE_BACKUP_FILE'] = CONFIG['cpe_search']['DATABASE_NAME'] + '.bak'
-CONFIG['DEPRECATED_CPES_BACKUP_FILE'] = CONFIG['cpe_search']['DEPRECATED_CPES_FILE'] + '.bak'
-
 with open(CREATE_SQL_STATEMENTS_FILE) as f:
     CREATE_SQL_STATEMENTS = json.loads(f.read())
-
 
 def rollback():
     '''Rollback the DB / module update'''
