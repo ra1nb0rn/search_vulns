@@ -13,6 +13,7 @@ from search_vulns import (
     MATCH_CPE_23_RE
 )
 from cpe_search.cpe_search import search_cpes
+from search_vulns_modules.config import _load_config
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))

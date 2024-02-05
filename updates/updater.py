@@ -14,7 +14,7 @@ from .update_debian import update_vuln_debian_db
 from .update_ubuntu import update_vuln_ubuntu_db
 from .update_redhat import update_vuln_redhat_db
 from .update_distributions_generic import NEW_CPES_INFOS
-from config import get_config, update_config_generic
+from search_vulns_modules.config import get_config, update_config_generic
 
 
 def run(full=False, nvd_api_key=None, config_file=''):

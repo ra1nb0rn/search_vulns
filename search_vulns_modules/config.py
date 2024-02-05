@@ -1,7 +1,7 @@
 import os
 from cpe_search.cpe_search import _load_config as _load_config_cpe_search
 
-DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
+DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'config.json')
 CONFIG_FILE = DEFAULT_CONFIG_FILE
 
 CONFIG = None

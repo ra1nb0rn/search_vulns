@@ -16,7 +16,7 @@ from cpe_search.cpe_search import (
     get_cpe_parts,
     MATCH_CPE_23_RE
 )
-from config import _load_config, DEFAULT_CONFIG_FILE
+from search_vulns_modules.config import _load_config, DEFAULT_CONFIG_FILE
 
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
 

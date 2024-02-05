@@ -5,7 +5,7 @@ import asyncio
 import shutil
 from cpe_search.database_wrapper_functions import get_database_connection
 import subprocess
-from config import CONFIG
+from search_vulns_modules.config import CONFIG
 
 try:  # use ujson if available
     import ujson as json

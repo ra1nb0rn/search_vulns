@@ -12,7 +12,6 @@ sys.path.insert(1, ROOT_PATH)
 
 import aiohttp
 from aiolimiter import AsyncLimiter
-from search_vulns import get_equivalent_cpes
 
 from .update_generic import *
 from .update_distributions_generic import *

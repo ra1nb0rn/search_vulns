@@ -92,9 +92,9 @@ create_vuln_and_software_db() {
     fi
 
     if [ $FULL_RESOURCE_INSTALL != 0 ]; then
-        ./search_vulns.py --full-update
+        ./main.py --full-update
     else
-        ./search_vulns.py -u
+        ./main.py -u
     fi
 
     if [ $? != 0 ]; then
@@ -157,4 +157,4 @@ else
 fi
 
 
-sudo ln -sf "$(pwd -P)/search_vulns.py" /usr/local/bin/search_vulns
+sudo ln -sf "$(pwd -P)/main.py" /usr/local/bin/search_vulns
