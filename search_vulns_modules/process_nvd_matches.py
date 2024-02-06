@@ -7,7 +7,7 @@ from .process_distribution_matches import distribution_in_with_cpes
 def get_exact_vuln_matches(cpe, cpe_parts, distribution_name, db_cursor):
     '''Get vulns whose cpe entry matches the given one exactly'''
 
-    query_cpe1 = ':'.join(cpe_parts[:7]) + ':%%'
+    query_cpe1 = ':'.join(cpe_parts[:6]) + '%%:' + cpe_parts[6] + ':%%'
 
     # create main CPE to query for and alt cpes with wildcards '*' and '-' replaced by each other
     query_cpes = [query_cpe1]
@@ -18,7 +18,7 @@ def get_exact_vuln_matches(cpe, cpe_parts, distribution_name, db_cursor):
         repl_version = '*'
 
     if repl_version:
-        query_cpes.append(':'.join(cpe_parts[:5]) + ':' + repl_version + ':' + cpe_parts[6] + ':%%')
+        query_cpes.append(':'.join(cpe_parts[:5]) + ':' + repl_version + '%%:' + cpe_parts[6] + ':%%')
 
     if cpe_parts[6] == '*':
         repl_update = '-'
@@ -26,10 +26,10 @@ def get_exact_vuln_matches(cpe, cpe_parts, distribution_name, db_cursor):
         repl_update = '*'
 
     if repl_update:
-        query_cpes.append(':'.join(cpe_parts[:6]) + ':' + repl_update + ':%%')
+        query_cpes.append(':'.join(cpe_parts[:6]) + ':' + repl_update + '%%')
 
     if repl_version and repl_update:
-        query_cpes.append(':'.join(cpe_parts[:5]) + ':' + repl_version + ':' + repl_update + ':%%')
+        query_cpes.append(':'.join(cpe_parts[:5]) + ':' + repl_version + '%%:' + repl_update + ':%%')
 
     # query for vulns with all retrieved variants of the supplied CPE
     or_str = 'OR cpe LIKE ?' * (len(query_cpes) - 1)
@@ -41,7 +41,9 @@ def get_exact_vuln_matches(cpe, cpe_parts, distribution_name, db_cursor):
         if with_cpes and distribution_name:
             if not (MATCH_DISTRO_CPE_OTHER_FIELD(cpe_parts[12]) and distribution_in_with_cpes(with_cpes, distribution_name)):
                 continue
-        if is_cpe_included_after_version(cpe, vuln_cpe):
+        version_cpe = get_cpe_parts(vuln_cpe)[5]
+        is_version_matching = (cpe_parts[5] == version_cpe) or (CPEVersion(version_cpe).considered_equal(CPEVersion(cpe_parts[5])))
+        if is_cpe_included_after_version(cpe, vuln_cpe) and is_version_matching:
             vulns.append(((cve_id, with_cpes), 'exact_cpe'))
     return vulns
 
