@@ -35,7 +35,7 @@ def get_most_specific_cpe(vuln_cpes_distro, distribution, cpe_version, vuln_cpes
         if distro_version in ('upstream', 'sid'):
             distro_version = '-1'
         # cpe not relevant because version_start < given cpe_version
-        if cpe_version_start and cpe_version and cpe_version < CPEVersion(cpe_version_start):
+        if cpe_version_start and cpe_version and cpe_version < CPEVersion(cpe_version_start) and not CPEVersion(cpe_version_start).considered_equal(cpe_version):
             continue
         if not cpe_operator:
             if distro_version == query_distro_version:

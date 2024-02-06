@@ -79,10 +79,14 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
     version_start, version_start_incl = pot_vuln[2], pot_vuln[3]
     version_end, version_end_incl = pot_vuln[4], pot_vuln[5]
     is_cpe_vuln, vuln_match_reason = False, 'version_in_range'
+    cpe_version_start, cpe_version_end = CPEVersion(version_start), CPEVersion(version_end)
+    cpe_version_start_considered_equal = cpe_version_start.considered_equal(cpe_version)
 
     if version_start and version_end:
         if version_start_incl == True and version_end_incl == True:
-            is_cpe_vuln = CPEVersion(version_start) <= cpe_version <= CPEVersion(version_end)
+            is_cpe_vuln = cpe_version_start <= cpe_version <= cpe_version_end
+            if not is_cpe_vuln:
+                is_cpe_vuln = cpe_version_start_considered_equal and cpe_version <= cpe_version_end
         elif version_start_incl == True and version_end_incl == False:
             if version_end == '-1':
                 vuln_match_reason = 'not_affected'
@@ -95,16 +99,24 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
                 vuln_match_reason = 'general_cpe'
                 is_cpe_vuln = True
             else:
-                is_cpe_vuln = CPEVersion(version_start) <= cpe_version < CPEVersion(version_end)
+                is_cpe_vuln = cpe_version_start <= cpe_version < cpe_version_end
+                if not is_cpe_vuln:
+                    is_cpe_vuln = cpe_version_start_considered_equal and cpe_version < cpe_version_end
         elif version_start_incl == False and version_end_incl == True:
-            is_cpe_vuln = CPEVersion(version_start) < cpe_version <= CPEVersion(version_end)
+            is_cpe_vuln = cpe_version_start < cpe_version <= cpe_version_end
+            if not is_cpe_vuln:
+                is_cpe_vuln = cpe_version_start_considered_equal and cpe_version <= cpe_version_end
         else:
-            is_cpe_vuln = CPEVersion(version_start) < cpe_version < CPEVersion(version_end)
+            is_cpe_vuln = cpe_version_start < cpe_version < cpe_version_end
+            if not is_cpe_vuln:
+                is_cpe_vuln = cpe_version_start_considered_equal and cpe_version < cpe_version_end
     elif version_start:
         if version_end_incl == True:
-            is_cpe_vuln = CPEVersion(version_start) <= cpe_version
+            is_cpe_vuln = cpe_version_start <= cpe_version
         elif version_end_incl == False:
-            is_cpe_vuln = CPEVersion(version_start) < cpe_version
+            is_cpe_vuln = cpe_version_start < cpe_version
+        if not is_cpe_vuln:
+            is_cpe_vuln = cpe_version_start_considered_equal
     elif version_end:
         if version_end == '-1':
             vuln_match_reason = 'not_affected'
@@ -114,9 +126,9 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
             vuln_match_reason = 'general_cpe'
             is_cpe_vuln = True
         elif version_end_incl == True:
-            is_cpe_vuln = cpe_version <= CPEVersion(version_end)
+            is_cpe_vuln = cpe_version <= cpe_version_end
         elif version_end_incl == False:
-            is_cpe_vuln = cpe_version < CPEVersion(version_end)
+            is_cpe_vuln = cpe_version < cpe_version_end
     else:
         # if configured, ignore vulnerabilities that only affect a general CPE
         if ignore_general_cpe_vulns and all(val in ('*', '-') for val in get_cpe_parts(vuln_cpe)[5:]):
@@ -131,7 +143,6 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
             if not is_cpe_included_after_version(cpe, vuln_cpe, bool(distribution[0])):
                 if MATCH_DISTRO_CPE.match(vuln_cpe):
                     is_cpe_vuln = True
-                    # vuln_match_reason = 'distro_cpe_in_range'
                 else:
                     is_cpe_vuln = False
 

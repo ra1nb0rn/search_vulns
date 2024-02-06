@@ -12,18 +12,21 @@ EXIT_2=$?
 echo '[+] Running test_exploit_completeness.py'
 python3 "${SCRIPT_DIR}/test_exploit_completeness.py"
 EXIT_3=$?
-echo '[+] Running cpe_search/test_cpes.py'
-python3 "${SCRIPT_DIR}/../cpe_search/test_cpes.py"
-EXIT_4=$?
 echo '[+] Running test_debian_queries.py'
 python3 "${SCRIPT_DIR}/test_debian_queries.py"
-EXIT_5=$?
+EXIT_4=$?
 echo '[+] Running test_ubuntu_queries.py'
 python3 "${SCRIPT_DIR}/test_ubuntu_queries.py"
+EXIT_5=$?
+echo '[+] Running cpe_search/test_cpes.py'
+python3 "${SCRIPT_DIR}/../cpe_search/test_cpes.py"
 EXIT_6=$?
 echo '[+] Running cpe_search/test_cpe_suggestions.py'
 python3 "${SCRIPT_DIR}/../cpe_search/test_cpe_suggestions.py"
 EXIT_7=$?
+echo '[+] Running test_version_considered_equal.py'
+python3 "${SCRIPT_DIR}/test_version_considered_equal.py"
+EXIT_8=$?
 
 # https://stackoverflow.com/a/16358989
-! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_5 | $EXIT_6 || $EXIT_7))
+! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_5 | $EXIT_6 || $EXIT_7 || $EXIT_8))

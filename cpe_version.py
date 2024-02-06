@@ -137,3 +137,16 @@ class CPEVersion:
             return self
 
         return CPEVersion(str(self) + str(other))
+
+    def considered_equal(self, other):
+        '''
+        A version from the distro is considered equal to a version from the database
+        consider e.g. 1.1.1 and 1.1.1-5 as equal, b/c you mean with 1.1.1 the highest 
+        subversion of 1.1.1 and this subversion is <= 1.1.1-5
+        '''
+        # self is version from database, other version from query
+        parts, other_parts = self.get_version_parts(), other.get_version_parts()
+
+        if len(parts) <= len(other_parts):
+            return False
+        return parts[:len(other_parts)] == other_parts
