@@ -1,6 +1,21 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.12 - 2024-02-06
+### Added
+- New config file concept, which simplifies a web server deployment
+- Individual words in user queries are weighed to improve the matching of query to CPE.
+- Tooltip for EDB checkbox in web app
+- Equivalent CPE for Kubernetes API server
+
+### Changed
+- The version detection in queries has been improved, such that more new CPEs can be created.
+- Don't keep track of cveid_to_edbid.json mapping in GitHub repo any more.
+
+### Fixed
+- Update test cases with new vulns.
+
+
 ## v0.4.11 - 2024-01-09
 ### Fixed
 - Update test cases with new vulns and exploits.
