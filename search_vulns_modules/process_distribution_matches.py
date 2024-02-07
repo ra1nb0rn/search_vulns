@@ -140,7 +140,7 @@ def get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_gen
             vuln_match_reason = 'general_cpe_but_ok'
         if vuln_match_reason == 'version_start_not_included':
             is_cpe_vuln = False
-        elif not is_cpe_vuln:
+        elif not is_cpe_vuln and same_distro:
             is_cpe_vuln, vuln_match_reason = True, 'not_affected'
         if is_cpe_vuln:
             vulns.append((pot_vuln, vuln_match_reason))            

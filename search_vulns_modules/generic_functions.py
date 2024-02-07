@@ -137,6 +137,10 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
             is_cpe_vuln = is_cpe_included_after_version(cpe, vuln_cpe)
         vuln_match_reason = 'general_cpe'
 
+    # if configured, ignore general vulns from distro
+    if ignore_general_cpe_vulns and vuln_match_reason == 'general_cpe':
+        is_cpe_vuln = False
+
     # check that everything after the version field matches in the CPE
     if is_cpe_vuln:
         if cpe.count(':') > 5 and vuln_cpe.count(':') > 5:
@@ -256,14 +260,6 @@ def is_cpe_included_after_version(cpe1, cpe2, is_distro_query=False):
     cpe2_remainder_fields = get_cpe_parts(cpe2)[6:]
 
     for i in range(min(len(cpe1_remainder_fields), len(cpe2_remainder_fields))):
-        # same distro for distributions in other field
-        if i ==4 and is_distro_query and \
-            MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe1_remainder_fields[i]) and MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe2_remainder_fields[i]) \
-            and (MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe1_remainder_fields[i]).group(2) == MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe2_remainder_fields[i]).group(2)):
-            continue
-        if i == 6 and is_distro_query:
-            continue
-
         if cpe1_remainder_fields[i] in ('*', '-'):
             continue
         if cpe2_remainder_fields[i] in ('*', '-'):

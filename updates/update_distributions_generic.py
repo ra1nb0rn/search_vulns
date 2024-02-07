@@ -46,7 +46,10 @@ def get_general_cpe(cpe):
 def get_versionless_cpe(cpe):
     '''Return general cpe with no version set'''
     cpe_parts = get_cpe_parts(cpe)
+    # override version
     cpe_parts[5] = '*'
+    # override update
+    cpe_parts[6] = '*'
     return ':'.join(cpe_parts)
 
 

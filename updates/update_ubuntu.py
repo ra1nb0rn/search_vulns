@@ -217,6 +217,9 @@ def process_cve(cve):
         add_to_vuln_db_bool = True
 
         relevant_statuses = summarize_statuses_with_version(statuses, 'upstream')
+    
+        if relevant_statuses[-1][1] == statuses[-1][1] and not relevant_statuses[-1][2] and len(cpes) == 0:
+            relevant_statuses[-1] = (relevant_statuses[-1][0], relevant_statuses[-1][1], '>=')
 
         # iterate through every relevant entry
         for version_end, ubuntu_version, extra_cpe in relevant_statuses:

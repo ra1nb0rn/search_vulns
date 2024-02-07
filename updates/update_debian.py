@@ -155,6 +155,9 @@ def process_cve(cve):
     relevant_statuses = summarize_statuses_with_version(statuses, dev_distro_name='sid')
     relevant_statuses.sort(key = lambda status:float(status[1]) if status[1].isdigit() else -1.0)
 
+    if relevant_statuses[-1][1] == statuses[-1][1] and not relevant_statuses[-1][2] and len(cpes) == 0:
+        relevant_statuses[-1] = (relevant_statuses[-1][0], relevant_statuses[-1][1], '>=')
+
     for version_end, debian_version, extra_cpe in relevant_statuses:
 
         if not version_end:

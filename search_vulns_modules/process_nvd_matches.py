@@ -39,7 +39,7 @@ def get_exact_vuln_matches(cpe, cpe_parts, distribution_name, db_cursor):
     for vuln_cpe, cve_id, with_cpes in pot_vulns:
         # if with_cpes and distribution given, check  if current cpe is a distro_cpe and if distro in with_cpes
         if with_cpes and distribution_name:
-            if not (MATCH_DISTRO_CPE_OTHER_FIELD(cpe_parts[12]) and distribution_in_with_cpes(with_cpes, distribution_name)):
+            if not (MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe_parts[12]) and distribution_in_with_cpes(with_cpes, distribution_name)):
                 continue
         version_cpe = get_cpe_parts(vuln_cpe)[5]
         is_version_matching = (cpe_parts[5] == version_cpe) or (CPEVersion(version_cpe).considered_equal(CPEVersion(cpe_parts[5])))

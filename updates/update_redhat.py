@@ -236,6 +236,9 @@ def process_cve(cve):
     relevant_packages = {}
 
     for package_name in package_names:
+        # skip all entries with flatpak b/c these packages get updates directly from the maintainer and not from the distributiomn
+        if 'flatpak' in package_name:
+            continue
         relevant_packages[package_name] = [(package_info[0], package_info[1], '') for package_info in relevant_package_infos if package_info[2] == package_name]
 
     for package_name, relevant_package_info in relevant_packages.items():
@@ -244,9 +247,14 @@ def process_cve(cve):
 
         # only try to summarize if more than 2 infos are given
         if len(relevant_package_info) > 2:
-            relevant_package_info = summarize_statuses_redhat(relevant_package_info)
+            relevant_package_info_summarized = summarize_statuses_with_version(relevant_package_info, dev_distro_name='upstream')
         
-            relevant_package_info.sort(key = lambda status:float(status[1]))
+            relevant_package_info_summarized.sort(key = lambda status:float(status[1]))
+        else:
+            relevant_package_info_summarized = relevant_package_info
+         
+        if relevant_package_info_summarized[-1][1] == relevant_package_info[-1][1] and not relevant_package_info_summarized[-1][2] and len(cpes) == 0:
+            relevant_package_info_summarized[-1] = (relevant_package_info_summarized[-1][0], relevant_package_info_summarized[-1][1], '>=')
 
             # highest version needs a '>=' as operator 
             if relevant_package_info:
@@ -257,28 +265,25 @@ def process_cve(cve):
         package_name, name_version = split_name(package_name)
         add_to_vuln_db_bool = True
 
-        for status_infos, redhat_version, extra_cpe in relevant_package_info:
-            status = status_infos['status']
-            version = status_infos['version']
-
+        for version_end, redhat_version, extra_cpe in relevant_package_info_summarized:
             # package_name is cpe
             if MATCH_RELEVANT_RHEL_CPE.match(package_name):
-                add_to_vuln_db(cve_id, version, package_name, distro_cpe=package_name, name_version='', cpes=[], source='redhat', db_cursor=DB_CURSOR)
+                add_to_vuln_db(cve_id, version_end, package_name, distro_cpe=package_name, name_version='', cpes=[], source='redhat', db_cursor=DB_CURSOR)
                 continue
             # add to not found if initial cpe search wasn't successful
             if not add_to_vuln_db_bool:
-                add_package_status_to_not_found(cve_id, matching_cpe, package_name, name_version, status, redhat_version, version, extra_cpe)
+                add_package_status_to_not_found(cve_id, matching_cpe, package_name, name_version, status, redhat_version, version_end, extra_cpe)
                 continue
             if not matching_cpe:
                 # virt:av/qemu-kvm -> qemu-kvm
                 package_name = package_name.replace(':', ' ')
                 if '/' in package_name:
                     package_name = package_name.split('/')[1]
-                name_version, search = get_search_version_string(package_name, name_version, version)
+                name_version, search = get_search_version_string(package_name, name_version, version_end)
                 if len(package_names) == 1 and len(general_given_cpes) == 1 and package_name in general_given_cpes[0] and package_name != 'linux':
                     matching_cpe = get_general_cpe(general_given_cpes[0])
                 else:
-                    matching_cpe = get_matching_cpe(package_name, original_package_name, name_version, version, search, cpes)
+                    matching_cpe = get_matching_cpe(package_name, original_package_name, name_version, version_end, search, cpes)
                 
                 # linux-* package
                 if not matching_cpe:
@@ -287,13 +292,13 @@ def process_cve(cve):
                 # check whether similarity between name and cpe is high enough
                 sim_score = cpe_matching_score(package_name, matching_cpe)
                 if sim_score < PACKAGE_CPE_MATCH_THRESHOLD:
-                    add_package_status_to_not_found(cve_id, matching_cpe, package_name, name_version, status, redhat_version, version, extra_cpe) 
+                    add_package_status_to_not_found(cve_id, matching_cpe, package_name, name_version, status, redhat_version, version_end, extra_cpe) 
                     add_to_vuln_db_bool = False
                     matching_cpe = ''
                     continue
 
                 # check if similiar packages are part of the given cve
-                matching_cpe, add_to_vuln_db_bool = check_similar_packages(cve_id, packages_cpes, matching_cpe, name_version, status, redhat_version, version, extra_cpe)
+                matching_cpe, add_to_vuln_db_bool = check_similar_packages(cve_id, packages_cpes, matching_cpe, name_version, status, redhat_version, version_end, extra_cpe)
                 # add packages to found packages for cve
                 if add_to_vuln_db_bool:
                     best_match = False
@@ -306,7 +311,7 @@ def process_cve(cve):
                 # match found cpe to all previous not found packages
                 match_not_found_cpe(cpes, matching_cpe, package_name)
 
-            version_end = get_clean_version(version, True)
+            version_end = get_clean_version(version_end, True)
             distro_cpe= get_distribution_cpe(redhat_version, 'rhel', matching_cpe, extra_cpe)
             add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', DB_CURSOR)
 

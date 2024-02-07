@@ -109,16 +109,15 @@ def add_cpe_infos_to_db(new_cpes, config):
                 terms_to_entries[term].append(int(eid))
 
     # add CPE infos to DB
-    for i, cpe_info in enumerate(new_cpes):
+    for cpe_info in new_cpes:
         if cpe_info[0] in all_cpes:       
             continue
-        counter_cpe_entries += 1
         db_cursor.execute('INSERT INTO cpe_entries VALUES (?, ?, ?, ?)', (counter_cpe_entries, cpe_info[0], json.dumps(cpe_info[1]), cpe_info[2]))
-        counter_cpe_entries += 1
         for term in cpe_info[1]:
             if term not in terms_to_entries:
                 terms_to_entries[term] = []
             terms_to_entries[term].append(counter_cpe_entries)
+        counter_cpe_entries += 1
     db_conn.commit()
     db_cursor.close()
     db_cursor = db_conn.cursor()
