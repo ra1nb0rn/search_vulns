@@ -319,6 +319,7 @@ def process_cve(cve):
 def process_relevant_package_infos(packages):
     relevant_package_infos = []
     for package in packages:
+        redhat_version_exact = ''
         redhat_cpe = package['cpe']
         if not MATCH_RELEVANT_RHEL_CPE.match(redhat_cpe):
             continue
@@ -332,9 +333,7 @@ def process_relevant_package_infos(packages):
             # get exact redhat version from package if something like 'RedHat Enterprise Linux 7' is given
             # add two entries to database, one general and one specific
             if len(redhat_version.split('.')) == 1 and MATCH_RHEL_VERSION_IN_PACKAGE.search(version):
-                redhat_version_specific = MATCH_RHEL_VERSION_IN_PACKAGE.search(version).group(1).replace('_', '.')
-                relevant_package_infos.append(({'status': 'Fixed', 'version': version}, redhat_version_specific, package_name.lower()))
-            package_fix_state = 'Fixed'
+                redhat_version_exact = MATCH_RHEL_VERSION_IN_PACKAGE.search(version).group(1).replace('_', '.')
         except:
             try:
                 package_fix_state = package['fix_state']
@@ -358,9 +357,12 @@ def process_relevant_package_infos(packages):
                     version = '-1'
                 else:
                     version = ''
-                # Missing state: 'Out of support scope' -> a product could be fixed by Extended life cycle support (ELS, paid), but not with the standard license
-            
-        relevant_package_infos.append(({'status': package_fix_state, 'version': version}, redhat_version, package_name.lower()))
+        if not redhat_version:
+            continue
+        version_end = get_clean_version(version, True)
+        relevant_package_infos.append((version_end, redhat_version, package_name.lower()))
+        if redhat_version_exact:
+            relevant_package_infos.append((version_end, redhat_version_exact, package_name.lower()))
     return relevant_package_infos
 
 

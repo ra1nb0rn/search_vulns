@@ -4,7 +4,7 @@ from cpe_search.cpe_search import (
     escape_string,
     get_cpe_parts
     )
-from cpe_search.cpe_search import VERSION_MATCH_CPE_CREATION_RE
+from cpe_search.cpe_search import VERSION_MATCH_CPE_CREATION_RE, TEXT_TO_VECTOR_RE
 from thefuzz import  fuzz
 import re
 import sys
@@ -70,6 +70,8 @@ def get_matching_cpe(name, original_package_name, name_version, version, search,
     # skip flatpak b/c it gets updates from software vendor and not os vendor
     elif 'flatpak' in name:
         return
+    elif 'java' in original_package_name and 'openjdk' in original_package_name:
+        return 'cpe:2.3:a:oracle:openjdk:*:*:*:*:*:*:*:*'
     # if only one cpe in given cpes
     if len(unique_cpes) == 1:
         for name_ in re.findall(r'[a-zA-Z+\.]+', name):
@@ -157,6 +159,7 @@ def get_matching_general_cpe(name, original_package_name, version, cpes, cpe_set
 
     possible_cpes = ['', '', '']
     highest_value = ('', 0)
+    name_parts = TEXT_TO_VECTOR_RE.findall(name)
     for cpe_infos in all_cpes:
         cpe, cpe_version = cpe_infos
         vendor, product = get_cpe_parts(cpe)[3:5]
@@ -176,9 +179,9 @@ def get_matching_general_cpe(name, original_package_name, version, cpes, cpe_set
         elif equal_name(name, product) and not possible_cpes[1]:
             possible_cpes[1] = cpe
             new_ratio *= 1.5
-        elif name.split('-')[0] in product and not possible_cpes[2]:
+        elif any(name_part == product for name_part in name_parts) and not possible_cpes[2]:
             possible_cpes[2] = cpe
-            new_ratio *= 1.2
+            new_ratio *= 1.25
 
         if new_ratio > highest_value[1]:
             highest_value = (cpe, new_ratio)
@@ -383,8 +386,9 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
     '''Add cve with new cpe to vuln_db'''
     
     version_start = '0'
-    is_cpe_version_start_including = False
+    is_cpe_version_start_including_ = False
     version_start_nvd_lt_version_end = None
+    start_versions = []
 
     # try to get with_cpes and version_start from matching cpe entries for the given package and cve
     for cpe_ in cpes:
@@ -392,15 +396,18 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
             if version_start_nvd_lt_version_end == None:
                 version_start_nvd_lt_version_end = True
             cpe_version_start, is_cpe_version_start_including = cpe_[2:4]
-            # version_end < version_start of nvd
-            if version_start_nvd_lt_version_end and CPEVersion(cpe_version_start) < CPEVersion(version_end) and CPEVersion(get_cpe_parts(cpe_[1])[5]) < CPEVersion(version_end):
-                version_start_nvd_lt_version_end = False
-            if CPEVersion(cpe_[5]) == CPEVersion(version_end) or CPEVersion(get_cpe_parts(cpe_[1])[5]) == CPEVersion(version_end):
-                return
             cpe_version = get_cpe_parts(cpe_[1])[5]
             if cpe_version in ('*', '-'):
                 cpe_version = ''
-            if is_cpe_version_start_including:
+            # change 
+            if cpe_version and re.match(r'\.\d+[\d\.]*', cpe_version):
+                cpe_version = '0'+cpe_version
+            # version_end < version_start of nvd
+            if version_start_nvd_lt_version_end and CPEVersion(cpe_version_start) < CPEVersion(version_end) and CPEVersion(cpe_version) < CPEVersion(version_end):
+                version_start_nvd_lt_version_end = False
+            if CPEVersion(cpe_[5]) == CPEVersion(version_end) or CPEVersion(cpe_version) == CPEVersion(version_end):
+                return
+            if is_cpe_version_start_including_: 
                 if CPEVersion(version_end) >= CPEVersion(cpe_version_start) and CPEVersion(cpe_version_start) > CPEVersion(version_start):
                     version_start = cpe_version_start
                     is_cpe_version_start_including = True
@@ -411,6 +418,7 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
                 elif CPEVersion(version_end) > CPEVersion(cpe_version) and (CPEVersion(cpe_version) < CPEVersion(version_start) or version_start == '0'):
                     version_start = cpe_version
                     is_cpe_version_start_including = True
+            start_versions.append(CPEVersion(version_start))
 
     # version_end < version_start of nvd -> not-affected, so use '-1' as version_end
     if version_start_nvd_lt_version_end:
@@ -419,14 +427,21 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
     if version_start == '0':
         version_start = ''
 
-    # set name_version as version_start, e.g. openssh097 -> version_start = 0.9.7
-    if name_version and name_version != '-1' and not version_start:
-        version_start = name_version
+    # set name_version as version_start, e.g. openssh097 -> version_start = 0.9.7, try to use name_version if close enough to already found version
+    if all([name_version, name_version != '-1', all([x in string.digits for x in name_version]), all([x in string.digits or x == '.' for x in version_start])]) \
+            and (not version_start or 0.7<(float('.'.join(version_start.split('.')[:2]))/float('.'.join(name_version[:2]))<1.3)) \
+            and name_version != version_start.split('.')[0]:
+        version_start = '.'.join(name_version) if not '.' in name_version else name_version
         is_cpe_version_start_including = True
 
     # remove start_version if start_version greater or equal to version_end
     if version_end != '-1' and CPEVersion(version_start) >= CPEVersion(version_end):
         version_start = ''
+        is_cpe_version_start_including = False
+
+    # if no similar packages with a different name_version exist and no exact version_end, set version_start to minimal start version
+    if not name_version and version_end in ('-1', str(sys.maxsize-1), str(sys.maxsize)):
+        version_start = str(min(start_versions, default=''))
         is_cpe_version_start_including = False
     
     db_cursor.execute('INSERT OR IGNORE INTO cve_cpe (cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including, source) VALUES (?, ?, ?, ?, ?, ?, ?)', (cve_id, distro_cpe, version_start, is_cpe_version_start_including , version_end, False, source))
