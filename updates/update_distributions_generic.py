@@ -399,7 +399,7 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
             cpe_version = get_cpe_parts(cpe_[1])[5]
             if cpe_version in ('*', '-'):
                 cpe_version = ''
-            # change 
+            # prefix with zero if necessary
             if cpe_version and re.match(r'\.\d+[\d\.]*', cpe_version):
                 cpe_version = '0'+cpe_version
             # version_end < version_start of nvd
@@ -420,19 +420,21 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
                     is_cpe_version_start_including = True
             start_versions.append(CPEVersion(version_start))
 
-    # version_end < version_start of nvd -> not-affected, so use '-1' as version_end
-    if version_start_nvd_lt_version_end:
-        version_end = '-1'
-
     if version_start == '0':
         version_start = ''
 
     # set name_version as version_start, e.g. openssh097 -> version_start = 0.9.7, try to use name_version if close enough to already found version
     if all([name_version, name_version != '-1', all([x in string.digits for x in name_version]), all([x in string.digits or x == '.' for x in version_start])]) \
             and (not version_start or 0.7<(float('.'.join(version_start.split('.')[:2]))/float('.'.join(name_version[:2]))<1.3)) \
-            and name_version != version_start.split('.')[0]:
+            and name_version != version_start.split('.')[0] \
+            and all(name_version != part[-len(name_version):] for part in get_cpe_parts(matching_cpe)[3:5]): # name_version already represented in cpe
         version_start = '.'.join(name_version) if not '.' in name_version else name_version
         is_cpe_version_start_including = True
+    
+    # version_end < version_start of nvd -> remove start_version
+    if version_start_nvd_lt_version_end:
+        version_start = ''
+        is_cpe_version_start_including = False
 
     # remove start_version if start_version greater or equal to version_end
     if version_end != '-1' and CPEVersion(version_start) >= CPEVersion(version_end):

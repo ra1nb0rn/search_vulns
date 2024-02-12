@@ -247,6 +247,7 @@ def process_cve(cve):
 
         # only try to summarize if more than 2 infos are given
         if len(relevant_package_info) > 2:
+            relevant_package_info = remove_duplicates(relevant_package_info)
             relevant_package_info_summarized = summarize_statuses_with_version(relevant_package_info, dev_distro_name='upstream')
         
             relevant_package_info_summarized.sort(key = lambda status:float(status[1]))
@@ -314,6 +315,18 @@ def process_cve(cve):
             version_end = get_clean_version(version_end, True)
             distro_cpe= get_distribution_cpe(redhat_version, 'rhel', matching_cpe, extra_cpe)
             add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', DB_CURSOR)
+
+
+def remove_duplicates(relevant_package_info):
+    unique_relevant_package_info = []
+    for version_end, redhat_version, operator in relevant_package_info:
+        if unique_relevant_package_info and unique_relevant_package_info[-1][1] == redhat_version:
+            if CPEVersion(unique_relevant_package_info[-1][0]) > CPEVersion(version_end):
+                continue
+            else:
+                unique_relevant_package_info.pop()
+        unique_relevant_package_info.append((version_end, redhat_version, operator))
+    return unique_relevant_package_info
 
 
 def process_relevant_package_infos(packages):
