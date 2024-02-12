@@ -449,7 +449,6 @@ function searchVulns() {
             else {
                 vulns = Object.values(vulns)[0]
                 cpe = vulns['cpe'];
-                var alt_queries_start_idx = 1;
                 if (cpe != undefined) {
                     curVulnData = vulns['vulns'];
                     if (Object.keys(curVulnData).length > 0) {
@@ -463,18 +462,23 @@ function searchVulns() {
                     }
                 }
                 else {
-                    alt_queries_start_idx = 0;
                     search_display_html = `<h5 class="text-danger text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
                 }
 
-                if (vulns.hasOwnProperty('pot_cpes') && vulns["pot_cpes"].length > 0 + alt_queries_start_idx) {
-                    related_queries_html = `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-                    related_queries_html += `<div class="row mx-2"><div class="col"><h5>Related queries:</h5></div></div>`;
-                    related_queries_html += `<div class="row mx-2"><div class="col"><ul>`;
-                    for (var i = alt_queries_start_idx; i < vulns["pot_cpes"].length; i++) {
-                        related_queries_html += `<li><a href="/?query=${encodeURIComponent(htmlEntities(vulns["pot_cpes"][i][0]))}&is-good-cpe=false">${htmlEntities(vulns["pot_cpes"][i][0])}</a> &nbsp; &nbsp;(${htmlEntities(buildTextualReprFromCPE(vulns["pot_cpes"][i][0]))})</li>`
+                if (vulns.hasOwnProperty('pot_cpes') && vulns["pot_cpes"].length > 0) {
+                    var related_queries_html_li = "";
+                    for (var i = 0; i < vulns["pot_cpes"].length; i++) {
+                        if (cpe == null || !cpe.includes(vulns["pot_cpes"][i][0]))
+                            related_queries_html_li += `<li><a href="/?query=${encodeURIComponent(htmlEntities(vulns["pot_cpes"][i][0]))}&is-good-cpe=false">${htmlEntities(vulns["pot_cpes"][i][0])}</a> &nbsp; &nbsp;(${htmlEntities(buildTextualReprFromCPE(vulns["pot_cpes"][i][0]))})</li>`
                     }
-                    related_queries_html += `</ul></div></div>`;
+
+                    if (related_queries_html_li != "") {
+                        related_queries_html = `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
+                        related_queries_html += `<div class="row mx-2"><div class="col"><h5>Related queries:</h5></div></div>`;
+                        related_queries_html += `<div class="row mx-2"><div class="col"><ul>`;
+                        related_queries_html += related_queries_html_li;
+                        related_queries_html += `</ul></div></div>`;
+                    }
                 }
             }
 
