@@ -239,8 +239,11 @@ def seperate_distribution_information_from_query(query, db_cursor):
 
 
 def is_known_distribution_version(distribution, db_cursor):
+    distro, distro_version = distribution
+    if distro == 'rhel':
+        distro = 'redhat'
     db_distro_query = 'SELECT version, codename FROM distribution_codename_version_mapping WHERE source = ? AND version = ?'
-    return bool(db_cursor.execute(db_distro_query, distribution).fetchone())
+    return bool(db_cursor.execute(db_distro_query, (distro, distro_version)).fetchone())
 
 
 def get_distribution_data_from_version(version, db_cursor):
@@ -271,7 +274,7 @@ def get_distribution_data_from_version(version, db_cursor):
     # get redhat data
     split_version = version.split('el')
     if len(split_version) == 2 and not distribution[0]:
-        distribution = ('redhat', '.'.join(split_version[1].split('.')[0].split('_')))
+        distribution = ('rhel', '.'.join(split_version[1].split('.')[0].split('_')))
     if distribution[0] and is_known_distribution_version(distribution, db_cursor):
         return distribution
     else:

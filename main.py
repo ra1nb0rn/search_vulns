@@ -9,6 +9,7 @@ import threading
 from cpe_search.cpe_search import (
     search_cpes,
     match_cpe23_to_cpe23_from_dict,
+    get_possible_versions_in_query,
 )
 from search_vulns_modules.config import _load_config, DEFAULT_CONFIG_FILE
 from search_vulns_modules.generic_functions import get_equivalent_cpes, printit, print_vulns
@@ -16,6 +17,7 @@ from search_vulns_modules.search_vulns import search_vulns
 from search_vulns_modules.process_distribution_matches import (
     is_possible_distro_query, 
     seperate_distribution_information_from_query, 
+    get_distribution_data_from_version,
     add_distribution_infos_to_cpe
 )
 MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
@@ -95,7 +97,10 @@ def main():
         if is_possible_distro_query(query):
             distribution, cpe_search_query = seperate_distribution_information_from_query(query, db_cursor)
         else:
-            distribution, cpe_search_query = ('', 'inf'), query
+            possible_versions = get_possible_versions_in_query(query)
+            if possible_versions:
+                distribution = get_distribution_data_from_version(possible_versions[0], db_cursor)
+            cpe_search_query = query
         if not MATCH_CPE_23_RE.match(query): 
             cpe = search_cpes(cpe_search_query, count=1, threshold=args.cpe_search_threshold, config=config['cpe_search'])
             found_cpe = True

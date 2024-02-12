@@ -134,6 +134,10 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
 
     if is_possible_distro_query(cpe):
         distribution = get_distro_infos_from_query(cpe, db_cursor)
+    elif not distribution[0]:
+        possible_versions = get_possible_versions_in_query(query)
+        if possible_versions:
+            distribution = get_distribution_data_from_version(possible_versions[0], db_cursor)
 
     # use the retrieved CPE to search for known vulnerabilities
     vulns = {}
