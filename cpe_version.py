@@ -108,7 +108,9 @@ class CPEVersion:
                 for i in range(iter_max):
                     if ord(part[i].lower()) > ord(other_part[i].lower()):
                         return False
-                    if i == iter_max - 1 and ord(part[i].lower()) == ord(other_part[i].lower()):
+                    if (i == iter_max - 1 and len(parts) == len(other_parts) and
+                        len(part) == len(other_part) and
+                        ord(part[i].lower()) == ord(other_part[i].lower())):
                         return False
             else:
                 for i, char in enumerate(part):
@@ -132,7 +134,7 @@ class CPEVersion:
 
                 return True  # if version part in front is smaller, the entire version is already smaller
 
-        if len(other_parts) > len(other_parts):
+        if len(parts) > len(other_parts):
             return False
 
         return True
