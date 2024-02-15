@@ -12,6 +12,9 @@ var exportIcon = `<i class="fa-solid fa-clipboard"></i>`, exportIconSuccess = `<
 var curSortColIdx = 1, curSortColAsc = false, searchIgnoreNextKeyup = false;
 var doneTypingQueryTimer, queryInput = $('#query'), doneTypingQueryInterval = 600;  //time in ms
 var default_theme = 'dim';
+var grecaptchaWidget, recaptchaLoaded = false;
+var curSelectedCPESuggestion = -1, suggestedQueriesJustOpened = false;
+
 
 function htmlEntities(text) {
     return text.replace(/[\u00A0-\u9999<>\&"']/g, function (i) {
@@ -488,42 +491,18 @@ function buildTextualReprFromCPE(cpe) {
 }
 
 
-function searchVulns() {
-    clearTimeout(doneTypingQueryTimer);
-    var query = $('#query').val();
-    if (query === undefined)
-        query = '';
-    var queryEnc = encodeURIComponent(query);
-    var url_query = "query=" + queryEnc;
-    var new_url = window.location.pathname + '?query=' + queryEnc;
+function searchVulns(query, url_query, recaptcha_response) {
+    var headers = {}
+    if (recaptcha_response !== undefined)
+        headers = {'Recaptcha-Response': recaptcha_response}
 
-    if (!isGoodCpe) {
-        url_query += "&is-good-cpe=false";
-        new_url += '&is-good-cpe=false';
-    }
-    url_query += "&include-single-version-vulns=true";  // false is default in backend
-
-    isGoodCpe = true;  // reset for subsequent query that wasn't initiated via URL
-
-    history.pushState({}, null, new_url);  // update URL
-    $("#buttonSearchVulns").html('<span class="loading loading-spinner"></span> Searching');
-    $("#buttonSearchVulns").addClass("btn-disabled");
-    $("#buttonFilterCVEs").addClass("btn-disabled");
-    $("#buttonManageColumns").addClass("btn-disabled");
-    $("#buttonExportResults").addClass("btn-disabled");
-    $('#cpeSuggestions').addClass("hidden");
-    $('#cpeSuggestions').html();
-    searchIgnoreNextKeyup = true;
-
-    $("#search-display").html("");
-    $("#related-queries-display").html("");
-    $("#vulns").html('<div class="row mt-3 justify-content-center align-items-center"><h5 class="spinner-border text-primary" style="width: 3rem; height: 3rem"></h5></div>');
-    curSortColIdx = 1;
-    curSortColAsc = false;
-    curVulnData = {};
+    var apiKey = localStorage.getItem('apiKey');
+    if (apiKey !== undefined && apiKey !== null && apiKey)
+        headers['API-Key'] = apiKey
 
     $.get({
-        url: "/search_vulns",
+        url: "/api/search-vulns",
+        headers: headers,
         data: url_query,
         success: function (vulns) {
             var search_display_html = "", related_queries_html = '', queryError = false;
@@ -581,8 +560,14 @@ function searchVulns() {
                 errorMsg = jXHR["responseText"];
             else
                 errorMsg = errorThrown;
+            errorMsg = htmlEntities(errorMsg);
 
-            $("#vulns").html(`<h5 class="text-error w-full text-center">${htmlEntities(errorMsg)}</h5>`);
+            if (jXHR["status"] == 403 && errorMsg.toLowerCase().includes("captcha")) {
+                errorMsg += ' Set up a key <a class="link" href="/api/setup">here<a>.';
+            }
+
+            $("#vulns").html(`<h5 class="text-error w-full text-center">${errorMsg}</h5>`);
+
             $("#buttonSearchVulns").removeClass("btn-disabled");
             $("#buttonFilterCVEs").removeClass("btn-disabled");
             $("#buttonManageColumns").removeClass("btn-disabled");
@@ -591,6 +576,53 @@ function searchVulns() {
             currentlySearchingVulns = false;
         }
     });
+}
+
+
+function searchVulnsAction() {
+    clearTimeout(doneTypingQueryTimer);
+    var query = $('#query').val();
+    if (query === undefined)
+        query = '';
+    var queryEnc = encodeURIComponent(query);
+    var url_query = "query=" + queryEnc;
+    var new_url = window.location.pathname + '?query=' + queryEnc;
+
+    if (!isGoodCpe) {
+        url_query += "&is-good-cpe=false";
+        new_url += '&is-good-cpe=false';
+    }
+    url_query += "&include-single-version-vulns=true";  // false is default in backend
+
+    isGoodCpe = true;  // reset for subsequent query that wasn't initiated via URL
+
+    history.pushState({}, null, new_url);  // update URL
+    $("#buttonSearchVulns").html('<span class="loading loading-spinner"></span> Searching');
+    $("#buttonSearchVulns").addClass("btn-disabled");
+    $("#buttonFilterCVEs").addClass("btn-disabled");
+    $("#buttonManageColumns").addClass("btn-disabled");
+    $("#buttonExportResults").addClass("btn-disabled");
+    $('#cpeSuggestions').addClass("hidden");
+    $('#cpeSuggestions').html();
+    searchIgnoreNextKeyup = true;
+
+    $("#search-display").html("");
+    $("#related-queries-display").html("");
+    $("#vulns").html('<div class="row mt-3 justify-content-center align-items-center"><h5 class="spinner-border text-primary" style="width: 3rem; height: 3rem"></h5></div>');
+    curSortColIdx = 1;
+    curSortColAsc = false;
+    curVulnData = {};
+
+    if (typeof grecaptcha !== 'undefined') {
+        grecaptcha.ready(function() {
+            grecaptcha.execute().then(function(recaptcha_response) {
+                searchVulns(query, url_query, recaptcha_response);
+            });
+        });
+    }
+    else {
+        searchVulns(query, url_query);
+    }
 }
 
 function reorderVulns(sortColumnIdx, asc) {
@@ -619,7 +651,7 @@ function copyToClipboardCVSS(cvssClipboardButton) {
 }
 
 function changeTheme(themeElement) {
-    var theme;
+    var theme, previousTheme = document.documentElement.getAttribute('data-theme');
     if (themeElement != null)
         theme = themeElement.id.split('-').slice(-1)[0];
     else {
@@ -632,6 +664,42 @@ function changeTheme(themeElement) {
     $(themeElement).find('a').addClass('active');
     $(themeElement).find('a').append('<span class="text-right"><i class="fa-solid fa-check"></i></span>');
     localStorage.setItem("theme", theme);
+
+    // change reCAPTCHA theme by replacing the HTML element with a new one if theme type changes (light/dark)
+    var themeType = 'dark', previousThemeType = 'dark';
+    if (['light', 'autumn', 'fantasy'].includes(theme))
+        themeType = 'light';
+    if (['light', 'autumn', 'fantasy'].includes(previousTheme))
+        previousThemeType = 'light';
+
+    if (recaptchaLoaded && ($('#grecaptcha').hasClass("hidden") || themeType != previousThemeType)) {
+        $('#grecaptcha').addClass('hidden');
+        var themeType = 'dark';
+        if (['light', 'autumn', 'fantasy'].includes(theme))
+            themeType = 'light';
+
+        var oldClasses = $('#grecaptcha')[0].className;
+        if (grecaptchaWidget !== undefined) {
+            grecaptcha.reset(grecaptchaWidget);
+        }
+
+        var sitekey = $('#grecaptcha').attr('data-sitekey');
+        var newRecaptchaContainer = document.createElement('div');
+        newRecaptchaContainer.className = oldClasses;
+        newRecaptchaContainer.setAttribute('data-sitekey', sitekey);
+        $('#grecaptcha').replaceWith(newRecaptchaContainer);
+        newRecaptchaContainer.id = 'grecaptcha';
+
+        grecaptchaWidget = grecaptcha.render('grecaptcha', {
+            'sitekey' : sitekey,
+            'theme' : themeType,
+            'size': 'invisible'
+        });
+        // fix some flashing in dark mode, since white background is rendered first
+        setTimeout(function () {
+            $('#grecaptcha').removeClass('hidden');
+        }, 250);
+    }
 }
 
 function changeSearchConfig(configElement) {
@@ -801,6 +869,63 @@ function backToTop() {
     window.scroll({ top: 0, behavior: "smooth" });
 }
 
+function retrieveCPESuggestions(url_query, recaptcha_response) {
+    var headers = {}
+    if (recaptcha_response !== undefined)
+        headers['Recaptcha-Response'] = recaptcha_response
+
+    var apiKey = localStorage.getItem('apiKey');
+    if (apiKey !== undefined && apiKey !== null && apiKey)
+        headers['API-Key'] = apiKey
+
+    $.get({
+        url: "/api/cpe-suggestions",
+        data: url_query,
+        headers: headers,
+        success: function (cpeInfos) {
+            if (!Array.isArray(cpeInfos)) {
+                console.log(cpeInfos)
+                $('#cpeSuggestions').html('<span class="text-error">An error occured, see console</span>');
+            }
+            else if (cpeInfos.length > 0) {
+                var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box">';
+                for (var i = 0; i < cpeInfos.length; i++) {
+                    dropdownContent += `<li><a class="text-nowrap whitespace-nowrap" id="cpe-suggestion-${i}" href="${window.location.pathname}?query=${encodeURIComponent(htmlEntities(cpeInfos[i][0]))}&is-good-cpe=false">${htmlEntities(cpeInfos[i][0])}</a></li>`;
+                }
+                dropdownContent += '</ul>';
+                $('#cpeSuggestions').html(dropdownContent);
+            }
+            else {
+                $('#cpeSuggestions').html("No results found");
+            }
+            curSelectedCPESuggestion = -1
+            suggestedQueriesJustOpened = true;
+            setTimeout(function () {
+                suggestedQueriesJustOpened = false;
+            }, 400);
+            $("#buttonSearchVulns").removeClass("btn-disabled");
+        },
+        error: function (jXHR, textStatus, errorThrown) {
+            var errorMsg;
+            if ("responseText" in jXHR)
+                errorMsg = jXHR["responseText"];
+            else
+                errorMsg = errorThrown;
+
+            console.log(errorMsg);
+
+            if (jXHR["status"] == 403 && errorMsg.toLowerCase().includes("captcha")) {
+                    $('#cpeSuggestions').html('<span class="text-error">No valid API key / CAPTCHA provided. Set up a key <a class="link" onmousedown="location.href = \'/api/setup\'">here<a>.');
+            }
+            else {
+                $('#cpeSuggestions').html('<span class="text-error">' + htmlEntities(errorMsg) + '</span>');
+            }
+
+            $("#buttonSearchVulns").removeClass("btn-disabled");
+        }
+    });
+}
+
 function doneTypingQuery () {
     // user paused or finished typing query --> retrieve and show CPE suggestions
     $('#cpeSuggestions').html('<div class="loading loading-spinner"></div>');
@@ -814,40 +939,32 @@ function doneTypingQuery () {
     var queryEnc = encodeURIComponent(query);
     var url_query = "query=" + queryEnc;
 
-    $.get({
-        url: "/cpe_suggestions",
-        data: url_query,
-        success: function (cpeInfos) {
-            if (!Array.isArray(cpeInfos)) {
-                console.log(cpeInfos)
-            }
-            else if (cpeInfos.length > 0) {
-                var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box">';
-                cpeInfos.forEach(function (cpeInfo) {
-                    dropdownContent += `<li><a class="text-nowrap whitespace-nowrap" onmousedown="location.href = '${window.location.pathname}?query=${encodeURIComponent(htmlEntities(cpeInfo[0]))}&is-good-cpe=false'">${htmlEntities(cpeInfo[0])}</a></li>`;
-                });
-                dropdownContent += '</ul>';
-                $('#cpeSuggestions').html(dropdownContent);
-            }
-            else {
-                $('#cpeSuggestions').html("No results found");
-            }
-            $("#buttonSearchVulns").removeClass("btn-disabled");
-        },
-        error: function (jXHR, textStatus, errorThrown) {
-            var errorMsg;
-            if ("responseText" in jXHR)
-                errorMsg = jXHR["responseText"];
-            else
-                errorMsg = errorThrown;
-            console.log(errorMsg);
-            $("#buttonSearchVulns").removeClass("btn-disabled");
-        }
-    });
+    if (typeof grecaptcha !== 'undefined') {
+        grecaptcha.ready(function() {
+            grecaptcha.execute().then(function(recaptcha_response) {
+                retrieveCPESuggestions(url_query, recaptcha_response);
+            });
+        });
+    }
+    else {
+        retrieveCPESuggestions(url_query);
+    }
 }
 
-function closeCPESuggestions() {
-    $('#cpeSuggestions').addClass('hidden');
+function closeCPESuggestions(event) {
+    // Check that new focused element lies without the queryInputConstruct / dropdown
+    var newFocusedElement = event.relatedTarget;
+    if (newFocusedElement === null || newFocusedElement.closest('#queryInputConstruct') === null) {
+        $('#cpeSuggestions').addClass('hidden');
+    }
+}
+
+function onRecaptchaLoaded() {
+    recaptchaLoaded = true;
+    if (localStorage.getItem('theme') !== null)
+        changeTheme($('#theme-option-' + localStorage.getItem('theme'))[0]);
+    else
+        changeTheme();
 }
 
 
@@ -858,7 +975,14 @@ $("#query").keypress(function (event) {
     var keycode = (event.keyCode ? event.keyCode : event.which);
     if (keycode == "13") {
         if (!$("#cpeSuggestions").hasClass("hidden") || !$("#buttonSearchVulns").hasClass("btn-disabled")) {
-            $("#buttonSearchVulns").click();
+            var highlightedCPESuggestion = null;
+            if ($("#cpeSuggestions").find('ul') != null) {
+                highlightedCPESuggestion = $("#cpeSuggestions").find('.my-menu-item-hover');
+            }
+            if (!highlightedCPESuggestion || curSelectedCPESuggestion == -1)
+                $("#buttonSearchVulns").click();
+            else
+                document.getElementById('cpe-suggestion-' + curSelectedCPESuggestion).click();
         }
     }
 });
@@ -871,6 +995,10 @@ document.addEventListener('DOMContentLoaded', function() {
         changeTheme();
     document.body.classList.remove('hidden');
 });
+
+// check for API key
+if (localStorage.getItem('apiKey') !== null)
+    document.cookie = 'isAPIKeyConfigured=true; secure; path=/';
 
 // fix dropdown open buttons to close again on click
 fixDropdownClicking();
@@ -892,19 +1020,49 @@ window.onscroll = function() {
 
 // register timers and functions for query input field
 // on keyup, start the countdown to register finished typing
-queryInput.on('keyup', function () {
-    clearTimeout(doneTypingQueryTimer);
-    if (!searchIgnoreNextKeyup)
-        doneTypingQueryTimer = setTimeout(doneTypingQuery, doneTypingQueryInterval);
-    searchIgnoreNextKeyup = false;
+queryInput.on('keyup', function (event) {
+    if (event.keyCode !== undefined) {
+        // arrows (up: 38 ; down: 40)
+        if ([38, 40].includes(event.keyCode) && !$('#cpeSuggestions').hasClass('hidden') && $("#cpeSuggestions").find('ul') != null) {
+            if (curSelectedCPESuggestion > -1)
+                $('#cpe-suggestion-' + curSelectedCPESuggestion).removeClass('my-menu-item-hover');
+
+            if (event.keyCode == 38)
+                curSelectedCPESuggestion--;
+            else if (event.keyCode == 40)
+                curSelectedCPESuggestion++;
+
+            // enforce lower and upper bounds
+            curSelectedCPESuggestion = Math.max(-1, curSelectedCPESuggestion);
+            curSelectedCPESuggestion = Math.min(curSelectedCPESuggestion, $("#cpeSuggestions").find('ul').children('li').length - 1);
+
+            if (curSelectedCPESuggestion > -1)
+                $('#cpe-suggestion-' + curSelectedCPESuggestion).addClass('my-menu-item-hover');
+
+            event.preventDefault();  // prevent jumping of cursor to start or end
+        }
+        // any key except CTRL, OPTION, CMD/SUPER/Windows
+        else if (![13, 17, 18, 91].includes(event.keyCode)) {
+            clearTimeout(doneTypingQueryTimer);
+            if (!searchIgnoreNextKeyup)
+                doneTypingQueryTimer = setTimeout(doneTypingQuery, doneTypingQueryInterval);
+            searchIgnoreNextKeyup = false;
+        }
+    }
 });
 
 // on keydown, clear the typing countdown and hide dropdown
 queryInput.on('keydown', function (event) {
-    if (event.keyCode !== undefined && event.keyCode != 13) {
-        clearTimeout(doneTypingQueryTimer);
-        $('#cpeSuggestions').addClass("hidden");
-        $('#cpeSuggestions').html();
+    if (event.keyCode !== undefined) {
+        if ([38, 40].includes(event.keyCode) && !$('#cpeSuggestions').hasClass('hidden') && $("#cpeSuggestions").find('ul') != null) {
+            event.preventDefault();  // prevent jumping of cursor to start or end
+        }
+        // any key except CTRL, OPTION, CMD/SUPER/Windows
+        else if(![13, 17, 18, 37, 39, 91].includes(event.keyCode)) {
+            clearTimeout(doneTypingQueryTimer);
+            $('#cpeSuggestions').addClass("hidden");
+            $('#cpeSuggestions').html();
+        }
     }
 });
 

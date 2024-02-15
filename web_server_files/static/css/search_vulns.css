@@ -100,3 +100,15 @@ tr.exploited-vuln td {
   --tw-bg-opacity: 1;
   background-color: var(--fallback-b2,oklch(var(--b2)/var(--tw-bg-opacity)));
 }
+
+/* Force hover on menu item (from DaisyUI) */
+.my-menu-item-hover {
+    background-color: var(--fallback-bc,oklch(var(--bc)/0.1));
+}
+
+/* reCAPTCHA v2 box remove white border */
+.g-recaptcha {
+    overflow:hidden;
+    width:302px;
+    height:76px;
+}

@@ -32,7 +32,7 @@
                     class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
                     <li><a href="/">Home</a></li>
                     <li><a href="/usage">Usage</a></li>
-                    <li><a href="/api-setup">API</a></li>
+                    <li><a href="/api/setup">API</a></li>
                     <li><a href="/news">News</a></li>
                 </ul>
             </div>
@@ -43,7 +43,7 @@
             <ul class="menu menu-horizontal px-1">
                 <li><a href="/">Home</a></li>
                 <li><a href="/usage">Usage</a></li>
-                <li><a href="/api-setup">API</a></li>
+                <li><a href="/api/setup">API</a></li>
                 <li><a href="/news">News</a></li>
             </ul>
         </div>
@@ -70,8 +70,97 @@
     </div>
 
     <!-- BEGIN API Setup -->
-    <div class="md:max-w-8xl lg:max-w-6xl mx-auto text-center mt-4" style="min-height: 65vh;">
-        <h2 class="text-4xl">Work in Progress</h2>
+    <div class="xs:max-w-full sm:max-w-5xl mx-auto mt-4 px-3" style="min-height: 65vh;">
+        <div class="text-center font-bold">
+            <h2 class="text-3xl">API (Setup)</h2>
+        </div>
+        {% if recaptcha_enabled == true %}
+        <div class="mt-4">
+            search_vulns offers an API that enables you to programmatically search for vulnerabilties in software.
+            To use the API, you need to generate an API key and use this key with your requests. Furthermore, you
+            can set up an API key to use with the web interface, enabling you to bypass the CAPTCHA mechanism.
+        </div>
+        <div class="text-center mt-4">
+            <h3 class="text-xl font-bold">Generate an API Key</h3>
+        </div>
+        <div class="mt-2 text-center">
+            <div class="flex justify-center">
+                <div class="hidden g-recaptcha justify-center self-center items-center" id="grecaptcha"
+                    data-sitekey="{{ recaptcha_site_key }}"></div>
+            </div>
+            <div class="mt-3" id="genKeyButton">
+                <button class="btn btn-primary" onclick="generateAPIKey()">Generate API Key</button>
+            </div>
+            <div class="mt-3" id="genTokenResponse">
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <h3 class="text-xl font-bold">Configure an API Key for Use in This Browser</h3>
+        </div>
+        <div class="mt-1">
+            <div class="mt-3 w-full">
+                <div class="w-104 mx-auto">
+                    <label class="input input-bordered flex items-center gap-2">
+                        <i class="fa-solid fa-key"></i>
+                        <input type="text" class="grow" placeholder="Enter your API key" id="config-api-key" />
+                    </label>
+                </div>
+            </div>
+            <div class="flex mt-3 w-full justify-center">
+                <button class="btn btn-success mr-2" onclick="saveAPIKeyInBrowser()">Save Key in Browser</button>
+                <button class="btn btn-error ml-2" onclick="deleteAPIKeyFromBrowser()">Clear Saved Key</button>
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <h3 class="text-xl font-bold">API Documentation</h3>
+        </div>
+        <div class="mt-1">
+            Unfortunately, there is no proper API documentation available yet. However, the application's frontend
+            uses all underlying API endpoints. This means you can observe how they work. Currently, the following four
+            API endpoints exist:
+            <div class="ml-9 mt-3">
+                <ul class="list-disc text-left">
+                    <li class="m-1"><code class="bg-base-300 p-1">/api/search-vulns</code> : Search for known
+                        vulnerabilities via product name + version or CPE 2.3 string.</li>
+                    <li class="m-1"><code class="bg-base-300 p-1">/api/cpe-suggestions</code> : Search for possible CPEs
+                        via product name + version.</li>
+                    <li class="m-1"><code class="bg-base-300 p-1">/api/check-key-status</code> : Check the status of
+                        your API key.</li>
+                    <li class="m-1"><code class="bg-base-300 p-1">/api/version</code> : Check the current version of the
+                        application and its resources.</li>
+                </ul>
+            </div>
+            <div class="mt-3">
+                When making requests to the API, you should include your key via an <code>API-Key</code> header,
+                e.g. <code class="bg-base-300 p-1">API-Key: test</code>
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <h3 class="text-xl font-bold">Check Status of API Key</h3>
+        </div>
+        <div class="mt-1">
+            <div class="mt-3 flex justify-center">
+                <div class="w-104">
+                    <label class="input input-bordered flex items-center gap-2">
+                        <i class="fa-solid fa-key"></i>
+                        <input type="text" class="grow" id="check-api-key" placeholder="Enter your API key" />
+                    </label>
+                </div>
+                <button class="btn btn-primary ml-2" onclick="checkAPIKeyStatus()">Check Key Status</button>
+                <button class="btn btn-secondary ml-2" onclick="checkCurrentAPIKeyStatus()">Check Current Key
+                    Status</button>
+            </div>
+            <div class="mt-2 text-center" id="check-api-key-result">
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <h3 class="text-xl font-bold">Check search_vulns Version</h3>
+        </div>
+        <div class="mt-2 mb-8 flex justify-center" id="search-vulns-version-content">
+        </div>
+        {% else %}
+        <h5 class="mt-3 text-warning w-full text-center">CAPTCHA and API management is not enabled server-side.</h5>
+        {% endif %}
     </div>
 
     <button id="toTopButton" onclick="backToTop()" title="Go To Top"
@@ -79,15 +168,21 @@
         <i class="fa-solid fa-arrow-up"></i>
     </button>
 
+    <div class="w-full fixed bottom-0 left-0" id="alert-container">
+    </div>
+
     <!-- Include classes only used by frontend JS for compiler
-    <div class="hidden text-error text-warning badge border-none text-success btn-xs text-warning loading loading-spinner bg-warning text-right tooltip relative z-10 w-80 p-2 p-1 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300 table table-sm table-rounded btn-disabled mr-1 mr-2 shadow-base-300 btn-success btn-outline ml-1 ml-2 sm:ml-1 sm:ml-2 divider divider-info text-lg text-info text-left grid place-items-center list-disc text-nowrap p-1.5">
+    <div class="hidden text-error font-bold loading loading-spinner btn btn-sm btn-circle m-1 mr-3 alert alert-success mb-2 mx-3">
     </div>
     -->
 
     <script src="{{ url_for('static', filename='js/jquery-3.7.1.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/fontawesome-6.5.1.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/search_vulns.js') }}"></script>
+    {% if recaptcha_enabled == true %}
+    <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded" async defer></script>
+    {% endif %}
+    <script src="{{ url_for('static', filename='js/search_vulns_api.js') }}"></script>
 </body>
 
 </html>

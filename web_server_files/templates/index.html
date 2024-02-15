@@ -32,7 +32,7 @@
                     class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
                     <li><a href="/">Home</a></li>
                     <li><a href="/usage">Usage</a></li>
-                    <li><a href="/api-setup">API</a></li>
+                    <li><a href="/api/setup">API</a></li>
                     <li><a href="/news">News</a></li>
                 </ul>
             </div>
@@ -43,7 +43,7 @@
             <ul class="menu menu-horizontal px-1">
                 <li><a href="/">Home</a></li>
                 <li><a href="/usage">Usage</a></li>
-                <li><a href="/api-setup">API</a></li>
+                <li><a href="/api/setup">API</a></li>
                 <li><a href="/news">News</a></li>
             </ul>
         </div>
@@ -72,17 +72,20 @@
     <!-- BEGIN SearchVulns -->
     <div class="md:max-w-8xl lg:max-w-6xl mx-auto text-center mt-4" style="min-height: 65vh;">
         <div class="flex flex-row rounded-box items-center w-full mx-auto p-3 bg-base-300">
-            <div class="dropdown dropdown-open sm:mr-1 md:mr-2 w-full" onfocusout="closeCPESuggestions()">
+            <div class="dropdown dropdown-open sm:mr-1 md:mr-2 w-full" id="queryInputConstruct"
+                onfocusout="closeCPESuggestions(event)">
                 <label class="input input-bordered flex w-full items-center gap-5 sm:mr-1 md:mr-2">
                     <i class="fa-solid fa-database"></i>
-                    <input type="text" class="w-full" autofocus placeholder="Enter Software" name="query" id="query"/>
+                    <input type="text" class="w-full" autofocus placeholder="Enter Software" name="query" id="query" />
                     <kbd class="kbd kbd-sm text-xl">⏎</kbd>
                 </label>
-                <div tabindex="0" class="dropdown-content hidden z-[1] w-fit min-w-full p-1 shadow-2xl bg-base-300 rounded-box mt-2" id="cpeSuggestions">
+                <div tabindex="0"
+                    class="dropdown-content hidden z-[10] w-fit min-w-full shadow-2xl bg-base-300 rounded-box mt-2"
+                    id="cpeSuggestions">
                 </div>
             </div>
             <button type="submit" class="btn btn-primary btn-outline sm:mr-1 md:mr-4 lg:mr-5 xl:mr-6 text-base"
-                name="buttonSearchVulns" id="buttonSearchVulns" onclick="searchVulns()">
+                name="buttonSearchVulns" id="buttonSearchVulns" onclick="searchVulnsAction()">
                 <i class="fa-solid fa-magnifying-glass"></i> Search Vulns
             </button>
             <div class="dropdown dropdown mr-1">
@@ -204,7 +207,7 @@
                 </ul>
             </div>
         </div>
-        <div class="row w-full mx-auto mt-5" id="search-display">
+        <div class="w-full mx-auto mt-5" id="search-display">
         </div>
         <div class="flex flex-row items-center w-full mx-auto mt-2" id="vulns">
         </div>
@@ -212,19 +215,30 @@
         </div>
     </div>
 
+    {% if show_recaptcha == true %}
+    <button id="toTopButton" onclick="backToTop()" title="Go To Top"
+        class="hidden btn btn-circle btn-accent fixed z-50 bottom-20 right-2.5 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
+        <i class="fa-solid fa-arrow-up"></i>
+    </button>
+    <div class="hidden g-recaptcha" id="grecaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+    {% else %}
     <button id="toTopButton" onclick="backToTop()" title="Go To Top"
         class="hidden btn btn-circle btn-accent fixed z-50 bottom-5 right-5 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
         <i class="fa-solid fa-arrow-up"></i>
     </button>
+    {% endif %}
 
     <!-- Include classes only used by frontend JS for compiler
-    <div class="hidden text-error text-warning badge border-none text-success btn-xs text-warning loading loading-spinner bg-warning text-right tooltip relative z-10 w-80 p-2 p-1 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300 table table-sm table-rounded btn-disabled mr-1 mr-2 shadow-base-300 btn-success btn-outline ml-1 ml-2 sm:ml-1 sm:ml-2 divider divider-info text-lg text-info text-left grid place-items-center list-disc text-nowrap whitespace-nowrap p-1.5">
+    <div class="hidden text-error text-warning badge border-none text-success btn-xs text-warning loading loading-spinner bg-warning text-right tooltip relative z-10 w-80 p-2 p-1 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300 table table-sm table-rounded btn-disabled mr-1 mr-2 shadow-base-300 btn-success btn-outline ml-1 ml-2 sm:ml-1 sm:ml-2 divider divider-info text-lg text-info text-left grid place-items-center list-disc text-nowrap whitespace-nowrap p-1.5 active">
     </div>
     -->
 
     <script src="{{ url_for('static', filename='js/jquery-3.7.1.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/fontawesome-6.5.1.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
+    {% if show_recaptcha == true %}
+    <script src="https://www.google.com/recaptcha/api.js?render=explicit&onload=onRecaptchaLoaded"></script>
+    {% endif %}
     <script src="{{ url_for('static', filename='js/search_vulns.js') }}"></script>
 </body>
 
