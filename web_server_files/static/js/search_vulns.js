@@ -129,6 +129,9 @@ function createVulnsHtml() {
     var exploits, cvss, exploit_url_show;
 
     for (var i = 0; i < vulns.length; i++) {
+        if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
+            continue;
+
         if (vulns[i].vuln_match_reason == "general_cpe")
             vulns_html += `<tr class="uncertain-vuln">`;
         else
@@ -174,7 +177,47 @@ function createVulnsHtml() {
     return vulns_html;
 }
 
+function changeExportFields () {
+    var exportFields = [];
+    var selectedFields = $('#select-export-fields').val();
+    // can't use IDs, b/c selectpicker generates different HTML
+    selectedFields.forEach(fieldName => {
+        if (fieldName == "CVE-ID")
+            exportFields.push('cve');
+        else if (fieldName == "CVSS Score")
+            exportFields.push('cvss');
+        else if (fieldName == "Description")
+            exportFields.push('descr');
+        else if (fieldName == "Exploits")
+            exportFields.push('expl');
+    });
+    localStorage.setItem('exportFields', JSON.stringify(exportFields));
+}
+
 function createResultProcessingHtml() {
+    var selectedExportOptions = JSON.parse(localStorage.getItem('exportFields'));
+    var fieldOptionsHTML = "";
+
+    if (selectedExportOptions.includes("cve"))
+        fieldOptionsHTML += `<option selected>CVE-ID</option>`;
+    else
+        fieldOptionsHTML += `<option>CVE-ID</option>`;
+
+    if (selectedExportOptions.includes("cvss"))
+        fieldOptionsHTML += `<option selected>CVSS Score</option>`;
+    else
+        fieldOptionsHTML += `<option>CVSS Score</option>`;
+
+    if (selectedExportOptions.includes("descr"))
+        fieldOptionsHTML += `<option selected>Description</option>`;
+    else
+        fieldOptionsHTML += `<option>Description</option>`;
+
+    if (selectedExportOptions.includes("expl"))
+        fieldOptionsHTML += `<option selected>Exploits</option>`;
+    else
+        fieldOptionsHTML += `<option>Exploits</option>`;
+
     return `
         <div class="d-flex p-0 justify-content-center">
             <div class="form-group m-0 p-0 pr-2 justify-content-center align-self-center">
@@ -183,11 +226,8 @@ function createResultProcessingHtml() {
                 </select>
             </div>
             <div class="form-group m-0 p-0 pr-5 justify-content-center align-self-center">
-                <select id="select-export-fields" name="select-export-fields" class="selectpicker form-control" multiple data-selected-text-format="static" data-actions-box="true" title="Select Fields (default: all)" onChange="resetCopyToClipboardMarkdownButton(); resetCopyToClipboardCSVButton();">
-                    <option>CVE-ID</option>
-                    <option>CVSS Score</option>
-                    <option>Description</option>
-                    <option>Exploits</option>
+                <select id="select-export-fields" name="select-export-fields" class="selectpicker form-control" multiple data-selected-text-format="count > 3" data-actions-box="true" title="Select Fields (default: all)" onChange="resetCopyToClipboardMarkdownButton(); resetCopyToClipboardCSVButton(); changeExportFields()">
+                    ${fieldOptionsHTML}
                 </select>
             </div>
             <div class="align-self-center pr-2"><button type="button"
@@ -418,11 +458,6 @@ function searchVulns() {
     var url_query = "query=" + queryEnc;
     var new_url = window.location.pathname + '?query=' + queryEnc;
 
-    if (ignoreGeneralCpeVulns) {
-        url_query += "&ignore-general-cpe-vulns=true";
-        new_url += '&general-vulns=false';
-    }
-
     if (!isGoodCpe) {
         url_query += "&is-good-cpe=false";
         new_url += '&is-good-cpe=false';
@@ -513,26 +548,43 @@ function reorderVulns(sortColumnIdx, asc) {
 }
 
 function ignoreGeneralVulnsToggle() {
+    if (ignoreGeneralCpeVulns)
+        localStorage.setItem("ignoreGeneralCpeVulns", 'false');
+    else
+        localStorage.setItem("ignoreGeneralCpeVulns", 'true');
     ignoreGeneralCpeVulns = !ignoreGeneralCpeVulns;
-    $("#vulns").html('');
-    $("#search-display").html('');
-    $("#process-results-display").html('');
-    $("#related-queries-display").html('');
-    curVulnData = {};
-}
 
-function onlyEDBExploitsToggle() {
-    onlyShowEDBExploits = !onlyShowEDBExploits;
     if (!$.isEmptyObject(curVulnData)) {
         var vulns_html = createVulnsHtml();
         vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
         $("#vulns").html(vulns_html);
+        $("#process-results-display").html(createResultProcessingHtml());
+        $("select").selectpicker();
     }
-    $("#process-results-display").html(createResultProcessingHtml());
-    $("select").selectpicker();
+}
+
+function onlyEDBExploitsToggle() {
+    if (onlyShowEDBExploits)
+        localStorage.setItem("onlyShowEDBExploits", 'false');
+    else
+        localStorage.setItem("onlyShowEDBExploits", 'true');
+    onlyShowEDBExploits = !onlyShowEDBExploits;
+
+    if (!$.isEmptyObject(curVulnData)) {
+        var vulns_html = createVulnsHtml();
+        vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
+        $("#vulns").html(vulns_html);
+        $("#process-results-display").html(createResultProcessingHtml());
+        $("select").selectpicker();
+    }
 }
 
 function copyToClipboardMarkdownTable() {
+    var selectedExportOptions = JSON.parse(localStorage.getItem('exportFields'));
+    var selectFieldsTitle = "Select Fields (default: all)";
+    if (selectedExportOptions.length > 0)
+        selectFieldsTitle = selectedExportOptions.join(', ');
+
     navigator.clipboard.writeText(createVulnsMarkDownTable());
     $("#copyMarkdownTableButton").html('<i style="font-size: 1rem" class="fa-solid fa-clipboard-check"></i>&nbsp;&nbsp;Copied Markdown Table to Clipboard');
     $("#copyMarkdownTableButton").attr('class', 'btn btn-success');
@@ -544,6 +596,11 @@ function resetCopyToClipboardMarkdownButton() {
 }
 
 function copyToClipboardCSV() {
+    var selectedExportOptions = JSON.parse(localStorage.getItem('exportFields'));
+    var selectFieldsTitle = "Select Fields (default: all)";
+    if (selectedExportOptions.length > 0)
+        selectFieldsTitle = selectedExportOptions.join(', ');
+
     navigator.clipboard.writeText(createVulnsCSV());
     $("#copyCSVButton").html('<i style="font-size: 1rem" class="fa-solid fa-clipboard-check"></i>&nbsp;&nbsp;Copied CSV to Clipboard');
     $("#copyCSVButton").attr('class', 'btn btn-success');
@@ -562,10 +619,6 @@ function init() {
         if (init_query !== null)
             $('#query').val(htmlEntities(init_query));
 
-        var show_general_vulns = params.get('general-vulns');
-        if (String(show_general_vulns).toLowerCase() === "false")
-            $('#toggleIgnoreGeneralCpeVulns').click();
-
         var is_good_cpe = params.get('is-good-cpe');
         if (String(is_good_cpe).toLowerCase() === "false")
             isGoodCpe = false;
@@ -582,10 +635,31 @@ $("#query").keypress(function (event) {
         $("#searchVulnsButton").click();
 });
 
-// check for existing query in URL
-init();
-
 // activate tooltips
 $(document).ready(function () {
     $("body").tooltip({ selector: '[data-toggle=tooltip]' });
 });
+
+// setup configuration from LocalStorage
+if (localStorage.getItem('onlyShowEDBExploits') === null) {
+    localStorage.setItem('onlyShowEDBExploits', 'false');
+}
+if (localStorage.getItem('ignoreGeneralCpeVulns') === null) {
+    localStorage.setItem('ignoreGeneralCpeVulns', 'false');
+}
+
+if (localStorage.getItem('onlyShowEDBExploits') == 'true') {
+    onlyShowEDBExploits = true;
+    document.getElementById("toggleOnlyEDBExploits").checked = true;
+}
+if (localStorage.getItem('ignoreGeneralCpeVulns') == 'true') {
+    ignoreGeneralCpeVulns = true;
+    document.getElementById("toggleIgnoreGeneralCpeVulns").checked = true;
+}
+
+if (localStorage.getItem('exportFields') === null) {
+    localStorage.setItem('exportFields', '[]');
+}
+
+// check for existing query in URL and insert its parameters
+init();
