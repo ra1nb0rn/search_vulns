@@ -566,10 +566,10 @@ def main():
 
     if args.update == True:
         from updater import run as run_updater
-        run_updater(False, args.api_key)
+        run_updater(False, args.api_key, args.config)
     elif args.full_update == True:
         from updater import run as run_updater
-        run_updater(True, args.api_key)
+        run_updater(True, args.api_key, args.config)
 
     if not args.queries:
         return

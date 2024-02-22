@@ -28,11 +28,6 @@ VULNDB_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/
 CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary.db3"
 CPE_DEPRECATIONS_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/deprecated-cpes.json"
 CVE_EDB_MAP_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cveid_to_edbid.json"
-
-CONFIG = _load_config()
-CONFIG['DATABASE_BACKUP_FILE'] = CONFIG['DATABASE_FILE'] + '.bak'
-CONFIG['CPE_DATABASE_BACKUP_FILE'] = CONFIG['cpe_search']['CPE_DATABASE_FILE'] + '.bak'
-CONFIG['DEPRECATED_CPES_BACKUP_FILE'] = CONFIG['cpe_search']['DEPRECATED_CPES_FILE'] + '.bak'
 POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
 POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PoC-in-GitHub")
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
@@ -409,7 +404,18 @@ def create_poc_in_github_table():
         shutil.rmtree(POC_IN_GITHUB_DIR)
 
 
-def run(full=False, nvd_api_key=None):
+def run(full=False, nvd_api_key=None, config_file=""):
+    global CONFIG
+
+    # load config
+    if config_file:
+        CONFIG = _load_config(config_file)
+    else:
+        CONFIG = _load_config()
+    CONFIG['DATABASE_BACKUP_FILE'] = CONFIG['DATABASE_FILE'] + '.bak'
+    CONFIG['CPE_DATABASE_BACKUP_FILE'] = CONFIG['cpe_search']['CPE_DATABASE_FILE'] + '.bak'
+    CONFIG['DEPRECATED_CPES_BACKUP_FILE'] = CONFIG['cpe_search']['DEPRECATED_CPES_FILE'] + '.bak'
+
     # create file dirs as needed
     update_files = [CONFIG['DATABASE_FILE'], CONFIG['cpe_search']['CPE_DATABASE_FILE'],
                     CONFIG['CVE_EDB_MAP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'],

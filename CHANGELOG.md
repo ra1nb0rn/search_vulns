@@ -1,6 +1,17 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.4.13 - 2024-02-22
+### Added
+- Store a client's configuration in the web app persistently on the client.
+- Improve CPE retrieval for THE Flask from PalletsProjects.
+
+### Fixed
+- Display bug of related queries in web frontend.
+- Bug in version comparison with more complex versions.
+- Bug in update process with custom config file.
+
+
 ## v0.4.12 - 2024-02-06
 ### Added
 - New config file concept, which simplifies a web server deployment
