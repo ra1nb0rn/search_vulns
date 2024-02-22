@@ -49,6 +49,17 @@ setup_create_db() {
     fi
     cd ".."
 
+    ## configure submodules of SQLiteCpp for create_db
+    cd "mariadb-connector-cpp"
+    if [ $QUIET != 1 ]; then
+        git submodule init
+        git submodule update
+    else
+        git submodule --quiet init
+        git submodule --quiet update
+    fi
+    cd ".."
+
     ## get C++ JSON parser from https://github.com/nlohmann/json for create_db
     mkdir -p "json/single_include/nlohmann"
     cd json/single_include/nlohmann

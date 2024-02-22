@@ -6,7 +6,6 @@ import os
 import re
 import requests
 import shutil
-import sqlite3
 import shlex
 import subprocess
 import sys
@@ -16,6 +15,7 @@ import time
 import aiohttp
 from aiolimiter import AsyncLimiter
 from cpe_search.cpe_search import update as update_cpe
+from cpe_search.database_wrapper_functions import get_database_connection
 from search_vulns import _load_config
 
 try:  # use ujson if available
@@ -33,6 +33,7 @@ POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "P
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+MARIADB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "mariadb_dump.sql")
 QUIET = False
 DEBUG = False
 API_RESULTS_PER_PAGE = 2000
@@ -95,8 +96,12 @@ async def update_vuln_db(nvd_api_key=None):
 
     global NVD_UPDATE_SUCCESS
 
-    if os.path.isfile(CONFIG['DATABASE_FILE']):
-        shutil.move(CONFIG['DATABASE_FILE'], CONFIG['DATABASE_BACKUP_FILE'])
+    # backup mariadb
+    if CONFIG['DATABASE']['TYPE'] == 'mariadb':
+        return_code = subprocess.call(['mariadb-dump', '-u', CONFIG['DATABASE']['USER'], f"--password={CONFIG['DATABASE']['PASSWORD']}", '-h', CONFIG['DATABASE']['HOST'], '-P', str(CONFIG['DATABASE']['PORT']),
+                                        '--add-drop-database', '-B', CONFIG['DATABASE_NAME'], '-B', CONFIG['cpe_search']['DATABASE_NAME'], '-r', MARIADB_BACKUP_FILE])
+    elif os.path.isfile(CONFIG['DATABASE_NAME']):
+        shutil.move(CONFIG['DATABASE_NAME'], CONFIG['DATABASE_BACKUP_FILE'])
 
     if nvd_api_key:
         if not QUIET:
@@ -167,7 +172,7 @@ async def update_vuln_db(nvd_api_key=None):
 
     # build local NVD copy with downloaded data feeds
     print('[+] Building vulnerability database')
-    create_db_call = ["./create_db", NVD_DATAFEED_DIR, CONFIG['DATABASE_FILE']]
+    create_db_call = ["./create_db", NVD_DATAFEED_DIR, CONFIG_FILE, CONFIG['DATABASE_NAME'], CONFIG['CREATE_TABLES_QUERIES_FILE']]
     with open(os.devnull, "w") as outfile:
         return_code = subprocess.call(create_db_call, stdout=outfile, stderr=subprocess.STDOUT)
 
@@ -197,22 +202,43 @@ async def update_vuln_db(nvd_api_key=None):
 
 
 async def handle_cpes_update(nvd_api_key=None):
-    if os.path.isfile(CONFIG['cpe_search']['CPE_DATABASE_FILE']):
-        shutil.move(CONFIG['cpe_search']['CPE_DATABASE_FILE'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
+    if os.path.isfile(CONFIG['cpe_search']['DATABASE_NAME']):
+        shutil.move(CONFIG['cpe_search']['DATABASE_NAME'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
     if os.path.isfile(CONFIG['cpe_search']['DEPRECATED_CPES_FILE']):
         shutil.move(CONFIG['cpe_search']['DEPRECATED_CPES_FILE'], CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
+    if CONFIG['DATABASE']['TYPE'] == 'mariadb':
+        try:
+            # check whether database exists
+            get_database_connection(CONFIG['DATABASE'], CONFIG['cpe_search']['DATABASE_NAME']).cursor().execute(f"use {CONFIG['cpe_search']['DATABASE_NAME']}")
+        except:
+            pass
+        else:
+            # backup mariadb
+            return_code = subprocess.call(['mariadb-dump', '-u', CONFIG['DATABASE']['USER'], f"--password={CONFIG['DATABASE']['PASSWORD']}", '-h', CONFIG['DATABASE']['HOST'], '-P', str(CONFIG['DATABASE']['PORT']),
+                                            '--add-drop-database', '--add-locks', '-B', CONFIG['cpe_search']['DATABASE_NAME'], '-r', MARIADB_BACKUP_FILE])
+            if return_code != 0:
+                print('[-] BackUp of database failed')
 
     success = await update_cpe(nvd_api_key, CONFIG['cpe_search'])
     if not success:
         if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
-            shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['CPE_DATABASE_FILE'])
+            shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['DATABASE_NAME'])
         if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
             shutil.move(CONFIG['DEPRECATED_CPES_BACKUP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'])
+        if os.path.isfile(MARIADB_BACKUP_FILE):
+            return_code = subprocess.call(['mariadb', '-u', CONFIG['DATABASE']['USER'], f"--password={CONFIG['DATABASE']['PASSWORD']}", '-h', CONFIG['DATABASE']['HOST'], '-P', CONFIG['DATABASE']['PORT'], '<', MARIADB_BACKUP_FILE])
+            if return_code != 0:
+                print('[-] Failed to restore mariadb')
+            else:
+                print('[+] Restored mariadb from backup')
+            os.remove(MARIADB_BACKUP_FILE)
     else:
         if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
             os.remove(CONFIG['CPE_DATABASE_BACKUP_FILE'])
         if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
             os.remove(CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
+        if os.path.isfile(MARIADB_BACKUP_FILE):
+            os.remove(MARIADB_BACKUP_FILE)
 
     return not success
 
@@ -221,12 +247,19 @@ def rollback():
     """Rollback the DB / module update"""
 
     communicate_warning('An error occured, rolling back database update')
-    if os.path.isfile(CONFIG['DATABASE_FILE']):
-        os.remove(CONFIG['DATABASE_FILE'])
+    if os.path.isfile(CONFIG['DATABASE_NAME']):
+        os.remove(CONFIG['DATABASE_NAME'])
     if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
-        shutil.move(CONFIG['DATABASE_BACKUP_FILE'], CONFIG['DATABASE_FILE'])
+        shutil.move(CONFIG['DATABASE_BACKUP_FILE'], CONFIG['DATABASE_NAME'])
     if os.path.isdir(NVD_DATAFEED_DIR):
         shutil.rmtree(NVD_DATAFEED_DIR)
+    if os.path.isfile(MARIADB_BACKUP_FILE):
+        return_code = subprocess.call(['mariadb', '-u', CONFIG['DATABASE']['USER'], f"--password={CONFIG['DATABASE']['PASSWORD']}", '-h', CONFIG['DATABASE']['HOST'], '-P', CONFIG['DATABASE']['PORT'], '<', MARIADB_BACKUP_FILE])
+        if return_code != 0:
+            print('[-] Failed to restore mariadb')
+        else:
+            print('[+] Restored mariadb from backup')
+        os.remove(MARIADB_BACKUP_FILE)
 
 
 def communicate_warning(msg: str):
@@ -325,7 +358,7 @@ def create_cveid_edbid_mapping():
 def fill_database_with_mapinfo(cve_edb_map):
     """ Put the given mapping data into the database specified by the given cursor """
 
-    db_conn = sqlite3.connect(CONFIG['DATABASE_FILE'])
+    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
 
     update_statement = "UPDATE cve SET edb_ids=? WHERE cve_id=?"
@@ -343,7 +376,7 @@ def fill_database_with_mapinfo(cve_edb_map):
 def recover_map_data_from_db():
     """ Return stored CVE ID <--> EDB ID mapping from DB backup file """
 
-    db_conn = sqlite3.connect(CONFIG['DATABASE_BACKUP_FILE'])
+    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_BACKUP_FILE'])
     db_cursor = db_conn.cursor()
 
     # recover CVE ID --> EDB ID data
@@ -375,9 +408,9 @@ def create_poc_in_github_table():
         raise (Exception("Could not download latest resources of PoC-in-GitHub"))
 
     # add PoC / exploit information to DB
-    db_conn = sqlite3.connect(CONFIG['DATABASE_FILE'])
+    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
-    db_cursor.execute('CREATE TABLE cve_poc_in_github_map (cve_id VARCHAR(25), reference text, PRIMARY KEY (cve_id, reference));')
+    db_cursor.execute(CREATE_TABLES_QUERIES['CVE_POC_IN_GITHUB_MAP'][CONFIG['DATABASE']['TYPE']])
     db_conn.commit()
 
     for file in os.listdir(POC_IN_GITHUB_DIR):
@@ -404,22 +437,29 @@ def create_poc_in_github_table():
         shutil.rmtree(POC_IN_GITHUB_DIR)
 
 
-def run(full=False, nvd_api_key=None, config_file=""):
+def run(full=False, nvd_api_key=None, config_file=''):
     global CONFIG
+    global CONFIG_FILE
+    global CREATE_TABLES_QUERIES
+    CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(config_file)), config_file)
 
     # load config
     if config_file:
         CONFIG = _load_config(config_file)
     else:
         CONFIG = _load_config()
-    CONFIG['DATABASE_BACKUP_FILE'] = CONFIG['DATABASE_FILE'] + '.bak'
-    CONFIG['CPE_DATABASE_BACKUP_FILE'] = CONFIG['cpe_search']['CPE_DATABASE_FILE'] + '.bak'
+    CONFIG['DATABASE_BACKUP_FILE'] = CONFIG['DATABASE_NAME'] + '.bak'
+    CONFIG['CPE_DATABASE_BACKUP_FILE'] = CONFIG['cpe_search']['DATABASE_NAME'] + '.bak'
     CONFIG['DEPRECATED_CPES_BACKUP_FILE'] = CONFIG['cpe_search']['DEPRECATED_CPES_FILE'] + '.bak'
 
+    with open(CONFIG['CREATE_TABLES_QUERIES_FILE']) as f:
+        CREATE_TABLES_QUERIES = json.loads(f.read())
+
     # create file dirs as needed
-    update_files = [CONFIG['DATABASE_FILE'], CONFIG['cpe_search']['CPE_DATABASE_FILE'],
-                    CONFIG['CVE_EDB_MAP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'],
+    update_files = [CONFIG['CVE_EDB_MAP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'],
                     CONFIG['MAN_EQUIVALENT_CPES_FILE']]
+    if CONFIG['DATABASE']['TYPE'] == 'sqlite':
+        update_files += [CONFIG['DATABASE_NAME'], CONFIG['cpe_search']['DATABASE_NAME']]
     for file in update_files:
         os.makedirs(os.path.dirname(file), exist_ok=True)
 
@@ -454,13 +494,16 @@ def run(full=False, nvd_api_key=None, config_file=""):
     else:
         print("[+] Downloading latest versions of resources ...")
 
-        if os.path.isfile(CONFIG['cpe_search']['CPE_DATABASE_FILE']):
-            shutil.move(CONFIG['cpe_search']['CPE_DATABASE_FILE'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
+        if os.path.isfile(CONFIG['cpe_search']['DATABASE_NAME']):
+            shutil.move(CONFIG['cpe_search']['DATABASE_NAME'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
         if os.path.isfile(CONFIG['cpe_search']['DEPRECATED_CPES_FILE']):
             shutil.move(CONFIG['cpe_search']['DEPRECATED_CPES_FILE'], CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
-        if os.path.isfile(CONFIG['DATABASE_FILE']):
-            shutil.move(CONFIG['DATABASE_FILE'], CONFIG['DATABASE_BACKUP_FILE'])
-
+        if os.path.isfile(CONFIG['DATABASE_NAME']):
+            shutil.move(CONFIG['DATABASE_NAME'], CONFIG['DATABASE_BACKUP_FILE'])
+        # backup mariadb
+        if CONFIG['DATABASE']['TYPE'] == 'mariadb':
+            return_code = subprocess.call(['mariadb-dump', '-u', CONFIG['DATABASE']['USER'], f"--password={CONFIG['DATABASE']['PASSWORD']}", '-h', CONFIG['DATABASE']['HOST'], '-P', str(CONFIG['DATABASE']['PORT']),
+                                            '--add-drop-database', '-B', CONFIG['DATABASE_NAME'], '-B', CONFIG['cpe_search']['DATABASE_NAME'], '-r', MARIADB_BACKUP_FILE])
         try:
             quiet_flag = ""
             if QUIET:
@@ -469,7 +512,7 @@ def run(full=False, nvd_api_key=None, config_file=""):
                 quiet_flag = "-q --show-progress"
 
             return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(CPE_DICT_ARTIFACT_URL),
-                                          shlex.quote(CONFIG['cpe_search']['CPE_DATABASE_FILE'])), shell=True)
+                                          shlex.quote(CONFIG['cpe_search']['DATABASE_NAME'])), shell=True)
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
 
@@ -479,7 +522,7 @@ def run(full=False, nvd_api_key=None, config_file=""):
                 raise(Exception("Could not download latest resource files"))
 
             return_code = subprocess.call("wget %s %s -O %s" % (quiet_flag, shlex.quote(VULNDB_ARTIFACT_URL),
-                                          shlex.quote(CONFIG['DATABASE_FILE'])), shell=True)
+                                          shlex.quote(CONFIG['DATABASE_NAME'])), shell=True)
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
 
@@ -489,17 +532,34 @@ def run(full=False, nvd_api_key=None, config_file=""):
                 os.remove(CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
             if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
                 os.remove(CONFIG['DATABASE_BACKUP_FILE'])
+
+            # migrate sqlite to mariadb if specified database type is mariadb 
+            if CONFIG['DATABASE']['TYPE'] == 'mariadb':
+                return_code = subprocess.call(['./migrate_sqlite_to_mariadb.sh', CONFIG['DATABASE_NAME'], CONFIG['cpe_search']['DATABASE_NAME'], CONFIG_FILE])
+                if return_code != 0:
+                    raise(Exception('Migration of database failed'))
+                os.remove(MARIADB_BACKUP_FILE)
+                os.remove(CONFIG['DATABASE_NAME'])
+                os.remove(CONFIG['cpe_search']['DATABASE_NAME'])
         except Exception as e:
             print("[!] Encountered an error: %s" % str(e))
             if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
-                shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['CPE_DATABASE_FILE'])
+                shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['DATABASE_NAME'])
                 print("[+] Restored software infos from backup")
             if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
                 shutil.move(CONFIG['DEPRECATED_CPES_BACKUP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'])
                 print("[+] Restored software deprecation infos from backup")
             if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
-                shutil.move(CONFIG['DATABASE_BACKUP_FILE'], CONFIG['DATABASE_FILE'])
+                shutil.move(CONFIG['DATABASE_BACKUP_FILE'], CONFIG['DATABASE_NAME'])
                 print("[+] Restored vulnerability infos from backup")
+            if os.path.isfile(MARIADB_BACKUP_FILE):
+                return_code = subprocess.run(['mariadb', '-u', CONFIG['DATABASE']['USER'], f"--password={CONFIG['DATABASE']['PASSWORD']}", '-h', CONFIG['DATABASE']['HOST'], '-P', CONFIG['DATABASE']['PORT'], '<', MARIADB_BACKUP_FILE])
+                if return_code != 0:
+                    print('[-] Failed to restore mariadb')
+                else:
+                    print('[+] Restored mariadb from backup')
+                os.remove(MARIADB_BACKUP_FILE)
+
 
 
 if __name__ == "__main__":

@@ -5,11 +5,11 @@ from collections import OrderedDict
 import json
 import os
 import re
-import sqlite3
 import sys
 import threading
 
 from cpe_version import CPEVersion
+from cpe_search.database_wrapper_functions import *
 from cpe_search.cpe_search import (
     is_cpe_equal,
     search_cpes,
@@ -18,6 +18,7 @@ from cpe_search.cpe_search import (
     create_base_cpe_if_versionless_query,
     get_possible_versions_in_query
 )
+from cpe_search.cpe_search import _load_config as load_config_cpe
 
 DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
 MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
@@ -122,7 +123,8 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
             continue
 
         query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score, vector FROM cve WHERE cve_id = ?'
-        edb_ids, descr, publ, last_mod, cvss_ver, score, vector = db_cursor.execute(query, (cve_id,)).fetchone()
+        db_cursor.execute(query, (cve_id,))
+        edb_ids, descr, publ, last_mod, cvss_ver, score, vector = db_cursor.fetchone()
         detailed_vulns[cve_id] = {"id": cve_id, "description": descr, "published": publ, "modified": last_mod,
                                   "href": "https://nvd.nist.gov/vuln/detail/%s" % cve_id, "cvss_ver": cvss_ver,
                                   "cvss": score, "cvss_vec": vector, 'vuln_match_reason': match_reason}
@@ -137,7 +139,10 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
         if add_other_exploit_refs:
             # from NVD
             query = 'SELECT exploit_ref FROM nvd_exploits_refs INNER JOIN cve_nvd_exploits_refs ON nvd_exploits_refs.ref_id = cve_nvd_exploits_refs.ref_id WHERE cve_id = ?'
-            nvd_exploit_refs = db_cursor.execute(query, (cve_id,)).fetchall()
+            nvd_exploit_refs = ''
+            db_cursor.execute(query, (cve_id,))
+            if db_cursor:
+                nvd_exploit_refs = db_cursor.fetchall()
             if nvd_exploit_refs:
                 if "exploits" not in detailed_vulns[cve_id]:
                     detailed_vulns[cve_id]["exploits"] = []
@@ -149,7 +154,10 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
 
             # from PoC-in-Github
             query = 'SELECT reference FROM cve_poc_in_github_map WHERE cve_id = ?'
-            poc_in_github_refs = db_cursor.execute(query, (cve_id,)).fetchall()
+            poc_in_github_refs = ''
+            db_cursor.execute(query, (cve_id,))
+            if db_cursor:
+                poc_in_github_refs = db_cursor.fetchall()
             if poc_in_github_refs:
                 if "exploits" not in detailed_vulns[cve_id]:
                     detailed_vulns[cve_id]["exploits"] = []
@@ -360,13 +368,13 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         config = _load_config()
     close_cursor_after = False
     if not db_cursor:
-        db_conn_file = sqlite3.connect(config['DATABASE_FILE'])
+        db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
         if keep_data_in_memory:
             db_conn_mem = sqlite3.connect(':memory:')
-            db_conn_file.backup(db_conn_mem)
+            db_conn.backup(db_conn_mem)
             db_cursor = db_conn_mem.cursor()
         else:
-            db_cursor = db_conn_file.cursor()
+            db_cursor = db_conn.cursor()
         close_cursor_after = True
 
     # if given query is not already a CPE, retrieve a CPE that matches the query
@@ -545,23 +553,8 @@ def parse_args():
 def _load_config(config_file=DEFAULT_CONFIG_FILE):
     """Load config from file"""
 
-    def load_config_dict(_dict):
-        config = {}
-        for key, val in _dict.items():
-            if isinstance(val, dict):
-                val = load_config_dict(val)
-            elif 'file' in key.lower():
-                if not os.path.isabs(val):
-                    if val != os.path.expanduser(val):  # home-relative path was given
-                        val = os.path.expanduser(val)
-                    else:
-                        val = os.path.join(os.path.dirname(os.path.abspath(config_file)), val)
-            config[key] = val
-        return config
-
-    with open(config_file) as f:  # default: config.json
-        config_raw = json.loads(f.read())
-        config = load_config_dict(config_raw)
+    config = load_config_cpe(config_file)
+    config['cpe_search']['DATABASE'] = config['DATABASE']
 
     return config
 
@@ -582,8 +575,8 @@ def main():
 
     # get handle for vulnerability database
     config = _load_config(args.config)
-    db_conn_file = sqlite3.connect(config['DATABASE_FILE'])
-    db_cursor = db_conn_file.cursor()
+    db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
+    db_cursor = db_conn.cursor()
 
     # retrieve known vulnerabilities for every query and print them
     vulns = {}
