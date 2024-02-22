@@ -470,14 +470,26 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
             bad_match = True
 
         # if a version number is clearly detectable in query, ensure this version is somewhat reflected in the CPE
-        cpe_has_matching_version = False
-        for possible_version in versions_in_query:
-            if any(char.isdigit() and char not in check_str for char in possible_version):
-                continue
-            cpe_has_matching_version = True
-            break
-        if not cpe_has_matching_version:
-            bad_match = True
+        if not bad_match:
+            cpe_has_matching_version = False
+            for possible_version in versions_in_query:
+                # ensure version has at least two parts to avoid using a short version for checking
+                if '.' not in possible_version:
+                    continue
+
+                idx_pos_ver, idx_check_str = 0, 0
+                while idx_pos_ver < len(possible_version) and idx_check_str < len(check_str):
+                    while not possible_version[idx_pos_ver].isdigit():
+                        idx_pos_ver += 1
+                    if possible_version[idx_pos_ver] == check_str[idx_check_str]:
+                        idx_pos_ver += 1
+                    idx_check_str += 1
+
+                if idx_pos_ver == len(possible_version):
+                    cpe_has_matching_version = True
+                    break
+            if not cpe_has_matching_version:
+                bad_match = True
 
         if bad_match:
             if cpes[query][0][1] > software_match_threshold:
