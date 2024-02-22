@@ -60,7 +60,7 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
     // Begin transaction
     SQLite::Transaction transaction(db);
     SQLite::Statement cve_query(db, "INSERT INTO cve VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    SQLite::Statement cve_cpe_query(db, "INSERT INTO cve_cpe VALUES (?, ?, ?, ?, ?, ?, ?)");
+    SQLite::Statement cve_cpe_query(db, "INSERT INTO cve_cpe VALUES (?, ?, ?, ?, ?, ?)");
     SQLite::Statement add_exploit_ref_query(db, "INSERT INTO nvd_exploits_refs VALUES (?, ?)");
     SQLite::Statement add_cveid_exploit_ref_query(db, "INSERT INTO cve_nvd_exploits_refs VALUES (?, ?)");
 
@@ -71,13 +71,13 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
 
     json metrics_entry, metrics_type_entry, references_entry;
     std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity;
-    std::string cvss_version, ref_url, op, vulnerable_with_cpes_node_str, vulnerable_with_cpes_str;
+    std::string cvss_version, ref_url, op;
     std::unordered_map<std::string, int> nvd_exploits_refs;
     std::unordered_map<std::string, std::unordered_set<int>> cveid_exploits_map;
     std::size_t datetime_dot_pos;
     bool vulnerable;
     double base_score;
-    int cur_node_id, cur_with_str_idx;
+    int cur_node_id;
 
     // iterate the array
     for (auto &cve_entry : j["vulnerabilities"]) {
@@ -189,17 +189,12 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
                 op = "OR";  // default if no operator explicitly specified
 
             std::vector<std::vector<VagueCpeInfo>> all_vulnerable_cpes;
-            std::vector<std::string> vulnerable_with_cpes_node_strs;
             for (auto &config_nodes_entry : cve_config_entry["nodes"]) {
                 std::vector<VagueCpeInfo> node_vulnerable_cpes;
-                vulnerable_with_cpes_node_str = "";
 
                 if (config_nodes_entry.find("cpeMatch") != config_nodes_entry.end()) {
                     for (auto &cpe_entry : config_nodes_entry["cpeMatch"]) {
                         vague_cpe_info = {cpe_entry["criteria"], "", "", "", ""};
-
-                        if (op == "AND")
-                            vulnerable_with_cpes_node_str += vague_cpe_info.vague_cpe + ",";
 
                         if (!cpe_entry["vulnerable"])
                             continue;
@@ -227,26 +222,11 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
                 }
 
                 all_vulnerable_cpes.push_back(node_vulnerable_cpes);
-
-                if (vulnerable_with_cpes_node_str != "")
-                    vulnerable_with_cpes_node_str.pop_back();
-                vulnerable_with_cpes_node_strs.push_back(vulnerable_with_cpes_node_str);
             }
 
             cur_node_id = -1;
             for (auto &node_vulnerable_cpes : all_vulnerable_cpes) {
                 cur_node_id++;
-                vulnerable_with_cpes_str = "";
-                cur_with_str_idx = -1;
-                for (auto &with_str : vulnerable_with_cpes_node_strs) {
-                    cur_with_str_idx++;
-
-                    if (cur_with_str_idx != cur_node_id)
-                        vulnerable_with_cpes_str += with_str + ',';
-                }
-
-                if (vulnerable_with_cpes_str != "")
-                    vulnerable_with_cpes_str.pop_back();
 
                 for (auto &vague_cpe_info : node_vulnerable_cpes) {
                     cve_cpe_query.bind(2, vague_cpe_info.vague_cpe);
@@ -260,7 +240,6 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
                         cve_cpe_query.bind(6, true);
                     else
                         cve_cpe_query.bind(6, false);
-                    cve_cpe_query.bind(7, vulnerable_with_cpes_str);
 
                     try {
                         cve_cpe_query.exec();
@@ -332,8 +311,8 @@ int main(int argc, char *argv[]) {
         db.exec("CREATE TABLE cve (cve_id VARCHAR(25), description TEXT, edb_ids TEXT, published DATETIME, last_modified DATETIME, \
             cvss_version CHAR(3), base_score CHAR(3), vector VARCHAR(60), severity VARCHAR(15), PRIMARY KEY(cve_id))");
         db.exec("CREATE TABLE cve_cpe (cve_id VARCHAR(25), cpe TEXT, cpe_version_start VARCHAR(255), is_cpe_version_start_including BOOL, \
-            cpe_version_end VARCHAR(255), is_cpe_version_end_including BOOL, with_cpes TEXT, PRIMARY KEY(cve_id, cpe, cpe_version_start, \
-            is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including, with_cpes))");
+            cpe_version_end VARCHAR(255), is_cpe_version_end_including BOOL, PRIMARY KEY(cve_id, cpe, cpe_version_start, \
+            is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including))");
         db.exec("CREATE TABLE nvd_exploits_refs (ref_id INTEGER, exploit_ref text, PRIMARY KEY (ref_id))");
         db.exec("CREATE TABLE cve_nvd_exploits_refs (cve_id VARCHAR(25), ref_id INTEGER, PRIMARY KEY (cve_id, ref_id))");
 
