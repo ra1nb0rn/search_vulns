@@ -101,3 +101,7 @@
 .bg-darker {
     background-color: #d7d4d4 !important;
 }
+
+button[data-id="select-export-fields"] {
+    min-width: 15rem;
+}
