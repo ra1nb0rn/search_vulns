@@ -13,8 +13,8 @@ PASSWORD=$(jq -r '.DATABASE.PASSWORD' $CONFIG_FILE)
 PORT=$(jq -r '.DATABASE.PORT' $CONFIG_FILE)
 DATABASE_NAME=$(jq -r '.DATABASE_NAME' $CONFIG_FILE)
 CPE_DATABASE_NAME=$(jq -r '.cpe_search.DATABASE_NAME' $CONFIG_FILE)
-CREATE_TABLES_QUERIES_VULNDB=$ABS_PATH/$(jq -r '.CREATE_TABLES_QUERIES_FILE' $CONFIG_FILE)
-CREATE_TABLES_QUERIES_CPE_SEARCH=$ABS_PATH/$(jq -r '.cpe_search.CREATE_TABLES_QUERIES_FILE' $CONFIG_FILE)
+CREATE_TABLES_QUERIES_VULNDB=$ABS_PATH/$(jq -r '.CREATE_SQL_STATEMENTS_FILE' $CONFIG_FILE)
+CREATE_TABLES_QUERIES_CPE_SEARCH=$ABS_PATH/$(jq -r '.cpe_search.CREATE_SQL_STATEMENTS_FILE' $CONFIG_FILE)
 
 add_vulndb_data() {
     mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL local_infile=1;"
@@ -48,10 +48,15 @@ perform_integrity_checks() {
         fi
     done
 
+    # remove csv files
+    rm $ABS_PATH/*.csv $ABS_PATH/*.csv.mariadb
+
     if [ $migration_successfull -eq 0 ]; then
         echo "[+] Migration successful"
+        return 0
     else
         echo "[-] Migration failed"
+        return 1
     fi
 }
 
@@ -73,18 +78,28 @@ python3 $ABS_PATH/export_database_as_csv.py sqlite $DATABASE_FILE
 python3 $ABS_PATH/export_database_as_csv.py sqlite $CPE_DATABASE_FILE
 
 # Create databases
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -e "CREATE OR REPLACE DATABASE $DATABASE_NAME;"
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -e "CREATE OR REPLACE DATABASE $CPE_DATABASE_NAME;"
 echo "[+] Add data to mariadb"
 # get queries from file
-vulndb_create_queries=$(cat $CREATE_TABLES_QUERIES_VULNDB | jq '.[] | select(.mariadb) | .mariadb'| tr '\n' ' ' | sed 's/"//g')
-cpe_search_create_queries=$(cat $CREATE_TABLES_QUERIES_CPE_SEARCH | jq '.[] | select(.mariadb) | .mariadb' | tr '\n' ' ' | sed 's/"//g')
+vulndb_create_tables_queries=$(cat $CREATE_TABLES_QUERIES_VULNDB | jq '.TABLES | .[] | select(.mariadb) | .mariadb'| tr '\n' ' ' | sed 's/"//g')
+cpe_search_create_tables_queries=$(cat $CREATE_TABLES_QUERIES_CPE_SEARCH | jq '.TABLES | .[] | select(.mariadb) | .mariadb' | tr '\n' ' ' | sed 's/"//g')
 # create vulndb tables and add data
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "$vulndb_create_queries"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 8589934592;"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 8589934592;"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "$vulndb_create_tables_queries"
 add_vulndb_data
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 16777216;"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 16777216;"
 # create cpe_search tables and add data
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "$cpe_search_create_queries"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 8589934592;"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 8589934592;"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "$cpe_search_create_tables_queries"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 16777216;"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 16777216;"
 add_cpe_search_data
+
+# create views
+vulndb_create_views=$(cat $CREATE_TABLES_QUERIES_VULNDB | jq '.VIEWS | .[] | select(.mariadb) | .mariadb'| tr '\n' ' ' | sed 's/"//g')
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "$vulndb_create_views"
 
 # Export mariadb databases
 echo "[+] Export mariadb as csv"
@@ -95,6 +110,3 @@ python3 $ABS_PATH/export_database_as_csv.py mariadb $CPE_DATABASE_NAME,$USER,$PA
 # Loop through each CSV file in the current folder
 echo "[+] Perform integrity checks"
 perform_integrity_checks
-
-# remove csv files
-rm $ABS_PATH/*.csv $ABS_PATH/*.csv.mariadb

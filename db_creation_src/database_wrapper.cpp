@@ -23,12 +23,6 @@ PreparedStatement* DatabaseWrapper::get_add_cveid_exploit_ref_query() {
 
 SQLiteDB::SQLiteDB(const std::string& outfile) {
     db = std::make_unique<SQLite::Database>(outfile,  SQLite::OPEN_CREATE | SQLite::OPEN_READWRITE);
- 
-    // drop tables
-    db->exec("DROP TABLE IF EXISTS cve");
-    db->exec("DROP TABLE IF EXISTS cve_cpe");
-    db->exec("DROP TABLE IF EXISTS nvd_exploits_refs");
-    db->exec("DROP TABLE IF EXISTS cve_nvd_exploits_refs");
 }
 
 void SQLiteDB::execute_query(std::string query) {
@@ -74,6 +68,9 @@ MariaDB::MariaDB(nlohmann::json config) {
     std::unique_ptr<sql::Statement> stmnt(conn->createStatement());
     stmnt->executeQuery(create_db_query);
     stmnt->executeQuery("use "+database+";");
+    // set max table size to 8GB
+    stmnt->executeQuery("SET max_heap_table_size = 8589934592;");
+    stmnt->executeQuery("SET tmp_table_size = 8589934592;");
 }
 
 void MariaDB::execute_query(std::string query) {
@@ -98,5 +95,8 @@ void MariaDB::start_transaction() {
 }
 
 void MariaDB::close_connection() {
+    std::unique_ptr<sql::Statement> stmnt(conn->createStatement());
+    stmnt->executeQuery("SET max_heap_table_size = @@max_heap_table_size;");
+    stmnt->executeQuery("SET tmp_table_size = @@tmp_table_size;");
     conn->close();
 }

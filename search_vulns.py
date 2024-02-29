@@ -138,7 +138,7 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
         # add other exploit references
         if add_other_exploit_refs:
             # from NVD
-            query = 'SELECT exploit_ref FROM nvd_exploits_refs INNER JOIN cve_nvd_exploits_refs ON nvd_exploits_refs.ref_id = cve_nvd_exploits_refs.ref_id WHERE cve_id = ?'
+            query = 'SELECT exploit_ref FROM nvd_exploits_refs_view WHERE cve_id = ?'
             nvd_exploit_refs = ''
             db_cursor.execute(query, (cve_id,))
             if db_cursor:
@@ -207,7 +207,10 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
     general_cpe_prefix = ':'.join(cpe.split(':')[:5]) + ':'
     query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
              'is_cpe_version_end_including FROM cve_cpe WHERE cpe LIKE ?')
-    general_cpe_nvd_data =  set(db_cursor.execute(query, (general_cpe_prefix + '%%', )).fetchall())
+    db_cursor.execute(query, (general_cpe_prefix + '%%', ))
+    general_cpe_nvd_data = set()
+    if db_cursor:
+        general_cpe_nvd_data =  set(db_cursor.fetchall())
     general_cpe_nvd_data_structered = {}
 
     for cve_cpe_entry in general_cpe_nvd_data:
@@ -369,7 +372,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     close_cursor_after = False
     if not db_cursor:
         db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
-        if keep_data_in_memory:
+        if keep_data_in_memory and config['DATABASE']['TYPE'] == 'sqlite':
             db_conn_mem = sqlite3.connect(':memory:')
             db_conn.backup(db_conn_mem)
             db_cursor = db_conn_mem.cursor()

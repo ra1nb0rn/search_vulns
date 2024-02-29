@@ -295,7 +295,7 @@ int main(int argc, char *argv[]) {
 
     if (argc != 5) {
         std::cerr << "Wrong argument count." << std::endl;
-        std::cerr << "Usage: ./create_db cve_folder path_to_config outfile create_tables_queries_file" << std::endl;
+        std::cerr << "Usage: ./create_db cve_folder path_to_config outfile create_sql_statements_file" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -303,8 +303,8 @@ int main(int argc, char *argv[]) {
     std::ifstream config_file(argv[2]);
     json config = json::parse(config_file);
     std::string outfile = argv[3];
-    std::ifstream create_tables_queries_file(argv[4]);
-    json create_tables_queries = json::parse(create_tables_queries_file);
+    std::ifstream create_sql_statements_file(argv[4]);
+    json create_sql_statements = json::parse(create_sql_statements_file);
     std::string database_type = config["DATABASE"]["TYPE"];
     std::string filename;
     std::vector<std::string> cve_files;
@@ -322,10 +322,10 @@ int main(int argc, char *argv[]) {
         } 
 
         // create tables and prepared statements
-        db->execute_query(create_tables_queries["CVE"][database_type]);
-        db->execute_query(create_tables_queries["CVE_CPE"][database_type]);
-        db->execute_query(create_tables_queries["CVE_NVD_EXPLOITS_REFS"][database_type]);
-        db->execute_query(create_tables_queries["NVD_EXPLOITS_REFS"][database_type]);
+        db->execute_query(create_sql_statements["TABLES"]["CVE"][database_type]);
+        db->execute_query(create_sql_statements["TABLES"]["CVE_CPE"][database_type]);
+        db->execute_query(create_sql_statements["TABLES"]["CVE_NVD_EXPLOITS_REFS"][database_type]);
+        db->execute_query(create_sql_statements["TABLES"]["NVD_EXPLOITS_REFS"][database_type]);
         db->create_prepared_statements();
 
         DIR *dir;
@@ -348,6 +348,9 @@ int main(int argc, char *argv[]) {
         for (const auto &file : cve_files) {
             add_to_db(db.get(), file);
         }
+
+        // create view for nvd_exploits_refs
+        db->execute_query(create_sql_statements["VIEWS"]["NVD_EXPLOITS_REFS_VIEW"][database_type]);
     }
     catch (std::exception& e) {
         std::cerr << "exception: " << e.what() << std::endl;
