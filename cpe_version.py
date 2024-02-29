@@ -144,3 +144,6 @@ class CPEVersion:
 
     def __str__(self):
         return self.version_str
+
+    def __bool__(self):
+        return str(self) not in ('-', '*') or not str(self)

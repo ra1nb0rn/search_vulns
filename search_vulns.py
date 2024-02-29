@@ -50,144 +50,11 @@ def printit(text: str = "", end: str = "\n", color=SANE):
     sys.stdout.flush()
 
 
-def get_exact_vuln_matches(cpe, db_cursor):
-    """Get vulns whose cpe entry matches the given one exactly"""
+def is_cpe_included_from_field(cpe1, cpe2, field=6):
+    '''Return True if cpe1 is included in cpe2 starting from the provided field'''
 
-    cpe_split = cpe.split(':')
-    query_cpe1 = ':'.join(cpe_split[:7]) + ':%%'
-
-    # create main CPE to query for and alt cpes with wildcards '*' and '-' replaced by each other
-    query_cpes = [query_cpe1]
-    repl_version, repl_update = '', ''
-    if cpe_split[5] == '*':
-        repl_version = '-'
-    elif cpe_split[5] == '-':
-        repl_version = '*'
-
-    if repl_version:
-        query_cpes.append(':'.join(cpe_split[:5]) + ':' + repl_version + ':' + cpe_split[6] + ':%%')
-
-    if cpe_split[6] == '*':
-        repl_update = '-'
-    elif cpe_split[6] == '-':
-        repl_update = '*'
-
-    if repl_update:
-        query_cpes.append(':'.join(cpe_split[:6]) + ':' + repl_update + ':%%')
-
-    if repl_version and repl_update:
-        query_cpes.append(':'.join(cpe_split[:5]) + ':' + repl_version + ':' + repl_update + ':%%')
-
-    # query for vulns with all retrieved variants of the supplied CPE
-    or_str = 'OR cpe LIKE ?' * (len(query_cpes) - 1)
-    query = "SELECT DISTINCT cpe, cve_id, with_cpes FROM cve_cpe WHERE cpe LIKE ? " + or_str
-    pot_vulns = db_cursor.execute(query, query_cpes).fetchall()
-    vulns = []
-    for vuln_cpe, cve_id, with_cpes in pot_vulns:
-        if is_cpe_included_after_version(cpe, vuln_cpe):
-            vulns.append(((cve_id, with_cpes), 'exact_cpe'))
-    return vulns
-
-
-def get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_general_cpe_vulns=False):
-    """
-    Get vulnerability data that is stored in the DB more generally,
-    e.g. with version_start and version_end information
-    """
-    
-    vulns = []
-    cpe_version = ""
-
-    if len(cpe_parts) > 5 and cpe_parts[5] not in ('-', '*'):  # for CPE 2.3
-        cpe_version = cpe_parts[5]
-
-    # query DB for general CPE-vuln data, potentially with cpe_version_start and cpe_version_end fields
-    general_cpe_nvd_data = set()
-    query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
-             'is_cpe_version_end_including, with_cpes FROM cve_cpe WHERE cpe LIKE ? OR cpe LIKE ? OR cpe LIKE ?')
-    get_cpes_query = 'SELECT cpe FROM cve_cpe WHERE cpe LIKE ? AND cve_id = ?'
-
-    for cur_part_idx in range(5, len(cpe_parts)):
-        if cpe_parts[cur_part_idx] not in ('*', '-'):
-            cur_cpe_prefix = ':'.join(cpe_parts[:cur_part_idx])
-            cpe_wildcards = ["%s::%%" % cur_cpe_prefix, "%s:-:%%" % cur_cpe_prefix, "%s:*:%%" % cur_cpe_prefix]
-            general_cpe_nvd_data |= set(db_cursor.execute(query, cpe_wildcards).fetchall())
-
-            # remove vulns that have a more specific exact CPE, which cur_cpe_prefix is a prefix of
-            found_vulns_cpes = {}
-            remove_vulns = set()
-            for pot_vuln in general_cpe_nvd_data:
-                cve_id, vuln_cpe, with_cpes = pot_vuln[0], pot_vuln[1], pot_vuln[6]
-                version_start, version_end = pot_vuln[2], pot_vuln[4]
-
-                if not version_start and not version_end:
-                    if cve_id not in found_vulns_cpes:
-                        vuln_cpes = set(db_cursor.execute(get_cpes_query, (cur_cpe_prefix+':%%', pot_vuln[0])))
-                        found_vulns_cpes[cve_id] = vuln_cpes
-                    if len(found_vulns_cpes[cve_id]) > 1:
-                        remove_vulns.add(pot_vuln)
-
-            general_cpe_nvd_data -= remove_vulns
-
-    if not cpe_version:
-        general_query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
-                         'is_cpe_version_end_including, with_cpes FROM cve_cpe WHERE cpe LIKE ?')
-        general_vulns = set(db_cursor.execute(general_query, (':'.join(cpe_parts[:5])+':%%', )))
-        all_general_vulns = [(vuln_data, 'general_cpe_but_ok') for vuln_data in (general_cpe_nvd_data | general_vulns)]
-        return all_general_vulns
-
-    # check version information of potential vulns to determine whether given version is actually vulnerable
-    vulns = []
-    cpe_version = CPEVersion(cpe_version)
-    for pot_vuln in general_cpe_nvd_data:
-        vuln_cpe = pot_vuln[1]
-        version_start, version_start_incl = pot_vuln[2], pot_vuln[3]
-        version_end, version_end_incl = pot_vuln[4], pot_vuln[5]
-        is_cpe_vuln, vuln_match_reason = False, 'version_in_range'
-
-        if version_start and version_end:
-            if version_start_incl == True and version_end_incl == True:
-                is_cpe_vuln = CPEVersion(version_start) <= cpe_version <= CPEVersion(version_end)
-            elif version_start_incl == True and version_end_incl == False:
-                is_cpe_vuln = CPEVersion(version_start) <= cpe_version < CPEVersion(version_end)
-            elif version_start_incl == False and version_end_incl == True:
-                is_cpe_vuln = CPEVersion(version_start) < cpe_version <= CPEVersion(version_end)
-            else:
-                is_cpe_vuln = CPEVersion(version_start) < cpe_version < CPEVersion(version_end)
-        elif version_start:
-            if version_end_incl == True:
-                is_cpe_vuln = CPEVersion(version_start) <= cpe_version
-            elif version_end_incl == False:
-                is_cpe_vuln = CPEVersion(version_start) < cpe_version
-        elif version_end:
-            if version_end_incl == True:
-                is_cpe_vuln = cpe_version <= CPEVersion(version_end)
-            elif version_end_incl == False:
-                is_cpe_vuln = cpe_version < CPEVersion(version_end)
-        else:
-            # if configured, ignore vulnerabilities that only affect a general CPE
-            if ignore_general_cpe_vulns and all(val in ('*', '-') for val in vuln_cpe.split(':')[5:]):
-                continue
-            is_cpe_vuln = is_cpe_included_after_version(cpe, vuln_cpe)
-            vuln_match_reason = 'general_cpe'
-
-        # check that everything after the version field matches in the CPE
-        if is_cpe_vuln:
-            if cpe.count(':') > 5 and vuln_cpe.count(':') > 5:
-                if not is_cpe_included_after_version(cpe, vuln_cpe):
-                    is_cpe_vuln = False
-
-        if is_cpe_vuln:
-            vulns.append((pot_vuln, vuln_match_reason))
-
-    return vulns
-
-
-def is_cpe_included_after_version(cpe1, cpe2):
-    '''Return True if cpe1 is included in cpe2 after the version section'''
-
-    cpe1_remainder_fields = cpe1.split(':')[6:]
-    cpe2_remainder_fields = cpe2.split(':')[6:]
+    cpe1_remainder_fields = cpe1.split(':')[field:]
+    cpe2_remainder_fields = cpe2.split(':')[field:]
 
     for i in range(min(len(cpe1_remainder_fields), len(cpe2_remainder_fields))):
         if cpe1_remainder_fields[i] in ('*', '-'):
@@ -200,20 +67,19 @@ def is_cpe_included_after_version(cpe1, cpe2):
     return True
 
 
-def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_refs=False):
-    """Get known vulnerabilities for the given CPE 2.3 string"""
+def is_cpe_included_after_version(cpe1, cpe2):
+    '''Return True if cpe1 is included in cpe2 starting after the version'''
 
-    cpe_parts = cpe.split(':')
-    vulns = []
+    return is_cpe_included_from_field(cpe1, cpe2)
 
-    vulns += get_exact_vuln_matches(cpe, db_cursor)
-    vulns += get_vulns_version_start_end_matches(cpe, cpe_parts, db_cursor, ignore_general_cpe_vulns)
 
-    # retrieve more information about the found vulns, e.g. CVSS scores and possible exploits
+def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
+    '''Collect more detailed information about the given vulns and return it'''
+
     detailed_vulns = {}
     for vuln_info in vulns:
         vuln, match_reason = vuln_info
-        cve_id = vuln[0]
+        cve_id = vuln
         if cve_id in detailed_vulns:
             continue
 
@@ -257,6 +123,105 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_
                         detailed_vulns[cve_id]["exploits"].append(poc_in_github_ref[0])
 
     return detailed_vulns
+
+
+def _is_version_start_end_matching(cpe_version, version_start, version_start_incl, version_end, version_end_incl):
+    """Return boolean whether the provided CPE version lies within the provided range modifiers"""
+
+    if version_start and version_end:
+        if version_start_incl == True and version_end_incl == True:
+            return CPEVersion(version_start) <= cpe_version <= CPEVersion(version_end)
+        elif version_start_incl == True and version_end_incl == False:
+            return CPEVersion(version_start) <= cpe_version < CPEVersion(version_end)
+        elif version_start_incl == False and version_end_incl == True:
+            return CPEVersion(version_start) < cpe_version <= CPEVersion(version_end)
+        else:
+            return CPEVersion(version_start) < cpe_version < CPEVersion(version_end)
+    elif version_start:
+        if version_end_incl == True:
+            return CPEVersion(version_start) <= cpe_version
+        elif version_end_incl == False:
+            return CPEVersion(version_start) < cpe_version
+    elif version_end:
+        if version_end_incl == True:
+            return cpe_version <= CPEVersion(version_end)
+        elif version_end_incl == False:
+            return cpe_version < CPEVersion(version_end)
+
+    return False
+
+
+def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_refs=False):
+    """Get known vulnerabilities for the given CPE 2.3 string"""
+
+    cpe_parts = cpe.split(':')
+    cpe_version = CPEVersion(cpe_parts[5])
+    vulns = []
+
+    general_cpe_prefix = ':'.join(cpe.split(':')[:5]) + ':'
+    query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
+             'is_cpe_version_end_including FROM cve_cpe WHERE cpe LIKE ?')
+    general_cpe_nvd_data =  set(db_cursor.execute(query, (general_cpe_prefix + '%%', )).fetchall())
+    general_cpe_nvd_data_structered = {}
+
+    for cve_cpe_entry in general_cpe_nvd_data:
+        if cve_cpe_entry[0] not in general_cpe_nvd_data_structered:
+            general_cpe_nvd_data_structered[cve_cpe_entry[0]] = []
+        general_cpe_nvd_data_structered[cve_cpe_entry[0]].append(cve_cpe_entry)
+
+    for cve_id, cve_cpe_data in general_cpe_nvd_data_structered.items():
+        cve_cpes = [cve_cpe_entry[1] for cve_cpe_entry in cve_cpe_data]
+        for cve_cpe_entry in cve_cpe_data:
+            vuln_cpe = cve_cpe_entry[1]
+            version_start, version_start_incl = cve_cpe_entry[2:4]
+            version_end, version_end_incl = cve_cpe_entry[4:]
+
+            is_cpe_vuln, bad_nvd_entry = False, False
+            match_reason = ''
+            is_cpe_vuln = is_cpe_included_from_field(cpe, vuln_cpe, 5)
+            if cpe_version and (version_start or version_end):
+                # additionally check if version matches range
+                is_cpe_vuln = _is_version_start_end_matching(cpe_version, version_start, version_start_incl, version_end, version_end_incl)
+                match_reason = 'version_in_range'
+            elif is_cpe_vuln:
+                # check for bad NVD configuration entry, where a general CPE and a more specific CPE are affected
+                for vuln_other_cpe in cve_cpes:
+                    if vuln_cpe != vuln_other_cpe:
+                        if is_cpe_included_from_field(vuln_cpe, vuln_other_cpe, 5):
+                            # assume the number of fields is the same for both, since they're official NVD CPEs
+                            vuln_cpe_fields, vuln_other_cpe_fields = vuln_cpe.split(':'), vuln_other_cpe.split(':')
+                            for i in range(len(vuln_other_cpe_fields)-1, -1, -1):
+                                if (not CPEVersion(vuln_cpe_fields[i])) and (not CPEVersion(vuln_other_cpe_fields[i])):
+                                    continue
+                                elif CPEVersion(vuln_other_cpe_fields[i]):
+                                    bad_nvd_entry = True
+                                    break
+                                else:
+                                    break
+                    if bad_nvd_entry:
+                        break
+
+                # check for general CPE vuln match
+                if not CPEVersion(vuln_cpe.split(':')[5]):
+                    if not cpe_version:
+                        match_reason = 'general_cpe_but_ok'
+                    else:
+                        match_reason = 'general_cpe'
+                        if ignore_general_cpe_vulns:
+                            is_cpe_vuln = False
+
+            # final check that everything after the version field matches in the vuln's CPE
+            if is_cpe_vuln:
+                if cpe.count(':') > 5 and vuln_cpe.count(':') > 5:
+                    if not is_cpe_included_after_version(cpe, vuln_cpe):
+                        is_cpe_vuln = False
+
+            if is_cpe_vuln and not bad_nvd_entry:
+                vulns.append((cve_id, match_reason))
+                break
+
+    # retrieve more information about the found vulns, e.g. CVSS scores and possible exploits
+    return get_vuln_details(db_cursor, vulns, add_other_exploit_refs)
 
 
 def print_vulns(vulns, to_string=False):
