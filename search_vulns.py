@@ -479,9 +479,9 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
 
                 idx_pos_ver, idx_check_str = 0, 0
                 while idx_pos_ver < len(possible_version) and idx_check_str < len(check_str):
-                    while not possible_version[idx_pos_ver].isdigit():
+                    while idx_pos_ver < len(possible_version) and not possible_version[idx_pos_ver].isdigit():
                         idx_pos_ver += 1
-                    if possible_version[idx_pos_ver] == check_str[idx_check_str]:
+                    if idx_pos_ver < len(possible_version) and possible_version[idx_pos_ver] == check_str[idx_check_str]:
                         idx_pos_ver += 1
                     idx_check_str += 1
 
