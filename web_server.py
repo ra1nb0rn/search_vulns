@@ -38,6 +38,12 @@ def search_vulns():
     else:
         ignore_general_cpe_vulns = False
 
+    include_single_version_vulns = request.args.get('include-single-version-vulns')
+    if include_single_version_vulns and include_single_version_vulns.lower() == 'true':
+        include_single_version_vulns = True
+    else:
+        include_single_version_vulns = False
+
     is_good_cpe = request.args.get('is-good-cpe')
     if is_good_cpe and is_good_cpe.lower() == 'false':
         is_good_cpe = False
@@ -46,7 +52,7 @@ def search_vulns():
 
     conn = sqlite3.connect(DB_URI, uri=True)
     db_cursor = conn.cursor()
-    vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, add_other_exploits_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, is_good_cpe=is_good_cpe, config=config)
+    vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, add_other_exploits_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
 
     if vulns is None:
         RESULTS_CACHE[url_query_string] = {}

@@ -73,6 +73,44 @@ def is_cpe_included_after_version(cpe1, cpe2):
     return is_cpe_included_from_field(cpe1, cpe2)
 
 
+def has_cpe_lower_versions(cpe1, cpe2):
+    '''Return True if cpe1 is considered to have a lower product version than cpe2'''
+
+    cpe1_remainder_fields = cpe1.split(':')[5:]
+    cpe2_remainder_fields = cpe2.split(':')[5:]
+
+    for i in range(min(len(cpe1_remainder_fields), len(cpe2_remainder_fields))):
+        if cpe1_remainder_fields[i] in ('*', '-'):
+            continue
+        if cpe2_remainder_fields[i] in ('*', '-'):
+            continue
+
+        if CPEVersion(cpe1_remainder_fields[i]) > CPEVersion(cpe2_remainder_fields[i]):
+            return False
+    return True
+
+
+def is_more_specific_cpe_contained(vuln_cpe, cve_cpes):
+    '''
+    Return boolean whether a more specific CPE than vuln_cpe
+    is contained in the CVE's list of affected CPEs.
+    '''
+
+    for vuln_other_cpe in cve_cpes:
+        if vuln_cpe != vuln_other_cpe:
+            if is_cpe_included_from_field(vuln_cpe, vuln_other_cpe, 5):
+                # assume the number of fields is the same for both, since they're official NVD CPEs
+                vuln_cpe_fields, vuln_other_cpe_fields = vuln_cpe.split(':'), vuln_other_cpe.split(':')
+                for i in range(len(vuln_other_cpe_fields)-1, -1, -1):
+                    if (not CPEVersion(vuln_cpe_fields[i])) and (not CPEVersion(vuln_other_cpe_fields[i])):
+                        continue
+                    elif CPEVersion(vuln_other_cpe_fields[i]):
+                        return True
+                    else:
+                        break
+    return False
+
+
 def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
     '''Collect more detailed information about the given vulns and return it'''
 
@@ -151,7 +189,7 @@ def _is_version_start_end_matching(cpe_version, version_start, version_start_inc
     return False
 
 
-def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_refs=False):
+def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_version_vulns=False, add_other_exploit_refs=False):
     """Get known vulnerabilities for the given CPE 2.3 string"""
 
     cpe_parts = cpe.split(':')
@@ -184,22 +222,8 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_
                 is_cpe_vuln = _is_version_start_end_matching(cpe_version, version_start, version_start_incl, version_end, version_end_incl)
                 match_reason = 'version_in_range'
             elif is_cpe_vuln:
-                # check for bad NVD configuration entry, where a general CPE and a more specific CPE are affected
-                for vuln_other_cpe in cve_cpes:
-                    if vuln_cpe != vuln_other_cpe:
-                        if is_cpe_included_from_field(vuln_cpe, vuln_other_cpe, 5):
-                            # assume the number of fields is the same for both, since they're official NVD CPEs
-                            vuln_cpe_fields, vuln_other_cpe_fields = vuln_cpe.split(':'), vuln_other_cpe.split(':')
-                            for i in range(len(vuln_other_cpe_fields)-1, -1, -1):
-                                if (not CPEVersion(vuln_cpe_fields[i])) and (not CPEVersion(vuln_other_cpe_fields[i])):
-                                    continue
-                                elif CPEVersion(vuln_other_cpe_fields[i]):
-                                    bad_nvd_entry = True
-                                    break
-                                else:
-                                    break
-                    if bad_nvd_entry:
-                        break
+                # check if the NVD's affected products entry for the CPE is considered faulty
+                bad_nvd_entry = is_more_specific_cpe_contained(vuln_cpe, cve_cpes)
 
                 # check for general CPE vuln match
                 if not CPEVersion(vuln_cpe.split(':')[5]):
@@ -209,6 +233,10 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, add_other_exploit_
                         match_reason = 'general_cpe'
                         if ignore_general_cpe_vulns:
                             is_cpe_vuln = False
+            elif include_single_version_vulns:
+                if len(cve_cpes) == 1 and has_cpe_lower_versions(cpe, vuln_cpe):
+                    is_cpe_vuln = True
+                    match_reason = 'single_higher_version_cpe'
 
             # final check that everything after the version field matches in the vuln's CPE
             if is_cpe_vuln:
@@ -324,7 +352,7 @@ def get_equivalent_cpes(cpe, config):
     return cpes
 
 
-def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, config=None):
+def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, include_single_version_vulns=False, config=None):
     """Search for known vulnerabilities based on the given query"""
 
     # create DB handle if not given
@@ -368,7 +396,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         equivalent_cpes = get_equivalent_cpes(cpe, config)  # also search and use equivalent CPEs
 
     for cur_cpe in equivalent_cpes:
-        cur_vulns = get_vulns(cur_cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns, add_other_exploit_refs=add_other_exploit_refs)
+        cur_vulns = get_vulns(cur_cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, add_other_exploit_refs=add_other_exploit_refs)
         for cve_id, vuln in cur_vulns.items():
             if cve_id not in vulns:
                 vulns[cve_id] = vuln
@@ -379,7 +407,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     return vulns
 
 
-def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploits_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, config=None):
+def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploits_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, include_single_version_vulns=False, config=None):
     """Search for known vulnerabilities based on the given query and return them with their CPE"""
 
     if not config:
@@ -485,7 +513,7 @@ def search_vulns_return_cpe(query, db_cursor=None, software_match_threshold=CPE_
         equivalent_cpes = get_equivalent_cpes(cpe, config)  # also search and use equivalent CPEs
 
     for cur_cpe in equivalent_cpes:
-        cur_vulns = search_vulns(cur_cpe, db_cursor, software_match_threshold, keep_data_in_memory, add_other_exploits_refs, True, ignore_general_cpe_vulns, config)
+        cur_vulns = search_vulns(cur_cpe, db_cursor, software_match_threshold, keep_data_in_memory, add_other_exploits_refs, True, ignore_general_cpe_vulns, include_single_version_vulns, config)
         for cve_id, vuln in cur_vulns.items():
             if cve_id not in vulns:
                 vulns[cve_id] = vuln
@@ -505,6 +533,7 @@ def parse_args():
     parser.add_argument("-q", "--query", dest="queries", metavar="QUERY", action="append", help="A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string")
     parser.add_argument("--cpe-search-threshold", type=float, default=CPE_SEARCH_THRESHOLD, help="Similarity threshold used for retrieving a CPE via the cpe_search tool")
     parser.add_argument("--ignore-general-cpe-vulns", action="store_true", help="Ignore vulnerabilities that only affect a general CPE (i.e. without version)")
+    parser.add_argument("--include-single-version-vulns", action="store_true", help="Include vulnerabilities that only affect one specific version of a product when querying a lower version")
     parser.add_argument("-c", "--config", type=str, default=DEFAULT_CONFIG_FILE, help="A config file to use (default: config.json)")
 
     args = parser.parse_args()
@@ -602,7 +631,7 @@ def main():
                 printit('[+] %s (%s)' % (query, '/'.join(equivalent_cpes)), color=BRIGHT_BLUE)
 
         for cur_cpe in equivalent_cpes:
-            cur_vulns = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, False, True, args.ignore_general_cpe_vulns, config)
+            cur_vulns = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, False, True, args.ignore_general_cpe_vulns, args.include_single_version_vulns, config)
             for cve_id, vuln in cur_vulns.items():
                 if cve_id not in vulns[query]:
                     vulns[query][cve_id] = vuln
