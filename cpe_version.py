@@ -2,6 +2,7 @@ import re
 import string
 
 VERSION_PART_SEP_RE = re.compile(r'[^\da-zA-Z]')
+SUBVERSION_PART_SEP_RE = re.compile(r'([a-zA-Z]+|[\d]+)')
 
 class CPEVersion:
 
@@ -9,8 +10,14 @@ class CPEVersion:
         self.version_str = ver_str
 
     def get_version_parts(self):
-        re_version_parts = VERSION_PART_SEP_RE.split(self.version_str)
-        return [part.lstrip('0') for part in re_version_parts]  # strip leading '0' from every part
+        split_version_parts = VERSION_PART_SEP_RE.split(self.version_str)
+        version_parts = []
+
+        for split_part in split_version_parts:
+            subversions = SUBVERSION_PART_SEP_RE.findall(split_part)
+            version_parts += subversions
+
+        return [part.lstrip('0') for part in version_parts]  # strip leading '0' from every part
 
     def __eq__(self, other):
         parts, other_parts = self.get_version_parts(), other.get_version_parts()
@@ -45,18 +52,22 @@ class CPEVersion:
         for part_idx in range(min_part_count):
             part, other_part = parts[part_idx], other_parts[part_idx]
 
-            # right-pad with '0' to make both parts the same length
-            if len(part) < len(other_part):
-                part = part.rjust(len(other_part), '0')
-            if len(other_part) < len(part):
-                other_part = other_part.rjust(len(part), '0')
-
-            # if both parts are empty / were zeroes
+            # if parts are empty / were zeroes
             if (not part) and (not other_part):
                 # continue if not in last step and return False otherwise
                 if part_idx < len(parts)-1 and part_idx < len(other_parts)-1:
                     continue
                 return False
+            if not other_part:
+                return False
+            if not part:
+                return True
+
+            # right-pad with '0' to make both parts the same length
+            if len(part) < len(other_part) and part[0] in string.digits:
+                part = part.rjust(len(other_part), '0')
+            if len(other_part) < len(part) and other_part[0] in string.digits:
+                other_part = other_part.rjust(len(part), '0')
 
             # if the comparison is not in the last step and the current parts are equal
             if part_idx < len(parts)-1 and part_idx < len(other_parts)-1:
@@ -65,6 +76,11 @@ class CPEVersion:
 
             # compare parts char by char
             for i in range(len(part)):
+                if i > len(part)-1:  # part is shorter
+                    return True
+                if i > len(other_part)-1:  # other_part is shorter
+                    return False
+
                 if ord(part[i].lower()) < ord(other_part[i].lower()):
                     return True
                 if ord(part[i].lower()) > ord(other_part[i].lower()):
