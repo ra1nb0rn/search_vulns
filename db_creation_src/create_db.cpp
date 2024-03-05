@@ -1,5 +1,6 @@
 #include <SQLiteCpp/SQLiteCpp.h>
-#include <mariadb/conncpp.hpp>
+// include mariadb
+#include <conncpp.hpp>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <fstream>

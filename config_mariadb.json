@@ -15,6 +15,7 @@
         "HOST": "localhost",
         "USER": "search_vulns",
         "PASSWORD": "",
-        "PORT": 3306
+        "PORT": 3306,
+        "QUERY_CACHE_SIZE": 1000
     }
 }

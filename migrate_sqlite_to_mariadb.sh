@@ -1,21 +1,5 @@
 #!/bin/bash
 
-DATABASE_FILE=$(realpath "$1")
-CPE_DATABASE_FILE=$(realpath "$2")
-CONFIG_FILE=$(realpath "$3")
-
-# init values from config file
-ABS_PATH=$(realpath "$0")
-ABS_PATH=$(dirname "$ABS_PATH")
-HOST=$(jq -r '.DATABASE.HOST' $CONFIG_FILE)
-USER=$(jq -r '.DATABASE.USER' $CONFIG_FILE)
-PASSWORD=$(jq -r '.DATABASE.PASSWORD' $CONFIG_FILE)
-PORT=$(jq -r '.DATABASE.PORT' $CONFIG_FILE)
-DATABASE_NAME=$(jq -r '.DATABASE_NAME' $CONFIG_FILE)
-CPE_DATABASE_NAME=$(jq -r '.cpe_search.DATABASE_NAME' $CONFIG_FILE)
-CREATE_TABLES_QUERIES_VULNDB=$ABS_PATH/$(jq -r '.CREATE_SQL_STATEMENTS_FILE' $CONFIG_FILE)
-CREATE_TABLES_QUERIES_CPE_SEARCH=$ABS_PATH/$(jq -r '.cpe_search.CREATE_SQL_STATEMENTS_FILE' $CONFIG_FILE)
-
 add_vulndb_data() {
     mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL local_infile=1;"
     mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "LOAD DATA LOCAL INFILE '$ABS_PATH/cve.csv' INTO TABLE cve FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n';"
@@ -71,6 +55,23 @@ if [ "$#" -ne 3 ];then
     exit 1
 fi
 
+DATABASE_FILE=$(realpath "$1")
+CPE_DATABASE_FILE=$(realpath "$2")
+CONFIG_FILE=$(realpath "$3")
+
+# init values from config file
+ABS_PATH=$(realpath "$0")
+ABS_PATH=$(dirname "$ABS_PATH")
+HOST=$(jq -r '.DATABASE.HOST' $CONFIG_FILE)
+USER=$(jq -r '.DATABASE.USER' $CONFIG_FILE)
+PASSWORD=$(jq -r '.DATABASE.PASSWORD' $CONFIG_FILE)
+QUERY_CACHE_SIZE=$(jq -r '.DATABASE.QUERY_CACHE_SIZE' $CONFIG_FILE)
+PORT=$(jq -r '.DATABASE.PORT' $CONFIG_FILE)
+DATABASE_NAME=$(jq -r '.DATABASE_NAME' $CONFIG_FILE)
+CPE_DATABASE_NAME=$(jq -r '.cpe_search.DATABASE_NAME' $CONFIG_FILE)
+CREATE_TABLES_QUERIES_VULNDB=$ABS_PATH/$(jq -r '.CREATE_SQL_STATEMENTS_FILE' $CONFIG_FILE)
+CREATE_TABLES_QUERIES_CPE_SEARCH=$ABS_PATH/$(jq -r '.cpe_search.CREATE_SQL_STATEMENTS_FILE' $CONFIG_FILE)
+
 
 # Export sqlite databases
 echo "[+] Export sqlite as csv"
@@ -83,18 +84,18 @@ echo "[+] Add data to mariadb"
 vulndb_create_tables_queries=$(cat $CREATE_TABLES_QUERIES_VULNDB | jq '.TABLES | .[] | select(.mariadb) | .mariadb'| tr '\n' ' ' | sed 's/"//g')
 cpe_search_create_tables_queries=$(cat $CREATE_TABLES_QUERIES_CPE_SEARCH | jq '.TABLES | .[] | select(.mariadb) | .mariadb' | tr '\n' ' ' | sed 's/"//g')
 # create vulndb tables and add data
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -e "CREATE OR REPLACE DATABASE $DATABASE_NAME"
 mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 8589934592;"
 mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 8589934592;"
 mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "$vulndb_create_tables_queries"
 add_vulndb_data
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 16777216;"
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 16777216;"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL query_cache_size = $QUERY_CACHE_SIZE;"
 # create cpe_search tables and add data
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 8589934592;"
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 8589934592;"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -e "CREATE OR REPLACE DATABASE $CPE_DATABASE_NAME"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 4294967296;"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 10737418240;"
 mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "$cpe_search_create_tables_queries"
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 16777216;"
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 16777216;"
+mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL query_cache_size = $QUERY_CACHE_SIZE;;"
 add_cpe_search_data
 
 # create views

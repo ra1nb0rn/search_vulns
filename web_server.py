@@ -3,12 +3,14 @@
 import datetime
 import os
 import sqlite3
-import mariadb
-import time
+try: # only use mariadb module if installed
+    import mariadb
+except:
+    pass
 
 from flask import Flask, request
 from flask import render_template
-
+from cpe_search.database_wrapper_functions import get_database_connection
 from search_vulns import _load_config, search_vulns_return_cpe as search_vulns_call
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -16,7 +18,7 @@ STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "stat
 TEMPLATE_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "templates"))
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config_mariadb.json')
 DB_URI = 'file:vuln_db?mode=memory&cache=shared'
-CONNECTION_POOL_SIZE = 8 # should be equal to number of cpu cores? (https://dba.stackexchange.com/a/305726)
+CONNECTION_POOL_SIZE = os.cpu_count() # should be equal to number of cpu cores? (https://dba.stackexchange.com/a/305726)
 RESULTS_CACHE = {}
 
 
@@ -55,9 +57,13 @@ def search_vulns():
     if config['DATABASE']['TYPE'] == 'sqlite':
         conn = sqlite3.connect(DB_URI, uri=True)
     else:
-        conn = pool.get_connection()
+        try:
+            conn = pool.get_connection()
+        except:
+            conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
     db_cursor = conn.cursor()
     vulns = search_vulns_call(query, db_cursor=db_cursor, keep_data_in_memory=True, add_other_exploits_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
+    db_cursor.close()
     conn.close()
     if vulns is None:
         RESULTS_CACHE[url_query_string] = {}
@@ -108,9 +114,11 @@ else:
         'database': config['DATABASE_NAME']
     }
     pool= mariadb.ConnectionPool(pool_name="search_vulns_pool", pool_size=CONNECTION_POOL_SIZE, **conn_params)
-    conn = pool.get_connection()
+    conn=pool.get_connection()
 db_cursor = conn.cursor()
 search_vulns_call('Sudo 1.8.2', db_cursor=db_cursor, keep_data_in_memory=True, config=config)
+db_cursor.close()
+conn.close()
 
 
 if __name__ == '__main__':

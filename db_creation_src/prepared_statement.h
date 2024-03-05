@@ -3,7 +3,8 @@
 
 #include <string>
 #include <SQLiteCpp/SQLiteCpp.h>
-#include <mariadb/conncpp.hpp>
+// include mariadb
+#include <conncpp.hpp>
 
 
 class PreparedStatement {

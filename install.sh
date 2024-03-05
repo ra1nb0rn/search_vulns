@@ -7,7 +7,7 @@ LINUX_PACKAGE_MANAGER="apt-get"
 
 install_linux_packages() {
     # Install required packages
-    PACKAGES="python3 python3-pip wget curl sqlite3 libsqlite3-dev cmake gcc"
+    PACKAGES="python3 python3-pip wget curl sqlite3 libsqlite3-dev cmake gcc sudo apt-get install libmariadb-dev jq"
     which ${LINUX_PACKAGE_MANAGER} &> /dev/null
     if [ $? != 0 ]; then
         printf "${RED}Could not find ${LINUX_PACKAGE_MANAGER} command.\\nPlease specify your package manager at the start of the script.\\n${SANE}"
@@ -35,6 +35,7 @@ install_linux_packages() {
     fi
 
     pip3 install -r requirements.txt
+    pip3 install mariadb
 }
 
 setup_create_db() {

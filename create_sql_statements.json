@@ -6,15 +6,15 @@
         },
         "CVE_CPE": {
             "sqlite": "DROP TABLE IF EXISTS cve_cpe; CREATE TABLE cve_cpe (cve_id VARCHAR(25), cpe VARCHAR(255), cpe_version_start VARCHAR(255), is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(255), is_cpe_version_end_including BOOL, PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including))",
-            "mariadb": "CREATE OR REPLACE TABLE cve_cpe (cve_id VARCHAR(25) CHARACTER SET ascii, cpe VARCHAR(255) CHARACTER SET utf8, cpe_version_start VARCHAR(255)  CHARACTER SET utf8, is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(255)  CHARACTER SET utf8, is_cpe_version_end_including BOOL, PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including), INDEX(cpe) USING BTREE) ENGINE = MEMORY;"
+            "mariadb": "CREATE OR REPLACE TABLE cve_cpe (cve_id VARCHAR(25) CHARACTER SET ascii, cpe VARCHAR(255) CHARACTER SET utf8, cpe_version_start VARCHAR(255)  CHARACTER SET utf8, is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(255)  CHARACTER SET utf8, is_cpe_version_end_including BOOL, PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including), INDEX(cpe) USING BTREE) ENGINE = MEMORY ROW_FORMAT=DYNAMIC;"
         },
         "CVE_NVD_EXPLOITS_REFS": {
             "sqlite": "DROP TABLE IF EXISTS cve_nvd_exploits_refs; CREATE TABLE cve_nvd_exploits_refs (cve_id VARCHAR(25), ref_id INTEGER, PRIMARY KEY (cve_id, ref_id))",
-            "mariadb": "CREATE OR REPLACE TABLE cve_nvd_exploits_refs (cve_id VARCHAR(25) CHARACTER SET ascii, ref_id INTEGER, PRIMARY KEY (cve_id, ref_id)) ENGINE = MEMORY;"
+            "mariadb": "CREATE OR REPLACE TABLE cve_nvd_exploits_refs (cve_id VARCHAR(25) CHARACTER SET ascii, ref_id INTEGER, PRIMARY KEY (cve_id, ref_id)) ENGINE = MEMORY ROW_FORMAT=DYNAMIC;"
         },
         "CVE_POC_IN_GITHUB_MAP": {
             "sqlite": "DROP TABLE IF EXISTS cve_poc_in_github_map; CREATE TABLE cve_poc_in_github_map (cve_id VARCHAR(25), reference VARCHAR(255), PRIMARY KEY (cve_id, reference));",
-            "mariadb": "CREATE OR REPLACE TABLE cve_poc_in_github_map (cve_id VARCHAR(25) CHARACTER SET ascii, reference VARCHAR(255), PRIMARY KEY (cve_id, reference)) ENGINE = MEMORY;"
+            "mariadb": "CREATE OR REPLACE TABLE cve_poc_in_github_map (cve_id VARCHAR(25) CHARACTER SET ascii, reference VARCHAR(255), PRIMARY KEY (cve_id, reference)) ENGINE = MEMORY ROW_FORMAT=DYNAMIC;"
         },
         "NVD_EXPLOITS_REFS": {
             "sqlite": "DROP TABLE IF EXISTS nvd_exploits_refs; CREATE TABLE nvd_exploits_refs (ref_id INTEGER, exploit_ref text, PRIMARY KEY (ref_id))",

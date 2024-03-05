@@ -1,5 +1,8 @@
 import sqlite3
-import mariadb
+try: # only use mariadb module if installed
+    import mariadb
+except:
+    pass
 import csv
 import sys
 import os
@@ -22,7 +25,6 @@ def export_tables_to_csv(database_file):
         with open(csv_file, 'w', newline='\n') as file:
             writer = csv.writer(file, dialect='unix', escapechar='\\')
             writer.writerows(rows)
-        print(f"Generated {table_name}.csv")
 
     # Close the database connection
     cursor.close()
@@ -55,7 +57,6 @@ def export_tables_mariadb_to_csv(config):
         with open(csv_file, 'w', newline='\n') as file:
             writer = csv.writer(file, dialect='unix', escapechar='\\')
             writer.writerows(rows)
-        print(f"Generated {table_name}.csv.mariadb")
 
     # Close the database connection
     cursor.close()
