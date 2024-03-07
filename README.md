@@ -89,7 +89,15 @@ It is also possible to run a web server that provides this tool's functionality 
 ```bash
 ./web_server.py
 ```
-Furthermore, you can use ``gunicorn`` to make the web server more scalable; for example by running:
+The web server uses mariadb as database. To change it to sqlite, simply change the CONFIG_FILE variable at top of the web_server.py script to `config.json`. 
+It is recommend to change the following values in `/etc/my.cnf` to make some useful changes:
+```
+query_cache_type = 1
+query_cache_size = 192M
+innodb_buffer_pool_size = 8G
+thread_handling=pool-of-threads
+```
+innodb_buffer_pool_size should be set to approximately 80% of available memory (https://mariadb.com/kb/en/innodb-system-variables/#innodb_buffer_pool_size)
 ```bash
 gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind '0.0.0.0:8000' wsgi:app
 ```

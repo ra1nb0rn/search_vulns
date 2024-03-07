@@ -31,17 +31,6 @@ perform_integrity_checks() {
             migration_successfull=1
         fi
     done
-
-    # remove csv files
-    rm $ABS_PATH/*.csv $ABS_PATH/*.csv.mariadb
-
-    if [ $migration_successfull -eq 0 ]; then
-        echo "[+] Migration successful"
-        return 0
-    else
-        echo "[-] Migration failed"
-        return 1
-    fi
 }
 
 #################################
@@ -65,7 +54,6 @@ ABS_PATH=$(dirname "$ABS_PATH")
 HOST=$(jq -r '.DATABASE.HOST' $CONFIG_FILE)
 USER=$(jq -r '.DATABASE.USER' $CONFIG_FILE)
 PASSWORD=$(jq -r '.DATABASE.PASSWORD' $CONFIG_FILE)
-QUERY_CACHE_SIZE=$(jq -r '.DATABASE.QUERY_CACHE_SIZE' $CONFIG_FILE)
 PORT=$(jq -r '.DATABASE.PORT' $CONFIG_FILE)
 DATABASE_NAME=$(jq -r '.DATABASE_NAME' $CONFIG_FILE)
 CPE_DATABASE_NAME=$(jq -r '.cpe_search.DATABASE_NAME' $CONFIG_FILE)
@@ -85,17 +73,11 @@ vulndb_create_tables_queries=$(cat $CREATE_TABLES_QUERIES_VULNDB | jq '.TABLES |
 cpe_search_create_tables_queries=$(cat $CREATE_TABLES_QUERIES_CPE_SEARCH | jq '.TABLES | .[] | select(.mariadb) | .mariadb' | tr '\n' ' ' | sed 's/"//g')
 # create vulndb tables and add data
 mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -e "CREATE OR REPLACE DATABASE $DATABASE_NAME"
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 8589934592;"
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 8589934592;"
 mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "$vulndb_create_tables_queries"
 add_vulndb_data
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL query_cache_size = $QUERY_CACHE_SIZE;"
 # create cpe_search tables and add data
 mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -e "CREATE OR REPLACE DATABASE $CPE_DATABASE_NAME"
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL max_heap_table_size = 4294967296;"
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL tmp_table_size = 10737418240;"
 mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "$cpe_search_create_tables_queries"
-mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$CPE_DATABASE_NAME" -e "SET GLOBAL query_cache_size = $QUERY_CACHE_SIZE;;"
 add_cpe_search_data
 
 # create views
@@ -111,3 +93,14 @@ python3 $ABS_PATH/export_database_as_csv.py mariadb $CPE_DATABASE_NAME,$USER,$PA
 # Loop through each CSV file in the current folder
 echo "[+] Perform integrity checks"
 perform_integrity_checks
+
+# remove csv files
+rm $ABS_PATH/*.csv $ABS_PATH/*.csv.mariadb
+
+if [ $migration_successfull -eq 0 ]; then
+    echo "[+] Migration successful"
+    exit 0
+else
+    echo "[-] Migration failed"
+    exit 1
+fi

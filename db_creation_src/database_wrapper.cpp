@@ -59,8 +59,6 @@ MariaDB::MariaDB(nlohmann::json config) {
     std::string user = config["DATABASE"]["USER"];
     std::string password = config["DATABASE"]["PASSWORD"];
     std::string database = config["DATABASE_NAME"];
-    int query_cache_size = config["DATABASE"]["QUERY_CACHE_SIZE"];
-    std::string query_cache_size_query = "SET GLOBAL query_cache_size = "+std::to_string(query_cache_size)+";";
     sql::SQLString url("jdbc:mariadb://" + host + ':' + std::to_string(port));
     sql::Properties properties({{"user", user}, {"password", password}});
 
@@ -70,10 +68,6 @@ MariaDB::MariaDB(nlohmann::json config) {
     std::unique_ptr<sql::Statement> stmnt(conn->createStatement());
     stmnt->executeQuery(create_db_query);
     stmnt->executeQuery("use "+database+";");
-    // set max table size to 8GB
-    stmnt->executeQuery("SET max_heap_table_size = 8589934592;");
-    stmnt->executeQuery("SET tmp_table_size = 8589934592;");
-    stmnt->executeQuery(query_cache_size_query);
 }
 
 void MariaDB::execute_query(std::string query) {

@@ -290,7 +290,7 @@ def print_vulns(vulns, to_string=False):
                     print_str += len("Exploits:  ") * " " + edb_link + "\n"
 
         print_str += "Reference: " + vuln_node["href"]
-        print_str += ", " + vuln_node["published"].split(" ")[0]
+        print_str += ", " + str(vuln_node["published"]).split(" ")[0]
         if not to_string:
             printit(print_str)
         else:
