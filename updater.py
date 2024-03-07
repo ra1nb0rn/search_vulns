@@ -37,16 +37,6 @@ MARIADB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 
 QUIET = False
 DEBUG = False
 API_RESULTS_PER_PAGE = 2000
-MAX_HEAP_TABLE_SIZE_MARIADB = 1024 * 1024 * 1024 * 1024 * 8 # 8GB, default: 16 MB
-TMP_TABLE_SIZE_MARIADB = 1024 * 1024 * 1024 * 1024 * 16 #16GB, default: 16 MB
-
-
-def reset_mariadb_tables_variables(): 
-    db_conn = get_database_connection(CONFIG['DATABASE'], '')
-    db_cursor = db_conn.cursor()
-    # set values for max_heap_table_size and tmp_table_size to default values (16MB)
-    db_cursor.execute('SET GLOBAL tmp_table_size = 16777216')
-    db_cursor.execute('SET GLOBAL max_heap_table_size = 16777216')
 
 
 async def api_request(headers, params, requestno):
@@ -271,7 +261,6 @@ def rollback():
     if os.path.isfile(MARIADB_BACKUP_FILE):
         restore_call = f'''mariadb -u {CONFIG['DATABASE']['USER']} --password={CONFIG['DATABASE']['PASSWORD']} -h {CONFIG['DATABASE']['HOST']} -P {str(CONFIG['DATABASE']['PORT'])} < {MARIADB_BACKUP_FILE}'''
         return_code = subprocess.call([restore_call], shell=True, stderr=subprocess.DEVNULL)
-        reset_mariadb_tables_variables()
         if return_code != 0:
             print('[-] Failed to restore mariadb')
         else:
@@ -483,14 +472,6 @@ def run(full=False, nvd_api_key=None, config_file=''):
     for file in update_files:
         os.makedirs(os.path.dirname(file), exist_ok=True)
     
-    # set global variables for mariadb
-    if CONFIG['DATABASE']['TYPE'] == 'mariadb':
-        db_conn = get_database_connection(CONFIG['DATABASE'], '')
-        db_cursor = db_conn.cursor()
-        # set values for max_heap_table_size and tmp_table_size for building memory tables
-        db_cursor.execute('SET GLOBAL max_heap_table_size = ?;', (MAX_HEAP_TABLE_SIZE_MARIADB,))
-        db_cursor.execute('SET GLOBAL tmp_table_size = ?;', (TMP_TABLE_SIZE_MARIADB,))
-
     if full:
         if not nvd_api_key:
             nvd_api_key = os.getenv('NVD_API_KEY')
@@ -599,15 +580,11 @@ def run(full=False, nvd_api_key=None, config_file=''):
                     return_code = subprocess.call([restore_call], shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 else:
                     return_code = subprocess.call([restore_call], shell=True, stderr=subprocess.DEVNULL)
-                reset_mariadb_tables_variables()
                 if return_code != 0:
                     print('[-] Failed to restore mariadb')
                 else:
                     print('[+] Restored mariadb from backup')
                 os.remove(MARIADB_BACKUP_FILE)
-    if CONFIG['DATABASE']['TYPE'] == 'mariadb':
-        reset_mariadb_tables_variables()
-
 
 
 if __name__ == "__main__":
