@@ -33,7 +33,8 @@ POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "P
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-MARIADB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "mariadb_dump.sql")
+MARIADB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'mariadb_dump.sql')
+CREATE_SQL_STATEMENTS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'create_sql_statements.json')
 QUIET = False
 DEBUG = False
 API_RESULTS_PER_PAGE = 2000
@@ -98,10 +99,17 @@ def backup_mariadb_database(database):
     except:
         pass
     else:
-        # backup mariadb
-        return_code = subprocess.call(['mariadb-dump', '-u', CONFIG['DATABASE']['USER'], f"--password={CONFIG['DATABASE']['PASSWORD']}", 
-                                       '-h', CONFIG['DATABASE']['HOST'], '-P', str(CONFIG['DATABASE']['PORT']),
-                                        '--add-drop-database', '--add-locks', '-B', database, '-r', MARIADB_BACKUP_FILE], stderr=subprocess.DEVNULL)
+        # backup MariaDB
+        backup_call = ['mariadb-dump',
+                       '-u', CONFIG['DATABASE']['USER'],
+                        '-h', CONFIG['DATABASE']['HOST'],
+                        '-P', str(CONFIG['DATABASE']['PORT']),
+                        '--add-drop-database', '--add-locks',
+                        '-B', database, '-r', MARIADB_BACKUP_FILE]
+        if CONFIG['DATABASE']['PASSWORD']:
+            backup_call.append('-p')
+            backup_call.append(CONFIG['DATABASE']['PASSWORD'])
+        return_code = subprocess.call(backup_call, stderr=subprocess.DEVNULL)
         if return_code != 0:
             print(f'[-] MariaDB BackUp of {database} failed')
 
@@ -111,7 +119,7 @@ async def update_vuln_db(nvd_api_key=None):
 
     global NVD_UPDATE_SUCCESS
 
-    # backup mariadb
+    # backup MariaDB
     if CONFIG['DATABASE']['TYPE'] == 'mariadb':
         backup_mariadb_database(CONFIG['DATABASE_NAME']) 
     elif os.path.isfile(CONFIG['DATABASE_NAME']):
@@ -186,7 +194,7 @@ async def update_vuln_db(nvd_api_key=None):
 
     # build local NVD copy with downloaded data feeds
     print('[+] Building vulnerability database')
-    create_db_call = ["./create_db", NVD_DATAFEED_DIR, CONFIG_FILE, CONFIG['DATABASE_NAME'], CONFIG['CREATE_SQL_STATEMENTS_FILE']]
+    create_db_call = ["./create_db", NVD_DATAFEED_DIR, CONFIG_FILE, CONFIG['DATABASE_NAME'], CREATE_SQL_STATEMENTS_FILE]
     with open(os.devnull, "w") as outfile:
         return_code = subprocess.call(create_db_call, stdout=outfile, stderr=subprocess.STDOUT)
 
@@ -230,13 +238,29 @@ async def handle_cpes_update(nvd_api_key=None):
         if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
             shutil.move(CONFIG['DEPRECATED_CPES_BACKUP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'])
         if os.path.isfile(MARIADB_BACKUP_FILE):
-            restore_call = f'''mariadb -u {CONFIG['DATABASE']['USER']} --password={CONFIG['DATABASE']['PASSWORD']} -h {CONFIG['DATABASE']['HOST']} -P {str(CONFIG['DATABASE']['PORT'])} < {MARIADB_BACKUP_FILE}'''
-            return_code = subprocess.call(restore_call, shell=True, stderr=subprocess.DEVNULL)
-            if return_code != 0:
-                print('[-] Failed to restore mariadb')
+            with open(MARIADB_BACKUP_FILE, 'rb') as f:
+                mariadb_backup_data = f.read()
+            restore_call = ['mariadb', '-u', CONFIG['DATABASE']['USER'],
+                            '-h', CONFIG['DATABASE']['HOST'],
+                            '-P', str(CONFIG['DATABASE']['PORT'])]
+            if CONFIG['DATABASE']['PASSWORD']:
+                restore_call.append('-p')
+                restore_call.append(CONFIG['DATABASE']['PASSWORD'])
+            restore_call_run = subprocess.run(restore_call, input=mariadb_backup_data)
+            if restore_call_run.returncode != 0:
+                print('[-] Failed to restore MariaDB')
             else:
-                print('[+] Restored mariadb from backup')
-            os.remove(MARIADB_BACKUP_FILE)
+                print('[+] Restored MariaDB from backup')
+
+            # Restore failed b/c database is down -> not delete backup file
+            # check whether database is up by trying to get a connection
+            try:
+                get_database_connection(CONFIG['DATABASE'], CONFIG['cpe_search']['DATABASE_NAME'])
+            except:
+                print('[!] MariaDB seems to be down. The backup file wasn\'t deleted. To restore manually from the file, run the following command:')
+                print(' '.join(restore_call+['<', MARIADB_BACKUP_FILE, '&&', 'rm', MARIADB_BACKUP_FILE]))
+            else:
+                os.remove(MARIADB_BACKUP_FILE)
     else:
         if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
             os.remove(CONFIG['CPE_DATABASE_BACKUP_FILE'])
@@ -252,20 +276,37 @@ def rollback():
     """Rollback the DB / module update"""
 
     communicate_warning('An error occured, rolling back database update')
-    if os.path.isfile(CONFIG['DATABASE_NAME']):
-        os.remove(CONFIG['DATABASE_NAME'])
+    if CONFIG['DATABASE']['TYPE'] == 'sqlite':
+        if os.path.isfile(CONFIG['DATABASE_NAME']):
+            os.remove(CONFIG['DATABASE_NAME'])
     if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
         shutil.move(CONFIG['DATABASE_BACKUP_FILE'], CONFIG['DATABASE_NAME'])
     if os.path.isdir(NVD_DATAFEED_DIR):
         shutil.rmtree(NVD_DATAFEED_DIR)
     if os.path.isfile(MARIADB_BACKUP_FILE):
-        restore_call = f'''mariadb -u {CONFIG['DATABASE']['USER']} --password={CONFIG['DATABASE']['PASSWORD']} -h {CONFIG['DATABASE']['HOST']} -P {str(CONFIG['DATABASE']['PORT'])} < {MARIADB_BACKUP_FILE}'''
-        return_code = subprocess.call([restore_call], shell=True, stderr=subprocess.DEVNULL)
-        if return_code != 0:
-            print('[-] Failed to restore mariadb')
+        with open(MARIADB_BACKUP_FILE, 'rb') as f:
+            mariadb_backup_data = f.read()
+        restore_call = ['mariadb', '-u', CONFIG['DATABASE']['USER'],
+                        '-h', CONFIG['DATABASE']['HOST'],
+                        '-P', str(CONFIG['DATABASE']['PORT'])]
+        if CONFIG['DATABASE']['PASSWORD']:
+            restore_call.append('-p')
+            restore_call.append(CONFIG['DATABASE']['PASSWORD'])
+        restore_call_run = subprocess.run(restore_call, input=mariadb_backup_data)
+        if restore_call_run.returncode != 0:
+            print('[-] Failed to restore MariaDB')
         else:
-            print('[+] Restored mariadb from backup')
-        os.remove(MARIADB_BACKUP_FILE)
+            print('[+] Restored MariaDB from backup')
+
+        # Restore failed b/c database is down -> not delete backup file
+        # check whether database is up by trying to get a connection
+        try:
+            get_database_connection(CONFIG['DATABASE'], CONFIG['cpe_search']['DATABASE_NAME'])
+        except:
+            print('[!] MariaDB seems to be down. The backup file wasn\'t deleted. To restore manually from the file, run the following command:')
+            print(' '.join(restore_call+['<', MARIADB_BACKUP_FILE, '&&', 'rm', MARIADB_BACKUP_FILE]))
+        else:
+            os.remove(MARIADB_BACKUP_FILE)
 
 
 def communicate_warning(msg: str):
@@ -417,7 +458,7 @@ def create_poc_in_github_table():
     db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
     create_poc_in_github_table = CREATE_SQL_STATEMENTS['TABLES']['CVE_POC_IN_GITHUB_MAP'][CONFIG['DATABASE']['TYPE']]
-    # necessary because sqlite can't handle more than one query a time
+    # necessary because SQLite can't handle more than one query a time
     for query in create_poc_in_github_table[:-1].split(';'):
         db_cursor.execute(query+';')
     db_conn.commit()
@@ -461,7 +502,7 @@ def run(full=False, nvd_api_key=None, config_file=''):
     CONFIG['CPE_DATABASE_BACKUP_FILE'] = CONFIG['cpe_search']['DATABASE_NAME'] + '.bak'
     CONFIG['DEPRECATED_CPES_BACKUP_FILE'] = CONFIG['cpe_search']['DEPRECATED_CPES_FILE'] + '.bak'
 
-    with open(CONFIG['CREATE_SQL_STATEMENTS_FILE']) as f:
+    with open(CREATE_SQL_STATEMENTS_FILE) as f:
         CREATE_SQL_STATEMENTS = json.loads(f.read())
 
     # create file dirs as needed
@@ -471,7 +512,7 @@ def run(full=False, nvd_api_key=None, config_file=''):
         update_files += [CONFIG['DATABASE_NAME'], CONFIG['cpe_search']['DATABASE_NAME']]
     for file in update_files:
         os.makedirs(os.path.dirname(file), exist_ok=True)
-    
+
     if full:
         if not nvd_api_key:
             nvd_api_key = os.getenv('NVD_API_KEY')
@@ -509,7 +550,7 @@ def run(full=False, nvd_api_key=None, config_file=''):
             shutil.move(CONFIG['cpe_search']['DEPRECATED_CPES_FILE'], CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
         if os.path.isfile(CONFIG['DATABASE_NAME']):
             shutil.move(CONFIG['DATABASE_NAME'], CONFIG['DATABASE_BACKUP_FILE'])
-        # backup mariadb
+        # backup MariaDB
         if CONFIG['DATABASE']['TYPE'] == 'mariadb':
             try:
                 # check whether database exists
@@ -518,14 +559,25 @@ def run(full=False, nvd_api_key=None, config_file=''):
             except:
                 pass
             else:
-                # backup mariadb
-                return_code = subprocess.call(['mariadb-dump', '-u', CONFIG['DATABASE']['USER'], f"--password={CONFIG['DATABASE']['PASSWORD']}", '-h', CONFIG['DATABASE']['HOST'], '-P', str(CONFIG['DATABASE']['PORT']),
-                                                '--add-drop-database', '--add-locks', '-B', CONFIG['DATABASE_NAME'], '-B', CONFIG['cpe_search']['DATABASE_NAME'], '-r', MARIADB_BACKUP_FILE], stderr=subprocess.DEVNULL)
+                # backup MariaDB
+                backup_call = ['mariadb-dump',
+                                '-u', CONFIG['DATABASE']['USER'],
+                                '-h', CONFIG['DATABASE']['HOST'],
+                                '-P', str(CONFIG['DATABASE']['PORT']),
+                                '--add-drop-database', '--add-locks',
+                                '-B', CONFIG['DATABASE_NAME'],
+                                '-B', CONFIG['cpe_search']['DATABASE_NAME'],
+                                '-r', MARIADB_BACKUP_FILE]
+                if CONFIG['DATABASE']['PASSWORD']:
+                    backup_call.append('-p')
+                    backup_call.append(CONFIG['DATABASE']['PASSWORD'])
+                return_code = subprocess.call(backup_call, stderr=subprocess.DEVNULL)
                 if return_code != 0:
                     print(f'[-] MariaDB backup failed')
             # expand paths
             CONFIG['DATABASE_NAME'] = os.path.join(os.path.dirname(os.path.abspath(config_file)), CONFIG['DATABASE_NAME'])
             CONFIG['cpe_search']['DATABASE_NAME'] = os.path.join(os.path.dirname(os.path.abspath(config_file)), CONFIG['cpe_search']['DATABASE_NAME'])
+
         try:
             quiet_flag = ""
             if QUIET:
@@ -546,6 +598,7 @@ def run(full=False, nvd_api_key=None, config_file=''):
                                           shlex.quote(CONFIG['DATABASE_NAME'])), shell=True)
             if return_code != 0:
                 raise(Exception("Could not download latest resource files"))
+
             if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
                 os.remove(CONFIG['CPE_DATABASE_BACKUP_FILE'])
             if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
@@ -553,12 +606,11 @@ def run(full=False, nvd_api_key=None, config_file=''):
             if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
                 os.remove(CONFIG['DATABASE_BACKUP_FILE'])
 
-            # migrate sqlite to mariadb if specified database type is mariadb 
+            # migrate SQLite to MariaDB if specified database type is mariadb
             if CONFIG['DATABASE']['TYPE'] == 'mariadb':
-                print('[+] Migrating from sqlite to mariadb (takes around 2 minutes)...')
-                path_of_migration_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'migrate_sqlite_to_mariadb.sh')
-                return_code = subprocess.call(['bash', path_of_migration_script, CONFIG['DATABASE_NAME'], CONFIG['cpe_search']['DATABASE_NAME'], CONFIG_FILE], stderr=subprocess.DEVNULL)
-                if return_code != 0 and False:
+                print('[+] Migrating from SQLite to MariaDB (takes around 2 minutes)...')
+                return_code = subprocess.call('./migrate_sqlite_to_mariadb.sh %s %s %s' % (shlex.quote(CONFIG['DATABASE_NAME']), shlex.quote(CONFIG['cpe_search']['DATABASE_NAME']), CONFIG_FILE), shell=True, stderr=subprocess.DEVNULL)
+                if return_code != 0:
                     raise(Exception('Migration of database failed'))
                 os.remove(MARIADB_BACKUP_FILE)
                 os.remove(CONFIG['DATABASE_NAME'])
@@ -575,16 +627,29 @@ def run(full=False, nvd_api_key=None, config_file=''):
                 shutil.move(CONFIG['DATABASE_BACKUP_FILE'], CONFIG['DATABASE_NAME'])
                 print("[+] Restored vulnerability infos from backup")
             if os.path.isfile(MARIADB_BACKUP_FILE):
-                restore_call = f'''mariadb -u {CONFIG['DATABASE']['USER']} --password={CONFIG['DATABASE']['PASSWORD']} -h {CONFIG['DATABASE']['HOST']} -P {str(CONFIG['DATABASE']['PORT'])} < {MARIADB_BACKUP_FILE}'''
-                if QUIET:
-                    return_code = subprocess.call([restore_call], shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                with open(MARIADB_BACKUP_FILE, 'rb') as f:
+                    mariadb_backup_data = f.read()
+                restore_call = ['mariadb', '-u', CONFIG['DATABASE']['USER'],
+                                '-h', CONFIG['DATABASE']['HOST'],
+                                '-P', str(CONFIG['DATABASE']['PORT'])]
+                if CONFIG['DATABASE']['PASSWORD']:
+                    restore_call.append('-p')
+                    restore_call.append(CONFIG['DATABASE']['PASSWORD'])
+                restore_call_run = subprocess.run(restore_call, input=mariadb_backup_data)
+                if restore_call_run.returncode != 0:
+                    print('[-] Failed to restore MariaDB')
                 else:
-                    return_code = subprocess.call([restore_call], shell=True, stderr=subprocess.DEVNULL)
-                if return_code != 0:
-                    print('[-] Failed to restore mariadb')
+                    print('[+] Restored MariaDB from backup')
+
+                # Restore failed b/c database is down -> not delete backup file
+                # check whether database is up by trying to get a connection
+                try:
+                    get_database_connection(CONFIG['DATABASE'], CONFIG['cpe_search']['DATABASE_NAME'])
+                except:
+                    print('[!] MariaDB seems to be down. The backup file wasn\'t deleted. To restore manually from the file, run the following command:')
+                    print(' '.join(restore_call+['<', MARIADB_BACKUP_FILE, '&&', 'rm', MARIADB_BACKUP_FILE]))
                 else:
-                    print('[+] Restored mariadb from backup')
-                os.remove(MARIADB_BACKUP_FILE)
+                    os.remove(MARIADB_BACKUP_FILE)
 
 
 if __name__ == "__main__":

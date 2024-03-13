@@ -89,15 +89,6 @@ It is also possible to run a web server that provides this tool's functionality 
 ```bash
 ./web_server.py
 ```
-The web server uses mariadb as database. To change it to sqlite, simply change the CONFIG_FILE variable at top of the web_server.py script to `config.json`. 
-It is recommend to change the following values in `/etc/my.cnf` to make some useful changes:
-```
-query_cache_type = 1
-query_cache_size = 192M
-innodb_buffer_pool_size = 8G
-thread_handling=pool-of-threads
-```
-innodb_buffer_pool_size should be set to approximately 80% of available memory (https://mariadb.com/kb/en/innodb-system-variables/#innodb_buffer_pool_size)
 ```bash
 gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind '0.0.0.0:8000' wsgi:app
 ```
@@ -107,6 +98,23 @@ Finally, you can also use Nginx as a reverse proxy. A sample configuration file 
 ```bash
 gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind 'unix:/tmp/gunicorn.sock' wsgi:app
 ```
+
+## MariaDB as Second Database Option
+As alternative to the preconfigured SQLite, you can use *MariaDB* as database. A sample configuration file for MariaDB is provided in [``config_mariadb.json``](https://github.com/ra1nb0rn/search_vulns/blob/master/config_mariadb.json).
+
+Make sure that you adjust the values for MariaDB in the configuration file to your MariaDB configuration (*user*, *password*, *host*, *port*).
+
+To use MariaDB instead of *SQLite* for the webserver, simply change the CONFIG_FILE variable in ``web_server.py`` to your config file (e.g. ``config_mariadb.json``).
+It is recommend to change the following values in ``/etc/my.cnf`` to improve the performance of MariaDB:
+```
+[mariadb]
+
+query_cache_type = 1
+query_cache_size = 192M
+innodb_buffer_pool_size = 8G
+thread_handling = pool-of-threads
+```
+`innodb_buffer_pool_size` should be set to approximately 80% of available memory (see [the official documentation](https://mariadb.com/kb/en/innodb-system-variables/#innodb_buffer_pool_size)).
 
 ## License
 *search_vulns* is licensed under the MIT license, see [here](https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE).

@@ -125,9 +125,9 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
         query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score, vector FROM cve WHERE cve_id = ?'
         db_cursor.execute(query, (cve_id,))
         edb_ids, descr, publ, last_mod, cvss_ver, score, vector = db_cursor.fetchone()
-        detailed_vulns[cve_id] = {"id": cve_id, "description": descr, "published": publ, "modified": last_mod,
-                                  "href": "https://nvd.nist.gov/vuln/detail/%s" % cve_id, "cvss_ver": cvss_ver,
-                                  "cvss": score, "cvss_vec": vector, 'vuln_match_reason': match_reason}
+        detailed_vulns[cve_id] = {"id": cve_id, "description": descr, "published": str(publ), "modified": str(last_mod),
+                                  "href": "https://nvd.nist.gov/vuln/detail/%s" % cve_id, "cvss_ver": str(float(cvss_ver)),
+                                  "cvss": str(float(score)), "cvss_vec": vector, 'vuln_match_reason': match_reason}
 
         edb_ids = edb_ids.strip()
         if edb_ids:
@@ -290,7 +290,7 @@ def print_vulns(vulns, to_string=False):
                     print_str += len("Exploits:  ") * " " + edb_link + "\n"
 
         print_str += "Reference: " + vuln_node["href"]
-        print_str += ", " + str(vuln_node["published"]).split(" ")[0]
+        print_str += ", " + vuln_node["published"].split(" ")[0]
         if not to_string:
             printit(print_str)
         else:

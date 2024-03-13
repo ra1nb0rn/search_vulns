@@ -9,9 +9,9 @@ include_directories(SQLiteCpp/include)
 add_subdirectory(SQLiteCpp)
 
 # Include mariadb-connector-cpp library
-set(CONC_WITH_UNIT_TESTS "Off")
+set(CONC_WITH_UNIT_TESTS OFF)
 set(CMAKE_BUILD_TYPE "RelWithDebInfo")
-set(WITH_UNIT_TESTS "Off")
+set(WITH_UNIT_TESTS OFF CACHE INTERNAL "")
 include_directories(mariadb-connector-cpp/include)
 # workaround until mariadb fix issue in test/CMakeLists.txt
 include_directories("${CMAKE_BINARY_DIR}/mariadb-connector-cpp/test")

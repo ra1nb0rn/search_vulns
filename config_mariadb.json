@@ -2,12 +2,10 @@
     "DATABASE_NAME": "vulndb",
     "MAN_EQUIVALENT_CPES_FILE": "man_equiv_cpes.json",
     "CVE_EDB_MAP_FILE": "cveid_to_edbid.json",
-    "CREATE_SQL_STATEMENTS_FILE": "create_sql_statements.json",
     "NVD_API_KEY": "",
     "cpe_search": {
         "DATABASE_NAME": "cpe_search_dictionary",
         "DEPRECATED_CPES_FILE": "cpe_search/deprecated-cpes.json",
-        "CREATE_SQL_STATEMENTS_FILE": "cpe_search/create_sql_statements.json",
         "NVD_API_KEY": ""
     },
     "DATABASE": {

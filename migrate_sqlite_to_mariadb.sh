@@ -57,17 +57,17 @@ PASSWORD=$(jq -r '.DATABASE.PASSWORD' $CONFIG_FILE)
 PORT=$(jq -r '.DATABASE.PORT' $CONFIG_FILE)
 DATABASE_NAME=$(jq -r '.DATABASE_NAME' $CONFIG_FILE)
 CPE_DATABASE_NAME=$(jq -r '.cpe_search.DATABASE_NAME' $CONFIG_FILE)
-CREATE_TABLES_QUERIES_VULNDB=$ABS_PATH/$(jq -r '.CREATE_SQL_STATEMENTS_FILE' $CONFIG_FILE)
-CREATE_TABLES_QUERIES_CPE_SEARCH=$ABS_PATH/$(jq -r '.cpe_search.CREATE_SQL_STATEMENTS_FILE' $CONFIG_FILE)
+CREATE_TABLES_QUERIES_VULNDB=$ABS_PATH/create_sql_statements.json
+CREATE_TABLES_QUERIES_CPE_SEARCH=$ABS_PATH/cpe_search/create_sql_statements.json
 
 
 # Export sqlite databases
-echo "[+] Export sqlite as csv"
-python3 $ABS_PATH/export_database_as_csv.py sqlite $DATABASE_FILE
-python3 $ABS_PATH/export_database_as_csv.py sqlite $CPE_DATABASE_FILE
+echo "[+] Export SQLite as csv"
+python3 $ABS_PATH/export_database_as_csv.py sqlite $DATABASE_FILE || { rm $ABS_PATH/*.csv; echo "[-] Migration failed"; exit 1; }
+python3 $ABS_PATH/export_database_as_csv.py sqlite $CPE_DATABASE_FILE || { rm $ABS_PATH/*.csv; echo "[-] Migration failed"; exit 1; }
 
 # Create databases
-echo "[+] Add data to mariadb"
+echo "[+] Add data to MariaDB"
 # get queries from file
 vulndb_create_tables_queries=$(cat $CREATE_TABLES_QUERIES_VULNDB | jq '.TABLES | .[] | select(.mariadb) | .mariadb'| tr '\n' ' ' | sed 's/"//g')
 cpe_search_create_tables_queries=$(cat $CREATE_TABLES_QUERIES_CPE_SEARCH | jq '.TABLES | .[] | select(.mariadb) | .mariadb' | tr '\n' ' ' | sed 's/"//g')
@@ -85,9 +85,9 @@ vulndb_create_views=$(cat $CREATE_TABLES_QUERIES_VULNDB | jq '.VIEWS | .[] | sel
 mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "$vulndb_create_views"
 
 # Export mariadb databases
-echo "[+] Export mariadb as csv"
-python3 $ABS_PATH/export_database_as_csv.py mariadb $DATABASE_NAME,$USER,$PASSWORD,$HOST,$PORT
-python3 $ABS_PATH/export_database_as_csv.py mariadb $CPE_DATABASE_NAME,$USER,$PASSWORD,$HOST,$PORT
+echo "[+] Export MariaDB as csv"
+python3 $ABS_PATH/export_database_as_csv.py mariadb $DATABASE_NAME,$USER,$PASSWORD,$HOST,$PORT || { rm $ABS_PATH/*.csv $ABS_PATH/*.csv.mariadb; echo "[-] Migration failed"; exit 1; }
+python3 $ABS_PATH/export_database_as_csv.py mariadb $CPE_DATABASE_NAME,$USER,$PASSWORD,$HOST,$PORT|| { rm $ABS_PATH/*.csv $ABS_PATH/*.csv.mariadb; echo "[-] Migration failed"; exit 1; }
 
 # check whether everything migrated correctly
 # Loop through each CSV file in the current folder

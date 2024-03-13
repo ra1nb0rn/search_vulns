@@ -31,10 +31,10 @@ void SQLiteDB::execute_query(std::string query) {
 
 void SQLiteDB::create_prepared_statements() {
     // init prepared statements
-    cve_query =  std::make_unique<SQLitePreparedStatement>(*db, CVE_QUERY_FRAGMENT);
-    cve_cpe_query =  std::make_unique<SQLitePreparedStatement>(*db, CVE_CPE_QUERY_FRAGMENT);
-    add_exploit_ref_query =  std::make_unique<SQLitePreparedStatement>(*db, NVD_EXPLOIT_REFS_FRAGMENT);
-    add_cveid_exploit_ref_query =  std::make_unique<SQLitePreparedStatement>(*db, CVE_NVD_EXPLOITS_REFS_FRAGMENT);
+    cve_query = std::make_unique<SQLitePreparedStatement>(*db, CVE_QUERY_FRAGMENT);
+    cve_cpe_query = std::make_unique<SQLitePreparedStatement>(*db, CVE_CPE_QUERY_FRAGMENT);
+    add_exploit_ref_query = std::make_unique<SQLitePreparedStatement>(*db, NVD_EXPLOIT_REFS_FRAGMENT);
+    add_cveid_exploit_ref_query = std::make_unique<SQLitePreparedStatement>(*db, CVE_NVD_EXPLOITS_REFS_FRAGMENT);
 }
 
 void SQLiteDB::commit() {
@@ -63,7 +63,8 @@ MariaDB::MariaDB(nlohmann::json config) {
     sql::Properties properties({{"user", user}, {"password", password}});
 
     conn = std::unique_ptr<sql::Connection>(driver->connect(url, properties));
-    
+
+    // set up database
     std::string create_db_query = "CREATE OR REPLACE DATABASE "+database+";";
     std::unique_ptr<sql::Statement> stmnt(conn->createStatement());
     stmnt->executeQuery(create_db_query);
@@ -77,10 +78,10 @@ void MariaDB::execute_query(std::string query) {
 
 void MariaDB::create_prepared_statements() {
     // init prepared statements
-    cve_query =  std::make_unique<MariaDBPreparedStatement>(conn, CVE_QUERY_FRAGMENT);
-    cve_cpe_query =  std::make_unique<MariaDBPreparedStatement>(conn, CVE_CPE_QUERY_FRAGMENT);
-    add_exploit_ref_query =  std::make_unique<MariaDBPreparedStatement>(conn, NVD_EXPLOIT_REFS_FRAGMENT);
-    add_cveid_exploit_ref_query =  std::make_unique<MariaDBPreparedStatement>(conn, CVE_NVD_EXPLOITS_REFS_FRAGMENT);
+    cve_query = std::make_unique<MariaDBPreparedStatement>(conn, CVE_QUERY_FRAGMENT);
+    cve_cpe_query = std::make_unique<MariaDBPreparedStatement>(conn, CVE_CPE_QUERY_FRAGMENT);
+    add_exploit_ref_query = std::make_unique<MariaDBPreparedStatement>(conn, NVD_EXPLOIT_REFS_FRAGMENT);
+    add_cveid_exploit_ref_query = std::make_unique<MariaDBPreparedStatement>(conn, CVE_NVD_EXPLOITS_REFS_FRAGMENT);
 }
 
 void MariaDB::commit() {

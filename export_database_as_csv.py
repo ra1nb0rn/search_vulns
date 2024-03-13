@@ -1,11 +1,16 @@
 import sqlite3
 try: # only use mariadb module if installed
     import mariadb
-except:
+except ImportError:
     pass
 import csv
 import sys
 import os
+
+
+def is_safe_table_name(table_name):
+    return all([c.isalnum() or c in ('-', '_') for c in table_name])
+
 
 def export_tables_to_csv(database_file):
     # Connect to the SQLite database
@@ -19,8 +24,12 @@ def export_tables_to_csv(database_file):
     # Export each table to a separate CSV file
     for table in tables:
         table_name = table[0]
-        csv_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), f"{table_name}.csv")
-        cursor.execute(f"SELECT * FROM {table_name};")
+        # check if table_name is not malicious
+        if not is_safe_table_name(table_name):
+            print('Malicious table name detected')
+            return 1
+        csv_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), f'{table_name}.csv')
+        cursor.execute('SELECT * FROM %s;' % table_name)
         rows = cursor.fetchall()
         with open(csv_file, 'w', newline='\n') as file:
             writer = csv.writer(file, dialect='unix', escapechar='\\')
@@ -44,14 +53,18 @@ def export_tables_mariadb_to_csv(config):
     cursor = conn.cursor()
 
     # Get the list of tables in the database
-    cursor.execute("SHOW TABLES;")
+    cursor.execute('SHOW TABLES;')
     tables = cursor.fetchall()
 
     # Export each table to a separate CSV file
     for table in tables:
         table_name = table[0]
-        csv_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), f"{table_name}.csv.mariadb")
-        cursor.execute(f"SELECT * FROM {table_name};")
+        # check if table_name is not malicious
+        if not is_safe_table_name(table_name):
+            print('Malicious table name detected')
+            return 1
+        csv_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), f'{table_name}.csv.mariadb')
+        cursor.execute('SELECT * FROM %s;' % table_name)
         rows = cursor.fetchall()
 
         with open(csv_file, 'w', newline='\n') as file:

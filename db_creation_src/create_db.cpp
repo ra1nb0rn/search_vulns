@@ -11,6 +11,7 @@
 #include <climits>
 #include <unordered_set>
 #include <unordered_map>
+#include <regex>
 #include "database_wrapper.h"
 #include "prepared_statement.h"
 
@@ -60,6 +61,18 @@ void handle_exception(T &e) {
         throw e;
     }
 }
+
+bool is_safe_database_name(std::string dbName) {
+    // Check if database name contains any special characters or keywords
+    std::regex pattern("[^a-zA-Z0-9_-]");
+
+    if (std::regex_search(dbName, pattern)) {
+        return false; // Database name is malicious
+    }
+
+    return true; // Database name is safe
+}
+
 
 int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     // Begin transaction
@@ -253,7 +266,7 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
                     else
                         cve_cpe_query->bind(6, false);
 
-                    try{
+                    try {
                         cve_cpe_query->execute();
                     }
                     catch (SQLite::Exception& e) {
@@ -314,9 +327,15 @@ int main(int argc, char *argv[]) {
     
     std::unique_ptr<DatabaseWrapper> db;
 
+    // validate given database name
+    if (database_type != "sqlite" && !is_safe_database_name(config["DATABASE_NAME"])) {
+        std::cout << "Potentially malicious database name detected. Abort creation of database" << std::endl;
+        return EXIT_FAILURE;
+    }
+
     try{
         // create database connection
-        if ( database_type == "sqlite")
+        if (database_type == "sqlite")
             db = std::make_unique<SQLiteDB>(outfile);
         else{
             db = std::make_unique<MariaDB>(config);
@@ -360,4 +379,15 @@ int main(int argc, char *argv[]) {
     }
     // close database connection
     db->close_connection();
+
+    // print duration of building process
+    auto time = std::chrono::high_resolution_clock::now() - start_time;
+
+    char *db_abs_path = realpath(outfile.c_str(), NULL);
+    std::cout << "Database creation took " <<
+    (float) (std::chrono::duration_cast<std::chrono::microseconds>(time).count()) / (1e6) << "s .\n";
+    std::cout << "Local copy of NVD created as " << db_abs_path << " ." << std::endl;
+    free(db_abs_path);
+    return EXIT_SUCCESS;
+
 }
