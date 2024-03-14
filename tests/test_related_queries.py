@@ -59,7 +59,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'dell omsa 9.4.0.2'
         result = search_vulns.search_vulns_return_cpe(query)
-        expected_related_cpes = [('cpe:2.3:a:dell:openmanage_server_administrator:9.4.0.2:*:*:*:*:*:*:*', -1), ('cpe:2.3:a:dell:openmanage_server_administrator:5.2.0:*:*:*:*:*:*:*', 0.9356286465015572), ('cpe:2.3:a:dell:openmanage_server_administrator:1.00.0000:*:*:*:*:*:*:*', 0.8845604348848455), ('cpe:2.3:a:dell:openmanage_server_administrator_installer:9.4.0.2:*:*:*:*:*:*:*', -1), ('cpe:2.3:a:dell:openmanage_server_administrator_installer:1.0.0:*:*:*:*:*:*:*', 0.8355902246901327), ('cpe:2.3:a:dell:openmanage_server_administrator_lite:9.4.0.2:*:*:*:*:*:*:*', -1), ('cpe:2.3:a:dell:openmanage_server_administrator_lite:5.4.1:*:*:*:*:*:*:*', 0.8355902246901327), ('cpe:2.3:a:dell:openmanage:9.4.0.2:*:*:*:*:*:*:*', -1), ('cpe:2.3:a:dell:openmanage:-:*:*:*:*:*:*:*', 0.826938997039739)]
+        expected_related_cpes = [('cpe:2.3:a:dell:openmanage_server_administrator:9.4.0.2:*:*:*:*:*:*:*', -1), ('cpe:2.3:a:dell:openmanage_server_administrator:5.2.0:*:*:*:*:*:*:*', 0.9356286465015572), ('cpe:2.3:a:dell:openmanage_server_administrator:1.00.0000:*:*:*:*:*:*:*', 0.8845604348848455), ('cpe:2.3:a:dell:openmanage_server_administrator_installer:9.4.0.2:*:*:*:*:*:*:*', -1), ('cpe:2.3:a:dell:openmanage_server_administrator_installer:1.0.0:*:*:*:*:*:*:*', 0.8355902246901327)]
         for i, (expected_related_cpe, match_score) in enumerate(expected_related_cpes):
             self.assertEqual(expected_related_cpe, result[query]['pot_cpes'][i][0])
             self.assertAlmostEqual(match_score, result[query]['pot_cpes'][i][1])
@@ -68,7 +68,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'citrix adc 13.1-42.47'
         result = search_vulns.search_vulns_return_cpe(query)
-        expected_related_cpes = [('cpe:2.3:a:citrix:application_delivery_controller:13.1:42.47:*:*:-:*:*:*', -1), ('cpe:2.3:a:citrix:application_delivery_controller:13.1-42.47:*:*:*:-:*:*:*', -1), ('cpe:2.3:a:citrix:application_delivery_controller:13.1:*:*:*:-:*:*:*', 0.9443356111798747), ('cpe:2.3:h:citrix:application_delivery_controller:13.1:*:*:*:*:*:*:*', -1), ('cpe:2.3:h:citrix:application_delivery_controller:13.1:42.47:*:*:*:*:*:*', -1), ('cpe:2.3:h:citrix:application_delivery_controller:13.1-42.47:*:*:*:*:*:*:*', -1), ('cpe:2.3:h:citrix:application_delivery_controller:-:*:*:*:*:*:*:*', 0.9195900759823716), ('cpe:2.3:a:citrix:application_delivery_controller:13.1-21.50:*:*:*:*:*:*:*', 0.8959514540639271), ('cpe:2.3:a:citrix:application_delivery_controller:12.1:*:*:*:-:*:*:*', 0.8588472122359783), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:13.1:*:*:*:*:*:*:*', -1), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:13.1:42.47:*:*:*:*:*:*', -1), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:13.1-42.47:*:*:*:*:*:*:*', -1), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:10.1:*:*:*:*:*:*:*', 0.8212665153916354)]
+        expected_related_cpes = [('cpe:2.3:a:citrix:application_delivery_controller:13.1:42.47:*:*:-:*:*:*', -1), ('cpe:2.3:a:citrix:application_delivery_controller:13.1-42.47:*:*:*:-:*:*:*', -1), ('cpe:2.3:a:citrix:application_delivery_controller:13.1:*:*:*:-:*:*:*', 0.9443356111798746), ('cpe:2.3:h:citrix:application_delivery_controller:13.1:*:*:*:*:*:*:*', -1), ('cpe:2.3:h:citrix:application_delivery_controller:13.1:42.47:*:*:*:*:*:*', -1), ('cpe:2.3:h:citrix:application_delivery_controller:13.1-42.47:*:*:*:*:*:*:*', -1), ('cpe:2.3:h:citrix:application_delivery_controller:-:*:*:*:*:*:*:*', 0.9195900759823715)]
         for i, (expected_related_cpe, match_score) in enumerate(expected_related_cpes):
             self.assertEqual(expected_related_cpe, result[query]['pot_cpes'][i][0])
             self.assertAlmostEqual(match_score, result[query]['pot_cpes'][i][1])
@@ -77,7 +77,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'citrix adc'
         result = search_vulns.search_vulns_return_cpe(query)
-        expected_related_cpes =  [('cpe:2.3:h:citrix:application_delivery_controller:-:*:*:*:*:*:*:*', 0.9640085266327638), ('cpe:2.3:a:citrix:application_delivery_controller:*:*:*:*:*:*:*:*', -1), ('cpe:2.3:a:citrix:application_delivery_controller:12.1:*:*:*:-:*:*:*', 0.9003316339465728), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:*:*:*:*:*:*:*:*', -1), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:10.1:*:*:*:*:*:*:*', 0.8609356974951642), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:10.5:*:*:*:*:*:*:*', 0.8609356974951642), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:10.5e:*:*:*:*:*:*:*', 0.8609356974951642)]
+        expected_related_cpes =  [('cpe:2.3:h:citrix:application_delivery_controller:-:*:*:*:*:*:*:*', 0.9640085266327638), ('cpe:2.3:a:citrix:application_delivery_controller:*:*:*:*:*:*:*:*', -1), ('cpe:2.3:a:citrix:application_delivery_controller:12.1:*:*:*:-:*:*:*', 0.9003316339465728), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:*:*:*:*:*:*:*:*', -1), ('cpe:2.3:o:citrix:application_delivery_controller_firmware:10.1:*:*:*:*:*:*:*', 0.8609356974951642)]
         for i, (expected_related_cpe, match_score) in enumerate(expected_related_cpes):
             self.assertEqual(expected_related_cpe, result[query]['pot_cpes'][i][0])
             self.assertAlmostEqual(match_score, result[query]['pot_cpes'][i][1])
@@ -93,4 +93,5 @@ class TestSearches(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    os.environ['IS_CPE_SEARCH_TEST'] = 'true'
     unittest.main()

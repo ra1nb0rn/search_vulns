@@ -1,4 +1,6 @@
 #include <SQLiteCpp/SQLiteCpp.h>
+// include mariadb
+#include <conncpp.hpp>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -9,6 +11,9 @@
 #include <climits>
 #include <unordered_set>
 #include <unordered_map>
+#include <regex>
+#include "database_wrapper.h"
+#include "prepared_statement.h"
 
 extern "C" {
     #include "dirent.h"
@@ -49,20 +54,34 @@ namespace std {
     };
 }
 
-void handle_exception(SQLite::Exception &e) {
+template<typename T>
+void handle_exception(T &e) {
     std::string msg = e.what();
-    if (msg.find("UNIQUE constraint failed") == std::string::npos) {
+    if ((msg.find("UNIQUE constraint failed") == std::string::npos) && (msg.find("Duplicate entry") == std::string::npos)){
         throw e;
     }
 }
 
-int add_to_db(SQLite::Database &db, const std::string &filepath) {
+bool is_safe_database_name(std::string dbName) {
+    // Check if database name contains any special characters or keywords
+    std::regex pattern("[^a-zA-Z0-9_-]");
+
+    if (std::regex_search(dbName, pattern)) {
+        return false; // Database name is malicious
+    }
+
+    return true; // Database name is safe
+}
+
+
+int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     // Begin transaction
-    SQLite::Transaction transaction(db);
-    SQLite::Statement cve_query(db, "INSERT INTO cve VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    SQLite::Statement cve_cpe_query(db, "INSERT INTO cve_cpe VALUES (?, ?, ?, ?, ?, ?, ?)");
-    SQLite::Statement add_exploit_ref_query(db, "INSERT INTO nvd_exploits_refs VALUES (?, ?)");
-    SQLite::Statement add_cveid_exploit_ref_query(db, "INSERT INTO cve_nvd_exploits_refs VALUES (?, ?)");
+    db->start_transaction();
+    // get prepared statements
+    PreparedStatement* cve_query = db->get_cve_query();
+    PreparedStatement* cve_cpe_query = db->get_cve_cpe_query();
+    PreparedStatement* add_exploit_ref_query = db->get_add_exploit_ref_query();
+    PreparedStatement* add_cveid_exploit_ref_query = db->get_add_cveid_exploit_ref_query(); 
 
     // read a JSON file
     std::ifstream input_file(filepath);
@@ -71,13 +90,13 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
 
     json metrics_entry, metrics_type_entry, references_entry;
     std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity;
-    std::string cvss_version, ref_url, op, vulnerable_with_cpes_node_str, vulnerable_with_cpes_str;
+    std::string cvss_version, ref_url, op;
     std::unordered_map<std::string, int> nvd_exploits_refs;
     std::unordered_map<std::string, std::unordered_set<int>> cveid_exploits_map;
     std::size_t datetime_dot_pos;
     bool vulnerable;
     double base_score;
-    int cur_node_id, cur_with_str_idx;
+    int cur_node_id;
 
     // iterate the array
     for (auto &cve_entry : j["vulnerabilities"]) {
@@ -93,6 +112,7 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
             }
         }
 
+        // cvss metrics_entry_type (2, 3.0, 3.1)
         metrics_entry = cve_entry["cve"]["metrics"];
         if (metrics_entry.find("cvssMetricV31") != metrics_entry.end()) {
             metrics_type_entry = metrics_entry["cvssMetricV31"];
@@ -104,6 +124,7 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
             metrics_type_entry = metrics_entry["cvssMetricV2"];
         }
 
+        // get base_score, severity, cvss_version and vector
         if (metrics_type_entry != NULL){
             for (auto &metric : metrics_type_entry){
                 // assume there's always a Primary entry
@@ -128,18 +149,21 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
             severity = "";
         }
 
+        // get published date
         published = cve_entry["cve"]["published"];
         std::replace(published.begin(), published.end(), 'T', ' ');
         datetime_dot_pos = published.rfind(".");
         if (datetime_dot_pos != std::string::npos)
             published = published.substr(0, datetime_dot_pos);
 
+        // get last modified date
         last_modified = cve_entry["cve"]["lastModified"];
         std::replace(last_modified.begin(), last_modified.end(), 'T', ' ');
         datetime_dot_pos = last_modified.rfind(".");
         if (datetime_dot_pos != std::string::npos)
             last_modified = last_modified.substr(0, datetime_dot_pos);
 
+        // mapping of cve to nvd exploits
         references_entry = cve_entry["cve"]["references"];
         for (auto &ref_entry : references_entry) {
             ref_url = ref_entry["url"];
@@ -160,23 +184,22 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
             }
         }
 
-        cve_query.bind(1, cve_id);
-        cve_query.bind(2, description);
-        cve_query.bind(3, edb_ids);
-        cve_query.bind(4, published);
-        cve_query.bind(5, last_modified);
+        // bind found cve info to prepared statement
+        cve_query->bind(1, cve_id);
+        cve_query->bind(2, description);
+        cve_query->bind(3, edb_ids);
+        cve_query->bind(4, published);
+        cve_query->bind(5, last_modified);
         
         // Assumption: every entry has at least a cvssV2 score
-        cve_query.bind(6, cvss_version);
-        cve_query.bind(7, base_score);
-        cve_query.bind(8, vector_string);
-        cve_query.bind(9, severity);
-
-        cve_query.exec();
-        cve_query.reset();
+        cve_query->bind(6, cvss_version);
+        cve_query->bind(7, base_score);
+        cve_query->bind(8, vector_string);
+        cve_query->bind(9, severity);
+        cve_query->execute();
 
         // Next, retrieve CPE data and put into DB  
-        cve_cpe_query.bind(1, cve_id);
+        cve_cpe_query->bind(1, cve_id);
         VagueCpeInfo vague_cpe_info;
         for (auto &cve_config_entry: cve_entry["cve"]["configurations"]){
             // assumption 1: the encapsulation depth of logic operators is no more than 2
@@ -188,18 +211,14 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
             else
                 op = "OR";  // default if no operator explicitly specified
 
+            // fill vector with version information of every mentioned cpe
             std::vector<std::vector<VagueCpeInfo>> all_vulnerable_cpes;
-            std::vector<std::string> vulnerable_with_cpes_node_strs;
             for (auto &config_nodes_entry : cve_config_entry["nodes"]) {
                 std::vector<VagueCpeInfo> node_vulnerable_cpes;
-                vulnerable_with_cpes_node_str = "";
 
                 if (config_nodes_entry.find("cpeMatch") != config_nodes_entry.end()) {
                     for (auto &cpe_entry : config_nodes_entry["cpeMatch"]) {
                         vague_cpe_info = {cpe_entry["criteria"], "", "", "", ""};
-
-                        if (op == "AND")
-                            vulnerable_with_cpes_node_str += vague_cpe_info.vague_cpe + ",";
 
                         if (!cpe_entry["vulnerable"])
                             continue;
@@ -227,78 +246,58 @@ int add_to_db(SQLite::Database &db, const std::string &filepath) {
                 }
 
                 all_vulnerable_cpes.push_back(node_vulnerable_cpes);
-
-                if (vulnerable_with_cpes_node_str != "")
-                    vulnerable_with_cpes_node_str.pop_back();
-                vulnerable_with_cpes_node_strs.push_back(vulnerable_with_cpes_node_str);
             }
 
+            // bind found information to prepared statement
             cur_node_id = -1;
             for (auto &node_vulnerable_cpes : all_vulnerable_cpes) {
                 cur_node_id++;
-                vulnerable_with_cpes_str = "";
-                cur_with_str_idx = -1;
-                for (auto &with_str : vulnerable_with_cpes_node_strs) {
-                    cur_with_str_idx++;
-
-                    if (cur_with_str_idx != cur_node_id)
-                        vulnerable_with_cpes_str += with_str + ',';
-                }
-
-                if (vulnerable_with_cpes_str != "")
-                    vulnerable_with_cpes_str.pop_back();
 
                 for (auto &vague_cpe_info : node_vulnerable_cpes) {
-                    cve_cpe_query.bind(2, vague_cpe_info.vague_cpe);
-                    cve_cpe_query.bind(3, vague_cpe_info.version_start);
+                    cve_cpe_query->bind(2, vague_cpe_info.vague_cpe);
+                    cve_cpe_query->bind(3, vague_cpe_info.version_start);
                     if (vague_cpe_info.version_start_type == "Including")
-                        cve_cpe_query.bind(4, true);
+                        cve_cpe_query->bind(4, true);
                     else
-                        cve_cpe_query.bind(4, false);
-                    cve_cpe_query.bind(5, vague_cpe_info.version_end);
+                        cve_cpe_query->bind(4, false);
+                    cve_cpe_query->bind(5, vague_cpe_info.version_end);
                     if (vague_cpe_info.version_end_type == "Including")
-                        cve_cpe_query.bind(6, true);
+                        cve_cpe_query->bind(6, true);
                     else
-                        cve_cpe_query.bind(6, false);
-                    cve_cpe_query.bind(7, vulnerable_with_cpes_str);
+                        cve_cpe_query->bind(6, false);
 
                     try {
-                        cve_cpe_query.exec();
+                        cve_cpe_query->execute();
                     }
                     catch (SQLite::Exception& e) {
                         handle_exception(e);
                     }
-
-                    try {
-                        cve_cpe_query.reset();
-                    }
-                    catch (SQLite::Exception& e) {
+                    catch (sql::SQLException& e) {
+                        handle_exception(e);
                     }
                 }
             }
         }
-    }
+    } 
 
     // Put exploit references into DB
     for (auto &exploit : nvd_exploits_refs) {
-        add_exploit_ref_query.bind(1, exploit.second);
-        add_exploit_ref_query.bind(2, exploit.first);
-        add_exploit_ref_query.exec();
-        add_exploit_ref_query.reset();
+        add_exploit_ref_query->bind(1, exploit.second);
+        add_exploit_ref_query->bind(2, exploit.first);
+        add_exploit_ref_query->execute();
     }
 
     // Put CVEs to NVD exploit refs into DB
     for (auto &mapping_entry : cveid_exploits_map) {
         for (auto &ref_id : mapping_entry.second) {
-            add_cveid_exploit_ref_query.bind(1, mapping_entry.first);
-            add_cveid_exploit_ref_query.bind(2, ref_id);
-            add_cveid_exploit_ref_query.exec();
-            add_cveid_exploit_ref_query.reset();
+            add_cveid_exploit_ref_query->bind(1, mapping_entry.first);
+            add_cveid_exploit_ref_query->bind(2, ref_id);
+            add_cveid_exploit_ref_query->execute();
         }
     }
 
     // Commit transaction
-    transaction.commit();
+    db->commit();
     return 1;
 }
 
@@ -308,35 +307,46 @@ bool ends_with(const std::string& str, const std::string& suffix) {
 
 int main(int argc, char *argv[]) {
 
-    if (argc != 3) {
+    if (argc != 5) {
         std::cerr << "Wrong argument count." << std::endl;
-        std::cerr << "Usage: ./create_db cve_folder outfile" << std::endl;
+        std::cerr << "Usage: ./create_db cve_folder path_to_config outfile create_sql_statements_file" << std::endl;
         return EXIT_FAILURE;
     }
 
     std::string cve_folder = argv[1];
-    std::string outfile = argv[2];
+    std::ifstream config_file(argv[2]);
+    json config = json::parse(config_file);
+    std::string outfile = argv[3];
+    std::ifstream create_sql_statements_file(argv[4]);
+    json create_sql_statements = json::parse(create_sql_statements_file);
+    std::string database_type = config["DATABASE"]["TYPE"];
     std::string filename;
     std::vector<std::string> cve_files;
 
-
     auto start_time = std::chrono::high_resolution_clock::now();
-    try {
-        SQLite::Database db(outfile, SQLite::OPEN_CREATE | SQLite::OPEN_READWRITE);
+    
+    std::unique_ptr<DatabaseWrapper> db;
 
-        db.exec("DROP TABLE IF EXISTS cve");
-        db.exec("DROP TABLE IF EXISTS cve_cpe");
-        db.exec("DROP TABLE IF EXISTS nvd_exploits_refs");
-        db.exec("DROP TABLE IF EXISTS cve_nvd_exploits_refs");
+    // validate given database name
+    if (database_type != "sqlite" && !is_safe_database_name(config["DATABASE_NAME"])) {
+        std::cout << "Potentially malicious database name detected. Abort creation of database" << std::endl;
+        return EXIT_FAILURE;
+    }
 
-        db.exec("CREATE TABLE cve (cve_id VARCHAR(25), description TEXT, edb_ids TEXT, published DATETIME, last_modified DATETIME, \
-            cvss_version CHAR(3), base_score CHAR(3), vector VARCHAR(60), severity VARCHAR(15), PRIMARY KEY(cve_id))");
-        db.exec("CREATE TABLE cve_cpe (cve_id VARCHAR(25), cpe TEXT, cpe_version_start VARCHAR(255), is_cpe_version_start_including BOOL, \
-            cpe_version_end VARCHAR(255), is_cpe_version_end_including BOOL, with_cpes TEXT, PRIMARY KEY(cve_id, cpe, cpe_version_start, \
-            is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including, with_cpes))");
-        db.exec("CREATE TABLE nvd_exploits_refs (ref_id INTEGER, exploit_ref text, PRIMARY KEY (ref_id))");
-        db.exec("CREATE TABLE cve_nvd_exploits_refs (cve_id VARCHAR(25), ref_id INTEGER, PRIMARY KEY (cve_id, ref_id))");
+    try{
+        // create database connection
+        if (database_type == "sqlite")
+            db = std::make_unique<SQLiteDB>(outfile);
+        else{
+            db = std::make_unique<MariaDB>(config);
+        } 
 
+        // create tables and prepared statements
+        db->execute_query(create_sql_statements["TABLES"]["CVE"][database_type]);
+        db->execute_query(create_sql_statements["TABLES"]["CVE_CPE"][database_type]);
+        db->execute_query(create_sql_statements["TABLES"]["CVE_NVD_EXPLOITS_REFS"][database_type]);
+        db->execute_query(create_sql_statements["TABLES"]["NVD_EXPLOITS_REFS"][database_type]);
+        db->create_prepared_statements();
 
         DIR *dir;
         struct dirent *ent;
@@ -353,16 +363,24 @@ int main(int argc, char *argv[]) {
             std::cerr << "Could not open directory \'" << cve_folder << "\'" << std::endl;
             return EXIT_FAILURE;
         }
-
+        
         std::cout << "Creating local copy of NVD as " << outfile << " ..." << std::endl;
         for (const auto &file : cve_files) {
-            add_to_db(db, file);
+            add_to_db(db.get(), file);
         }
+
+        // create view for nvd_exploits_refs
+        db->execute_query(create_sql_statements["VIEWS"]["NVD_EXPLOITS_REFS_VIEW"][database_type]);
     }
     catch (std::exception& e) {
         std::cerr << "exception: " << e.what() << std::endl;
+        db->close_connection();
         return EXIT_FAILURE;
     }
+    // close database connection
+    db->close_connection();
+
+    // print duration of building process
     auto time = std::chrono::high_resolution_clock::now() - start_time;
 
     char *db_abs_path = realpath(outfile.c_str(), NULL);
@@ -371,4 +389,5 @@ int main(int argc, char *argv[]) {
     std::cout << "Local copy of NVD created as " << db_abs_path << " ." << std::endl;
     free(db_abs_path);
     return EXIT_SUCCESS;
+
 }
