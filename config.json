@@ -5,8 +5,7 @@
     "NVD_API_KEY": "",
     "cpe_search": {
         "DATABASE_NAME": "cpe_search/cpe-search-dictionary.db3",
-        "DEPRECATED_CPES_FILE": "cpe_search/deprecated-cpes.json",
-        "NVD_API_KEY": ""
+        "DEPRECATED_CPES_FILE": "cpe_search/deprecated-cpes.json"
     },
     "DATABASE": {
         "TYPE": "sqlite"

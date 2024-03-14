@@ -121,6 +121,7 @@ conn.close()
 if __name__ == '__main__':
     print('[+] Starting webserver')
     app.run()
+
     # close pool if exists
     if 'pool' in locals():
         pool.close()

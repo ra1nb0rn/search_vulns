@@ -18,7 +18,7 @@ from cpe_search.cpe_search import (
     create_base_cpe_if_versionless_query,
     get_possible_versions_in_query
 )
-from cpe_search.cpe_search import _load_config as load_config_cpe
+from cpe_search.cpe_search import _load_config as _load_config_cpe_search
 
 DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
 MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
@@ -556,8 +556,9 @@ def parse_args():
 def _load_config(config_file=DEFAULT_CONFIG_FILE):
     """Load config from file"""
 
-    config = load_config_cpe(config_file)
+    config = _load_config_cpe_search(config_file)
     config['cpe_search']['DATABASE'] = config['DATABASE']
+    config['cpe_search']['NVD_API_KEY'] = config['NVD_API_KEY']
 
     return config
 

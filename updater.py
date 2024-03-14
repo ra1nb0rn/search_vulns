@@ -107,11 +107,11 @@ def backup_mariadb_database(database):
                         '--add-drop-database', '--add-locks',
                         '-B', database, '-r', MARIADB_BACKUP_FILE]
         if CONFIG['DATABASE']['PASSWORD']:
-            backup_call.append('-p')
-            backup_call.append(CONFIG['DATABASE']['PASSWORD'])
-        return_code = subprocess.call(backup_call, stderr=subprocess.DEVNULL)
+            backup_call.append(f"-p{CONFIG['DATABASE']['PASSWORD']}")
+
+        return_code = subprocess.call(backup_call)
         if return_code != 0:
-            print(f'[-] MariaDB BackUp of {database} failed')
+            print(f'[-] MariaDB backup of {database} failed')
 
 
 async def update_vuln_db(nvd_api_key=None):
@@ -237,15 +237,14 @@ async def handle_cpes_update(nvd_api_key=None):
             shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['DATABASE_NAME'])
         if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
             shutil.move(CONFIG['DEPRECATED_CPES_BACKUP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'])
-        if os.path.isfile(MARIADB_BACKUP_FILE):
+        if os.path.isfile(MARIADB_BACKUP_FILE) and CONFIG['DATABASE']['TYPE'] == 'mariadb':
             with open(MARIADB_BACKUP_FILE, 'rb') as f:
                 mariadb_backup_data = f.read()
             restore_call = ['mariadb', '-u', CONFIG['DATABASE']['USER'],
                             '-h', CONFIG['DATABASE']['HOST'],
                             '-P', str(CONFIG['DATABASE']['PORT'])]
             if CONFIG['DATABASE']['PASSWORD']:
-                restore_call.append('-p')
-                restore_call.append(CONFIG['DATABASE']['PASSWORD'])
+                restore_call.append(f"-p{CONFIG['DATABASE']['PASSWORD']}")
             restore_call_run = subprocess.run(restore_call, input=mariadb_backup_data)
             if restore_call_run.returncode != 0:
                 print('[-] Failed to restore MariaDB')
@@ -290,8 +289,7 @@ def rollback():
                         '-h', CONFIG['DATABASE']['HOST'],
                         '-P', str(CONFIG['DATABASE']['PORT'])]
         if CONFIG['DATABASE']['PASSWORD']:
-            restore_call.append('-p')
-            restore_call.append(CONFIG['DATABASE']['PASSWORD'])
+            restore_call.append(f"-p{CONFIG['DATABASE']['PASSWORD']}")
         restore_call_run = subprocess.run(restore_call, input=mariadb_backup_data)
         if restore_call_run.returncode != 0:
             print('[-] Failed to restore MariaDB')
@@ -569,8 +567,7 @@ def run(full=False, nvd_api_key=None, config_file=''):
                                 '-B', CONFIG['cpe_search']['DATABASE_NAME'],
                                 '-r', MARIADB_BACKUP_FILE]
                 if CONFIG['DATABASE']['PASSWORD']:
-                    backup_call.append('-p')
-                    backup_call.append(CONFIG['DATABASE']['PASSWORD'])
+                    backup_call.append(f"-p{CONFIG['DATABASE']['PASSWORD']}")
                 return_code = subprocess.call(backup_call, stderr=subprocess.DEVNULL)
                 if return_code != 0:
                     print(f'[-] MariaDB backup failed')
@@ -626,15 +623,14 @@ def run(full=False, nvd_api_key=None, config_file=''):
             if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
                 shutil.move(CONFIG['DATABASE_BACKUP_FILE'], CONFIG['DATABASE_NAME'])
                 print("[+] Restored vulnerability infos from backup")
-            if os.path.isfile(MARIADB_BACKUP_FILE):
+            if os.path.isfile(MARIADB_BACKUP_FILE) and CONFIG['DATABASE']['TYPE'] == 'mariadb':
                 with open(MARIADB_BACKUP_FILE, 'rb') as f:
                     mariadb_backup_data = f.read()
                 restore_call = ['mariadb', '-u', CONFIG['DATABASE']['USER'],
                                 '-h', CONFIG['DATABASE']['HOST'],
                                 '-P', str(CONFIG['DATABASE']['PORT'])]
                 if CONFIG['DATABASE']['PASSWORD']:
-                    restore_call.append('-p')
-                    restore_call.append(CONFIG['DATABASE']['PASSWORD'])
+                    restore_call.append(f"-p{CONFIG['DATABASE']['PASSWORD']}")
                 restore_call_run = subprocess.run(restore_call, input=mariadb_backup_data)
                 if restore_call_run.returncode != 0:
                     print('[-] Failed to restore MariaDB')

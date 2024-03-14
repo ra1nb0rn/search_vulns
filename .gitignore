@@ -3,5 +3,6 @@ __pycache__
 create_db
 db_creation_src/build/
 db_creation_src/json/
+db_creation_src/mariadb-connector-cpp/
 vulndb.db3
 cveid_to_edbid.json
