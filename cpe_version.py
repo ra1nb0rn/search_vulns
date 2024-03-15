@@ -3,10 +3,11 @@ import string
 
 VERSION_PART_SEP_RE = re.compile(r'[^\da-zA-Z]')
 SUBVERSION_PART_SEP_RE = re.compile(r'([a-zA-Z]+|[\d]+)')
+SUBVERSION_PART_SEP_WITH_DOTS_RE = re.compile(r'([a-zA-Z\.]+|[\d\.]+)')
 
 class CPEVersion:
 
-    def __init__(self, ver_str):
+    def __init__(self, ver_str: str):
         self.version_str = ver_str
 
     def get_version_parts(self):
@@ -18,6 +19,9 @@ class CPEVersion:
             version_parts += subversions
 
         return [part.lstrip('0') for part in version_parts]  # strip leading '0' from every part
+
+    def get_version_sections(self):
+        return SUBVERSION_PART_SEP_WITH_DOTS_RE.findall(str(self))
 
     def __eq__(self, other):
         parts, other_parts = self.get_version_parts(), other.get_version_parts()
@@ -106,3 +110,11 @@ class CPEVersion:
 
     def __bool__(self):
         return str(self) not in ('-', '*') or not str(self)
+
+    def __add__(self, other):
+        if not self:
+            return other
+        if not other:
+            return self
+
+        return CPEVersion(str(self) + str(other))

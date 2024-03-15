@@ -27,6 +27,7 @@ EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
 DEDUP_LINEBREAKS_RE_1 = re.compile(r'(\r\n)+')
 DEDUP_LINEBREAKS_RE_2 = re.compile(r'\n+')
+CPE_COMPARISON_STOP_CHARS_RE = re.compile(r'[\+\-\_\~]')
 
 # define ANSI color escape sequences
 # Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
@@ -58,13 +59,29 @@ def is_cpe_included_from_field(cpe1, cpe2, field=6):
     cpe2_remainder_fields = cpe2.split(':')[field:]
 
     for i in range(min(len(cpe1_remainder_fields), len(cpe2_remainder_fields))):
+        # CPE wildcards
         if cpe1_remainder_fields[i] in ('*', '-'):
             continue
         if cpe2_remainder_fields[i] in ('*', '-'):
             continue
 
+        # remove irrelevant chars
+        cpe1_remainder_fields[i] = CPE_COMPARISON_STOP_CHARS_RE.sub('', cpe1_remainder_fields[i])
+        cpe2_remainder_fields[i] = CPE_COMPARISON_STOP_CHARS_RE.sub('', cpe2_remainder_fields[i])
+
+        # alpha and beta version abbreviations
+        if cpe1_remainder_fields[i] == 'alpha' and cpe1_remainder_fields[i] == 'a':
+            continue
+        if cpe2_remainder_fields[i] == 'alpha' and cpe1_remainder_fields[i] == 'a':
+            continue
+        if cpe1_remainder_fields[i] == 'beta' and cpe1_remainder_fields[i] == 'b':
+            continue
+        if cpe2_remainder_fields[i] == 'beta' and cpe1_remainder_fields[i] == 'b':
+            continue
+
         if cpe1_remainder_fields[i] != cpe2_remainder_fields[i]:
             return False
+
     return True
 
 
@@ -171,28 +188,35 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
     return detailed_vulns
 
 
-def _is_version_start_end_matching(cpe_version, version_start, version_start_incl, version_end, version_end_incl):
+def _is_version_start_end_matching(cpe_version, cpe_subversion, version_start, version_start_incl, version_end, version_end_incl):
     """Return boolean whether the provided CPE version lies within the provided range modifiers"""
+
+    version_start = CPEVersion(version_start)
+    version_end = CPEVersion(version_end)
+
+    # combine version and subversion if NVD merged both for version_end as well
+    if version_end and len(version_end.get_version_sections()) > len(cpe_version.get_version_sections()):
+        cpe_version = (cpe_version + cpe_subversion)
 
     if version_start and version_end:
         if version_start_incl == True and version_end_incl == True:
-            return CPEVersion(version_start) <= cpe_version <= CPEVersion(version_end)
+            return version_start <= cpe_version <= version_end
         elif version_start_incl == True and version_end_incl == False:
-            return CPEVersion(version_start) <= cpe_version < CPEVersion(version_end)
+            return version_start <= cpe_version < version_end
         elif version_start_incl == False and version_end_incl == True:
-            return CPEVersion(version_start) < cpe_version <= CPEVersion(version_end)
+            return version_start < cpe_version <= version_end
         else:
-            return CPEVersion(version_start) < cpe_version < CPEVersion(version_end)
+            return version_start < cpe_version < version_end
     elif version_start:
         if version_end_incl == True:
-            return CPEVersion(version_start) <= cpe_version
+            return version_start <= cpe_version
         elif version_end_incl == False:
-            return CPEVersion(version_start) < cpe_version
+            return version_start < cpe_version
     elif version_end:
         if version_end_incl == True:
-            return cpe_version <= CPEVersion(version_end)
+            return cpe_version <= version_end
         elif version_end_incl == False:
-            return cpe_version < CPEVersion(version_end)
+            return cpe_version < version_end
 
     return False
 
@@ -202,6 +226,7 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
 
     cpe_parts = cpe.split(':')
     cpe_version = CPEVersion(cpe_parts[5])
+    cpe_subversion = CPEVersion(cpe_parts[6])
     vulns = []
 
     general_cpe_prefix = ':'.join(cpe.split(':')[:5]) + ':'
@@ -228,9 +253,10 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
             is_cpe_vuln, bad_nvd_entry = False, False
             match_reason = ''
             is_cpe_vuln = is_cpe_included_from_field(cpe, vuln_cpe, 5)
+
             if cpe_version and (version_start or version_end):
                 # additionally check if version matches range
-                is_cpe_vuln = _is_version_start_end_matching(cpe_version, version_start, version_start_incl, version_end, version_end_incl)
+                is_cpe_vuln = _is_version_start_end_matching(cpe_version, cpe_subversion, version_start, version_start_incl, version_end, version_end_incl)
                 match_reason = 'version_in_range'
             elif is_cpe_vuln:
                 # check if the NVD's affected products entry for the CPE is considered faulty
@@ -354,13 +380,30 @@ def get_equivalent_cpes(cpe, config):
     cpes = [cpe]
     cpe_split = cpe.split(':')
     cpe_prefix = ':'.join(cpe_split[:5]) + ':'
+    cpe_version = cpe_split[5]
+    cpe_subversion = cpe_split[6]
 
-    for equivalent_cpe in EQUIVALENT_CPES.get(cpe_prefix, []):
-        equivalent_cpe_prefix = ':'.join(equivalent_cpe.split(':')[:5]) + ':'
-        if equivalent_cpe != cpe_prefix:
-            cpes.append(equivalent_cpe_prefix + ':'.join(cpe_split[5:]))
+    # if version part consists of more than one version parts, split into two CPE fields
+    cpe_version_sections = CPEVersion(cpe_version).get_version_sections()
+    if len(cpe_version_sections) > 1 and cpe_subversion in ('*', '', '-'):
+        cpe_split[5] = ''.join(cpe_version_sections[:-1])
+        cpe_split[6] = cpe_version_sections[-1]
+        cpes.append(':'.join(cpe_split))
 
-    return cpes
+    # if CPE has subversion, create equivalent query with main version and subversion combined in one CPE field
+    if cpe_subversion not in ('*', '', '-'):
+        cpe_split[5] = cpe_version + '-' + cpe_subversion
+        cpe_split[6] = '*'
+        cpes.append(':'.join(cpe_split))
+
+    equiv_cpes = cpes.copy()
+    for cpe in cpes:
+        for equivalent_cpe in EQUIVALENT_CPES.get(cpe_prefix, []):
+            equivalent_cpe_prefix = ':'.join(equivalent_cpe.split(':')[:5]) + ':'
+            if equivalent_cpe != cpe_prefix:
+                equiv_cpes.append(equivalent_cpe_prefix + ':'.join(cpe_split[5:]))
+
+    return equiv_cpes
 
 
 def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD, keep_data_in_memory=False, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, include_single_version_vulns=False, config=None):
