@@ -93,7 +93,7 @@ Furthermore, you can use ``gunicorn`` to make the web server more scalable; for 
 ```bash
 gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind '0.0.0.0:8000' wsgi:app
 ```
-You can read more about choosing good ``gunicorn`` settings for your system [here](https://medium.com/building-the-system/gunicorn-3-means-of-concurrency-efbb547674b7). Note, however, that this tool is quite CPU and memory intensive, meaning that scalability is somewhat limited.
+You can read more about choosing good ``gunicorn`` settings for your system [here](https://medium.com/building-the-system/gunicorn-3-means-of-concurrency-efbb547674b7). Note, however, that this tool is quite CPU intensive, meaning that scalability is somewhat limited.
 
 Finally, you can also use Nginx as a reverse proxy. A sample configuration file is provided in [``web_server_files/nginx.conf.sample``](https://github.com/ra1nb0rn/search_vulns/blob/master/web_server_files/nginx.conf.sample). Again, you may have to adjust this to your needs. When using Nginx, make sure you have the app running at the configured endpoint(s). For the sample configuration file, for example, you would have to run something similar to the following:
 ```bash
