@@ -5,13 +5,12 @@ import os
 from flask import Flask, request
 from flask import render_template
 from cpe_search.database_wrapper_functions import get_database_connection, get_connection_pools
-from search_vulns import _load_config, search_vulns_return_cpe as search_vulns_call
+from search_vulns import _load_config, search_vulns as search_vulns_call
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))
 TEMPLATE_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "templates"))
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
-CONNECTION_POOL_SIZE = os.cpu_count() # should be equal to number of cpu cores? (https://dba.stackexchange.com/a/305726)
 RESULTS_CACHE = {}
 
 
@@ -55,7 +54,7 @@ def search_vulns():
         DB_CONN = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
         db_cursor = DB_CONN.cursor()
 
-    vulns = search_vulns_call(query, db_cursor=db_cursor, add_other_exploits_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
+    vulns = search_vulns_call(query, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
     db_cursor.close()
 
     if vulns is None:
