@@ -788,7 +788,7 @@ function doneTypingQuery () {
             else if (cpeInfos.length > 0) {
                 var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box">';
                 cpeInfos.forEach(function (cpeInfo) {
-                    dropdownContent += `<li><a class="text-nowrap" href="${window.location.pathname}?query=${encodeURIComponent(htmlEntities(cpeInfo[0]))}&is-good-cpe=false">${htmlEntities(cpeInfo[0])}</a></li>`
+                    dropdownContent += `<li><a class="text-nowrap" onmousedown="location.href = '${window.location.pathname}?query=${encodeURIComponent(htmlEntities(cpeInfo[0]))}&is-good-cpe=false'">${htmlEntities(cpeInfo[0])}</a></li>`;
                 });
                 dropdownContent += '</ul>';
                 $('#cpeSuggestions').html(dropdownContent);
