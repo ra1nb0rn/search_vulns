@@ -1,0 +1,81 @@
+/* Variables */
+:root {
+    --cvss-badge-text-color: rgb(49, 50, 51);
+    --cvss-badge-text-color-uncertain: rgb(49, 50, 51, 0.75);
+    --cvss-badge-bg-color-critical: rgb(225, 114, 225);
+    --cvss-badge-bg-color-critical-uncertain: rgb(225, 114, 225, 0.75);
+    --cvss-badge-bg-color-high: rgb(255, 117, 117);
+    --cvss-badge-bg-color-high-uncertain: rgb(255, 117, 117, 0.75);
+    --cvss-badge-bg-color-medium: rgb(253, 205, 114);
+    --cvss-badge-bg-color-medium-uncertain: rgb(253, 205, 114, 0.75);
+    --cvss-badge-bg-color-low: rgb(255, 255, 162);
+    --cvss-badge-bg-color-low-uncertain: rgb(255, 255, 162, 0.75);
+
+}
+
+
+/* Uncertain vulnerability table row (adapted from DaisyUI CSS) */
+tr.uncertain-vuln {
+    color: var(--fallback-bc,oklch(var(--bc)/0.75));
+    background-color: var(--fallback-wa,oklch(var(--wa)/0.15));
+}
+
+
+/* Vuln CVSS badges */
+.badge-cvss {
+    color: var(--cvss-badge-text-color);
+}
+
+.badge-critical {
+    background-color: var(--cvss-badge-bg-color-critical);
+}
+.badge-critical.uncertain-vuln {
+    background-color: var(--cvss-badge-bg-color-critical-uncertain);
+}
+.badge-high {
+    background-color: var(--cvss-badge-bg-color-high);
+}
+.badge-high.uncertain-vuln {
+    background-color: var(--cvss-badge-bg-color-high-uncertain);
+}
+.badge-medium {
+    background-color: var(--cvss-badge-bg-color-medium);
+}
+.badge-medium.uncertain-vuln {
+    background-color: var(--cvss-badge-bg-color-medium-uncertain);
+}
+.badge-low {
+    background-color: var(--cvss-badge-bg-color-low);
+}
+.badge-low.uncertain-vuln {
+    background-color: var(--cvss-badge-bg-color-low-uncertain);
+}
+
+
+/* Rounded table */
+.table-rounded thead tr th:first-child {
+    border-radius: 0.8rem 0 0 0;
+}
+
+.table-rounded thead tr {
+    border-radius: 0.8rem 0 0 0.8rem;
+}
+
+.table-rounded thead tr th:last-child {
+    border-radius: 0 0.8rem 0 0;
+}
+
+.table-rounded tr:last-child td:first-child {
+    border-radius: 0 0 0 0.8rem;
+}
+
+.table-rounded tr:last-child td:last-child {
+    border-radius: 0 0 0.8rem 0;
+}
+
+
+/* Overwrite Tailwind striping for uncetain-vuln table row */
+.my-table-zebra tbody tr:nth-child(even):not(.uncertain-vuln) {
+  --tw-bg-opacity: 1;
+  background-color: var(--fallback-b2,oklch(var(--b2)/var(--tw-bg-opacity)));
+}

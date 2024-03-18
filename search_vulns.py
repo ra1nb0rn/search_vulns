@@ -66,11 +66,11 @@ def is_cpe_included_from_field(cpe1, cpe2, field=6):
         cpe2_remainder_fields[i] = CPE_COMPARISON_STOP_CHARS_RE.sub('', cpe2_remainder_fields[i])
 
         # alpha and beta version abbreviations
-        if cpe1_remainder_fields[i] == 'alpha' and cpe1_remainder_fields[i] == 'a':
+        if cpe1_remainder_fields[i] == 'alpha' and cpe2_remainder_fields[i] == 'a':
             continue
         if cpe2_remainder_fields[i] == 'alpha' and cpe1_remainder_fields[i] == 'a':
             continue
-        if cpe1_remainder_fields[i] == 'beta' and cpe1_remainder_fields[i] == 'b':
+        if cpe1_remainder_fields[i] == 'beta' and cpe2_remainder_fields[i] == 'b':
             continue
         if cpe2_remainder_fields[i] == 'beta' and cpe1_remainder_fields[i] == 'b':
             continue
@@ -446,6 +446,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
                 vulns[cve_id] = vuln
 
     if close_cursor_after:
+        db_conn.close()
         db_cursor.close()
 
     return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes}}

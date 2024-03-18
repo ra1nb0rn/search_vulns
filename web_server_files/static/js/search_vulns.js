@@ -1,11 +1,17 @@
 
-var curVulnData = {};
-var exploit_url_show_max_length = 55, exploit_url_show_max_length_md = 42;
-var ignoreGeneralCpeVulns = false, onlyShowEDBExploits = false, isGoodCpe = true;
+var curVulnData = {}, onlyShowCVEs = null;
+var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
+var ignoreGeneralCpeVulns = false, onlyShowEDBExploits = false;
+var showSingleVersionVulns = false, isGoodCpe = true, showTableFiltering = false;
+var noVulnsFoundHtml = '<div class="w-full text-center"><h5 class="text-success">No known vulnerabilities could be found.</h5></div>';
+var filterCVEDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="filterCVEsAll" onclick="changeFilterCVEs(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="filterCVEsNone" onclick="changeFilterCVEs(this)">None</button></div>`;
 var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
 var iconSortDesc = '<i class="fa-solid fa-sort-down"></i>';
 var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
-var curSortColIdx = 1, curSortColAsc = false;
+var exportIcon = `<i class="fa-solid fa-clipboard"></i>`, exportIconSuccess = `<i class="fa-solid fa-clipboard-check text-success"></i>`;
+var curSortColIdx = 1, curSortColAsc = false, searchIgnoreNextKeyup = false;
+var doneTypingQueryTimer, queryInput = $('#query'), doneTypingQueryInterval = 600;  //time in ms
+var default_theme = 'dim';
 
 function htmlEntities(text) {
     return text.replace(/[\u00A0-\u9999<>\&"']/g, function (i) {
@@ -79,7 +85,71 @@ function getCurrentVulnsSorted() {
     }
 }
 
-function createVulnsHtml() {
+function createVulnTableRowHtml(idx, vuln) {
+    var vuln_row_html = '', uncertain_vuln_class = "";
+    var exploits, cvss, cvss_badge_css, exploit_url_show;
+    var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
+
+    if (selectedColumns.length < 1)
+        return '';
+
+    if (vuln.vuln_match_reason == "general_cpe" || vuln.vuln_match_reason == "single_higher_version_cpe")
+        uncertain_vuln_class = "uncertain-vuln";
+
+    vuln_row_html += `<tr class="${uncertain_vuln_class}">`;
+
+    if (selectedColumns.includes('cve')) {
+        vuln_row_html += `<td class="text-nowrap pr-2 relative"><a href="${htmlEntities(vuln["href"])}" target="_blank" style="color: inherit;">${vuln["id"]}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a>`;
+        if (vuln.vuln_match_reason == "general_cpe")
+            vuln_row_html += `<br><center><span data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects the queried software in general and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div></center>`;
+        else if (vuln.vuln_match_reason == "single_higher_version_cpe")
+            vuln_row_html += `<br><center><span data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects only a single higher version of the product and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div></center>`;
+        vuln_row_html += "</td>";
+    }
+
+    if (selectedColumns.includes('cvss')) {
+        var cvss_vector = vuln.cvss_vec;
+        if (!cvss_vector.startsWith('CVSS'))
+            cvss_vector = "CVSS:2.0/" + cvss_vector;
+
+        cvss = parseFloat(vuln.cvss);
+        if (cvss >= 9.0)
+            cvss_badge_css = "badge-critical";
+        else if (cvss < 9.0 && cvss >= 7.0)
+            cvss_badge_css = "badge-high";
+        else if (cvss < 7.0 && cvss >= 4.0)
+            cvss_badge_css = "badge-medium";
+        else if (cvss < 4.0 && cvss >= 0.1)
+            cvss_badge_css = "badge-low";
+        vuln_row_html += `<td class="text-nowrap"><div class="dropdown dropdown-hover"><div class="badge p-1.5 border-none badge-cvss ${cvss_badge_css} text-center ${uncertain_vuln_class}" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
+    }
+
+    if (selectedColumns.includes('descr')) {
+        vuln_row_html += `<td>${htmlEntities(vuln["description"])}</td>`;
+    }
+
+    if (selectedColumns.includes('expl')) {
+        exploits = [];
+        if (vuln.exploits !== undefined) {
+            for (var j = 0; j < vuln.exploits.length; j++) {
+                if (onlyShowEDBExploits && !vuln.exploits[j].startsWith('https://www.exploit-db.com/exploits/'))
+                    continue;
+
+                exploit_url_show = vuln.exploits[j];
+                if (exploit_url_show.length > exploit_url_show_max_length) {
+                    exploit_url_show = exploit_url_show.substring(0, exploit_url_show_max_length - 2) + '...';
+                }
+                exploits.push(`<a href="${vuln.exploits[j].replace('"', '&quot;')}" target="_blank" style="color: inherit;">${htmlEntities(exploit_url_show)}</a>`);
+            }
+        }
+        vuln_row_html += `<td class="text-nowrap">${exploits.join("<br>")}</td>`;
+    }
+
+    vuln_row_html += "</tr>";
+    return vuln_row_html;
+}
+
+function renderSearchResults(reloadFilterDropdown) {
     var sortIconCVEID = iconUnsorted, sortFunctionCVEID = "reorderVulns(0, false)";
     var sortIconCVSS = iconUnsorted, sortFunctionCVSS = "reorderVulns(1, false)";
     var sortIconExploits = iconUnsorted, sortFunctionExploits = "reorderVulns(3, false)";
@@ -117,142 +187,73 @@ function createVulnsHtml() {
         }
     }
 
-    vulns_html = '<table class="table table-sm table-rounded table-borderless">';
-    vulns_html += '<thead>';
+    var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
+    if (selectedColumns.length < 1) {
+        $("#vulns").html('');
+        return false;
+    }
+    
+    vulns_html = '<table class="table table-sm my-table-zebra table-rounded">';
+    vulns_html += '<thead class="bg-base-300">';
     vulns_html += '<tr>'
-    vulns_html += `<th onclick="${sortFunctionCVEID}" style="white-space: nowrap;">CVE-ID&nbsp;&nbsp;${sortIconCVEID}</th>`;
-    vulns_html += `<th onclick="${sortFunctionCVSS}" style="white-space: nowrap;">CVSS&nbsp;&nbsp;${sortIconCVSS}</th>`;
-    vulns_html += '<th>Description</th>'
-    vulns_html += `<th onclick="${sortFunctionExploits}" style="white-space: nowrap;">Exploits&nbsp;&nbsp;${sortIconExploits}</th>`;
+    if (selectedColumns.includes('cve')) {
+        vulns_html += `<th onclick="${sortFunctionCVEID}" style="white-space: nowrap;">CVE-ID&nbsp;&nbsp;${sortIconCVEID}</th>`;
+    }
+    if (selectedColumns.includes('cvss')) {
+        vulns_html += `<th onclick="${sortFunctionCVSS}" style="white-space: nowrap;">CVSS&nbsp;&nbsp;${sortIconCVSS}</th>`;
+    }
+    if (selectedColumns.includes('descr')) {
+        vulns_html += '<th>Description</th>'
+    }
+    if (selectedColumns.includes('expl')) {
+        vulns_html += `<th onclick="${sortFunctionExploits}" style="white-space: nowrap;">Exploits&nbsp;&nbsp;${sortIconExploits}</th>`;
+    }
     vulns_html += "</tr></thead>";
     vulns_html += "<tbody>";
-    var exploits, cvss, exploit_url_show;
 
+    var filter_vulns_html = filterCVEDropdownButtonHtml, has_vulns = false;
     for (var i = 0; i < vulns.length; i++) {
+        // create row in table
         if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
             continue;
+        else if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+            continue;
 
-        if (vulns[i].vuln_match_reason == "general_cpe")
-            vulns_html += `<tr class="uncertain-vuln">`;
-        else
-            vulns_html += `<tr>`;
-
-        vulns_html += `<td class="text-nowrap pr-2"><a href="${htmlEntities(vulns[i]["href"])}" target="_blank" style="color: inherit;">${vulns[i]["id"]}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a>`;
-        if (vulns[i].vuln_match_reason == "general_cpe")
-            vulns_html += `<br><center><i class="far fa-question-circle" style="color: #FF4F00;" data-toggle="tooltip" data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-info'></div></div>" data-placement="bottom" data-original-title="This vulnerability affects the queried software in general and could be a false positive."></i></center>`;
-        vulns_html += "</td>";
-
-        var cvss_vector = vulns[i].cvss_vec;
-        if (!cvss_vector.startsWith('CVSS'))
-            cvss_vector = "CVSS:2.0/" + cvss_vector;
-
-        cvss = parseFloat(vulns[i].cvss);
-        if (cvss >= 9.0)
-            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-critical text-center" data-toggle="tooltip" data-container="body" data-placement="bottom" data-html="true" data-original-title="<b>${cvss_vector}</b>" data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-cvss'></div></div>">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
-        else if (cvss < 9.0 && cvss >= 7.0)
-            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-high text-center" data-toggle="tooltip" data-container="body" data-placement="bottom" data-html="true" data-original-title="<b>${cvss_vector}</b>" data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-cvss'></div></div>">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
-        else if (cvss < 7.0 && cvss >= 4.0)
-            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-medium text-center" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="<b>${cvss_vector}</b>" data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-cvss'></div></div>">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
-        else if (cvss < 4.0 && cvss >= 0.1)
-            vulns_html += `<td class="text-nowrap"><div class="badge-pill badge-low text-center" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="<b>${cvss_vector}</b>" data-template="<div class='tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner tooltip-cvss'></div></div>">${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]})</div></td>`;
-
-        vulns_html += `<td>${htmlEntities(vulns[i]["description"])}</td>`;
-        exploits = [];
-        if (vulns[i].exploits !== undefined) {
-            for (var j = 0; j < vulns[i].exploits.length; j++) {
-                if (onlyShowEDBExploits && !vulns[i].exploits[j].startsWith('https://www.exploit-db.com/exploits/'))
-                    continue;
-
-                exploit_url_show = vulns[i].exploits[j];
-                if (exploit_url_show.length > exploit_url_show_max_length) {
-                    exploit_url_show = exploit_url_show.substring(0, exploit_url_show_max_length - 2) + '...';
-                }
-                exploits.push(`<a href="${vulns[i].exploits[j].replace('"', '&quot;')}" target="_blank" style="color: inherit;">${htmlEntities(exploit_url_show)}</a>`);
-            }
+        has_vulns = true;
+        var checked_html = "";
+        if (!showTableFiltering || onlyShowCVEs == null || onlyShowCVEs.includes(vulns[i].id)) {
+            vulns_html += createVulnTableRowHtml(i, vulns[i]);
+            checked_html = 'checked="checked"';
         }
-        vulns_html += `<td class="text-nowrap">${exploits.join("<br>")}</td>`;
-        vulns_html += "</tr>";
+
+        // add CVE to filter
+        filter_vulns_html += `<div class="form-control filter-cves"><label class="label cursor-pointer py-1 gap-4"><span class="label-text text-nowrap">${vulns[i]["id"]}</span><input type="checkbox" class="checkbox" onclick="changeFilterCVEs()" ${checked_html} /></label></div>`;
     }
     vulns_html += "</tbody></table>";
-    return vulns_html;
-}
+    if (has_vulns)
+        $("#vulns").html(vulns_html);
 
-function changeExportFields () {
-    var exportFields = [];
-    var selectedFields = $('#select-export-fields').val();
-    // can't use IDs, b/c selectpicker generates different HTML
-    selectedFields.forEach(fieldName => {
-        if (fieldName == "CVE-ID")
-            exportFields.push('cve');
-        else if (fieldName == "CVSS Score")
-            exportFields.push('cvss');
-        else if (fieldName == "Description")
-            exportFields.push('descr');
-        else if (fieldName == "Exploits")
-            exportFields.push('expl');
-    });
-    localStorage.setItem('exportFields', JSON.stringify(exportFields));
-}
+    if (reloadFilterDropdown)
+        $('#filterCVEsDropdown').html(filter_vulns_html);  // set CVE filter HTML
+    $('#exportMarkdownIcon').html(exportIcon);
+    $('#exportCSVIcon').html(exportIcon);
 
-function createResultProcessingHtml() {
-    var selectedExportOptions = JSON.parse(localStorage.getItem('exportFields'));
-    var fieldOptionsHTML = "";
+    initFlowbite();
+    fixDropdownClicking();
 
-    if (selectedExportOptions.includes("cve"))
-        fieldOptionsHTML += `<option selected>CVE-ID</option>`;
-    else
-        fieldOptionsHTML += `<option>CVE-ID</option>`;
-
-    if (selectedExportOptions.includes("cvss"))
-        fieldOptionsHTML += `<option selected>CVSS Score</option>`;
-    else
-        fieldOptionsHTML += `<option>CVSS Score</option>`;
-
-    if (selectedExportOptions.includes("descr"))
-        fieldOptionsHTML += `<option selected>Description</option>`;
-    else
-        fieldOptionsHTML += `<option>Description</option>`;
-
-    if (selectedExportOptions.includes("expl"))
-        fieldOptionsHTML += `<option selected>Exploits</option>`;
-    else
-        fieldOptionsHTML += `<option>Exploits</option>`;
-
-    return `
-        <div class="d-flex p-0 justify-content-center">
-            <div class="form-group m-0 p-0 pr-2 justify-content-center align-self-center">
-                <select id="select-export-vulns" name="select-export-vulns" class="selectpicker form-control" data-selected-text-format="static" multiple data-actions-box="true" title=" Select CVEs (default: all)" onChange="resetCopyToClipboardMarkdownButton(); resetCopyToClipboardCSVButton();">
-                    ${getCurrentVulnsSorted().map(vuln => '<option>' + vuln.id + ' (' + vuln.cvss + ')' + '</option>').join('\n')}
-                </select>
-            </div>
-            <div class="form-group m-0 p-0 pr-5 justify-content-center align-self-center">
-                <select id="select-export-fields" name="select-export-fields" class="selectpicker form-control" multiple data-selected-text-format="count > 3" data-actions-box="true" title="Select Fields (default: all)" onChange="resetCopyToClipboardMarkdownButton(); resetCopyToClipboardCSVButton(); changeExportFields()">
-                    ${fieldOptionsHTML}
-                </select>
-            </div>
-            <div class="align-self-center pr-2"><button type="button"
-                class="btn btn-info" name="copyCSVButton" id="copyCSVButton"
-                onclick="copyToClipboardCSV()"><i style="font-size: 1rem"
-                    class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (CSV)</button></div>
-            <div class="align-self-center"><button type="button"
-                class="btn btn-info" name="copyMarkdownTableButton" id="copyMarkdownTableButton"
-                onclick="copyToClipboardMarkdownTable()"><i style="font-size: 1rem"
-                    class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (Markdown
-                Table)</button></div>
-        </div>
-    `;
+    return has_vulns;
 }
 
 function createVulnsMarkDownTable() {
-    var selectedVulns = $('#select-export-vulns').val().map(vuln => vuln.split(' ')[0]);
-    var selectedFields = $('#select-export-fields').val();
+    var selectedVulns = onlyShowCVEs;
+    var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
     var vulns = getCurrentVulnsSorted();
     var vulns_md = "";
     var has_exploits = false, cur_vuln_has_exploits = false;
     var exploit_url_show;
 
     for (var i = 0; i < vulns.length; i++) {
-        if (selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
+        if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
             continue;
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
@@ -262,22 +263,22 @@ function createVulnsMarkDownTable() {
         }
     }
 
-    if (selectedFields.length > 0) {
+    if (selectedColumns.length > 0) {
         var table_row1 = "|", table_row2 = "|";
-        selectedFields.forEach(fieldName => {
-            if (fieldName == "CVE-ID") {
+        selectedColumns.forEach(column => {
+            if (column == 'cve') {
                 table_row1 += 'CVE|';
                 table_row2 += ':---:|';
             }
-            else if (fieldName == "CVSS Score") {
+            else if (column == 'cvss') {
                 table_row1 += 'CVSS|';
                 table_row2 += ':---:|';
             }
-            else if (fieldName == "Description") {
+            else if (column == 'descr') {
                 table_row1 += 'Description|';
                 table_row2 += ':---|';
             }
-            else if (fieldName == "Exploits" && has_exploits) {
+            else if (column == "epxl" && has_exploits) {
                 table_row1 += 'Exploits|';
                 table_row2 += ':---|';
             }
@@ -296,23 +297,23 @@ function createVulnsMarkDownTable() {
     }
 
     for (var i = 0; i < vulns.length; i++) {
-        if (selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
+        if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
             continue;
 
         cur_vuln_has_exploits = false;
         vulns_md += '|';
-        if (selectedFields.length < 1 || selectedFields.includes('CVE-ID'))
+        if (selectedColumns.length < 1 || selectedColumns.includes("cve"))
             vulns_md += `[${vulns[i]["id"]}](${htmlEntities(vulns[i]["href"])})|`
-        if (selectedFields.length < 1 || selectedFields.includes('CVSS Score'))
+        if (selectedColumns.length < 1 || selectedColumns.includes("cvss"))
             vulns_md += `${vulns[i]["cvss"]}&nbsp;(v${vulns[i]["cvss_ver"]})|`;
-        if (selectedFields.length < 1 || selectedFields.includes('Description')) {
+        if (selectedColumns.length < 1 || selectedColumns.includes("descr")) {
             var description = htmlEntities(vulns[i]["description"].trim());
             description = description.replaceAll('\n', '<br>');
             description = description.replaceAll('|', '&#124;');
             vulns_md += `${description}|`;
         }
 
-        if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0 && (selectedFields.length < 1 || selectedFields.includes('Exploits'))) {
+        if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0 && (selectedColumns.length < 1 || selectedColumns.includes('expl'))) {
             for (var j = 0; j < vulns[i].exploits.length; j++) {
                 if (onlyShowEDBExploits && !vulns[i].exploits[j].startsWith('https://www.exploit-db.com/exploits/'))
                     continue;
@@ -331,7 +332,7 @@ function createVulnsMarkDownTable() {
             else if (has_exploits)
                 vulns_md += "|";
         }
-        else if (has_exploits && (selectedFields.length < 1 || selectedFields.includes('Exploits')))
+        else if (has_exploits && (selectedColumns.length < 1 || selectedColumns.includes('expl')))
             vulns_md += "|";
 
         vulns_md += '\n'
@@ -341,14 +342,14 @@ function createVulnsMarkDownTable() {
 }
 
 function createVulnsCSV() {
-    var selectedVulns = $('#select-export-vulns').val().map(vuln => vuln.split(' ')[0]);
-    var selectedFields = $('#select-export-fields').val();
+    var selectedVulns = onlyShowCVEs;
+    var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
     var vulns = getCurrentVulnsSorted();
     var vulns_csv = "";
     var has_exploits = false;
 
     for (var i = 0; i < vulns.length; i++) {
-        if (selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
+        if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
             continue;
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
@@ -358,15 +359,15 @@ function createVulnsCSV() {
         }
     }
 
-    if (selectedFields.length > 0) {
-        selectedFields.forEach(fieldName => {
-            if (fieldName == "CVE-ID")
+    if (selectedColumns.length > 0) {
+        selectedColumns.forEach(column => {
+            if (column == "cve")
                 vulns_csv += 'CVE,';
-            else if (fieldName == "CVSS Score")
+            else if (column == "cvss")
                 vulns_csv += 'CVSS,';
-            else if (fieldName == "Description")
+            else if (column == "descr")
                 vulns_csv += 'Description,';
-            else if (fieldName == "Exploits" && has_exploits)
+            else if (column == "expl" && has_exploits)
                 vulns_csv += 'Exploits,';
         })
         vulns_csv = vulns_csv.slice(0, -1) + '\n';
@@ -379,21 +380,20 @@ function createVulnsCSV() {
     }
 
     for (var i = 0; i < vulns.length; i++) {
-        if (selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
+        if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
             continue;
 
-        if (selectedFields.length < 1 || selectedFields.includes('CVE-ID'))
+        if (selectedColumns.length < 1 || selectedColumns.includes('cve'))
             vulns_csv += `${vulns[i]["id"]},`
-        if (selectedFields.length < 1 || selectedFields.includes('CVSS Score'))
+        if (selectedColumns.length < 1 || selectedColumns.includes('cvss'))
             vulns_csv += `${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]}),`;
-        if (selectedFields.length < 1 || selectedFields.includes('Description'))
+        if (selectedColumns.length < 1 || selectedColumns.includes('descr'))
             vulns_csv += `"${vulns[i]["description"].replaceAll('"', '""')}",`;
 
-
-        if (vulns_csv.length > 0 && (!has_exploits || (selectedFields.length > 0 && !selectedFields.includes('Exploits'))))
+        if (vulns_csv.length > 0 && (!has_exploits || (selectedColumns.length > 0 && !selectedColumns.includes('expl'))))
             vulns_csv = vulns_csv.slice(0, -1);
 
-        if (has_exploits && vulns[i].exploits !== undefined && vulns[i].exploits.length > 0 && (selectedFields.length < 1 || selectedFields.includes('Exploits'))) {
+        if (has_exploits && vulns[i].exploits !== undefined && vulns[i].exploits.length > 0 && (selectedColumns.length < 1 || selectedColumns.includes('expl'))) {
             if (onlyShowEDBExploits)
                 vulns_csv += `"${reduceToEDBUrls(vulns[i].exploits).join(", ")}"`;
             else
@@ -453,7 +453,10 @@ function buildTextualReprFromCPE(cpe) {
 
 
 function searchVulns() {
+    clearTimeout(doneTypingQueryTimer);
     var query = $('#query').val();
+    if (query === undefined)
+        query = '';
     var queryEnc = encodeURIComponent(query);
     var url_query = "query=" + queryEnc;
     var new_url = window.location.pathname + '?query=' + queryEnc;
@@ -462,12 +465,21 @@ function searchVulns() {
         url_query += "&is-good-cpe=false";
         new_url += '&is-good-cpe=false';
     }
+    url_query += "&include-single-version-vulns=true";  // false is default in backend
+
     isGoodCpe = true;  // reset for subsequent query that wasn't initiated via URL
 
     history.pushState({}, null, new_url);  // update URL
-    $("#searchVulnsButton").attr("disabled", true);
+    $("#buttonSearchVulns").html('<span class="loading loading-spinner"></span> Searching');
+    $("#buttonSearchVulns").addClass("btn-disabled");
+    $("#buttonFilterCVEs").addClass("btn-disabled");
+    $("#buttonManageColumns").addClass("btn-disabled");
+    $("#buttonExportResults").addClass("btn-disabled");
+    $('#cpeSuggestions').addClass("hidden");
+    $('#cpeSuggestions').html();
+    searchIgnoreNextKeyup = true;
+
     $("#search-display").html("");
-    $("#process-results-display").html("");
     $("#related-queries-display").html("");
     $("#vulns").html('<div class="row mt-3 justify-content-center align-items-center"><h5 class="spinner-border text-primary" style="width: 3rem; height: 3rem"></h5></div>');
     curSortColIdx = 1;
@@ -478,51 +490,54 @@ function searchVulns() {
         url: "/search_vulns",
         data: url_query,
         success: function (vulns) {
-            var vulns_html = "", search_display_html = "", process_results_html = "", related_queries_html = "";
-            if (typeof Object.values(vulns)[0] !== "object")
-                search_display_html = `<h5 class="text-danger text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
+            var search_display_html = "", related_queries_html = '', queryError = false;
+            if (typeof Object.values(vulns)[0] !== "object") {
+                search_display_html = `<h5 class="text-error text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
+                queryError = true;
+            }
             else {
                 vulns = Object.values(vulns)[0]
                 cpe = vulns['cpe'];
                 if (cpe != undefined) {
                     curVulnData = vulns['vulns'];
-                    if (Object.keys(curVulnData).length > 0) {
-                        search_display_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div>`;
-                        vulns_html = createVulnsHtml();
-                        vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-                        process_results_html = createResultProcessingHtml();
-                    }
-                    else {
-                        search_display_html = `<div class="row mt-2"><div class="col text-center"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div><br><h5 class="text-center">No known vulnerabilities could be found.</h5>`;
-                    }
+                    cpe = cpe.replaceAll('/', ' / ');
+                    search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div>`;
                 }
                 else {
-                    search_display_html = `<h5 class="text-danger text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
+                    search_display_html = `<h5 class="text-error w-full text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
+                    queryError = true;
                 }
 
                 if (vulns.hasOwnProperty('pot_cpes') && vulns["pot_cpes"].length > 0) {
                     var related_queries_html_li = "";
                     for (var i = 0; i < vulns["pot_cpes"].length; i++) {
                         if (cpe == null || !cpe.includes(vulns["pot_cpes"][i][0]))
-                            related_queries_html_li += `<li><a href="/?query=${encodeURIComponent(htmlEntities(vulns["pot_cpes"][i][0]))}&is-good-cpe=false">${htmlEntities(vulns["pot_cpes"][i][0])}</a> &nbsp; &nbsp;(${htmlEntities(buildTextualReprFromCPE(vulns["pot_cpes"][i][0]))})</li>`
+                            related_queries_html_li += `<li><a href="${window.location.pathname}?query=${encodeURIComponent(htmlEntities(vulns["pot_cpes"][i][0]))}&is-good-cpe=false">${htmlEntities(vulns["pot_cpes"][i][0])} &nbsp; &nbsp;(${htmlEntities(buildTextualReprFromCPE(vulns["pot_cpes"][i][0]))})</a></li>`
                     }
 
                     if (related_queries_html_li != "") {
-                        related_queries_html = `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-                        related_queries_html += `<div class="row mx-2"><div class="col"><h5>Related queries:</h5></div></div>`;
-                        related_queries_html += `<div class="row mx-2"><div class="col"><ul>`;
+                        related_queries_html = `<div class="divider divider-info text-lg">Related Queries</div>`;
+                        related_queries_html += `<div class="grid place-items-center">`;
+                        related_queries_html += `<ul class="list-disc text-left">`;
                         related_queries_html += related_queries_html_li;
-                        related_queries_html += `</ul></div></div>`;
+                        related_queries_html += `</ul></div>`;
                     }
                 }
             }
 
-            $("#vulns").html(vulns_html);
             $("#search-display").html(search_display_html);
-            $("#process-results-display").html(process_results_html);
-            $("select").selectpicker();
+            onlyShowCVEs = null;
+            var hasVulns = renderSearchResults(true);
+            if (!hasVulns && !queryError)
+                $('#vulns').html(noVulnsFoundHtml);
+                
             $("#related-queries-display").html(related_queries_html);
-            $("#searchVulnsButton").removeAttr("disabled");
+            $("#buttonSearchVulns").removeClass("btn-disabled");
+            $("#buttonFilterCVEs").removeClass("btn-disabled");
+            $("#buttonManageColumns").removeClass("btn-disabled");
+            $("#buttonExportResults").removeClass("btn-disabled");
+            $("#buttonSearchVulns").html('<i class="fa-solid fa-magnifying-glass"></i> Search Vulns');
+            currentlySearchingVulns = false;
         },
         error: function (jXHR, textStatus, errorThrown) {
             var errorMsg;
@@ -531,87 +546,195 @@ function searchVulns() {
             else
                 errorMsg = errorThrown;
 
-            $("#vulns").html(`<h5 class="text-danger text-center">${htmlEntities(errorMsg)}</h5>`);
-            $("#searchVulnsButton").removeAttr("disabled");
+            $("#vulns").html(`<h5 class="text-error w-full text-center">${htmlEntities(errorMsg)}</h5>`);
+            $("#buttonSearchVulns").removeClass("btn-disabled");
+            $("#buttonFilterCVEs").removeClass("btn-disabled");
+            $("#buttonManageColumns").removeClass("btn-disabled");
+            $("#buttonExportResults").removeClass("btn-disabled");
+            $("#buttonSearchVulns").html('<i class="fa-solid fa-magnifying-glass"></i> Search Vulns');
+            currentlySearchingVulns = false;
         }
-    })
+    });
 }
 
 function reorderVulns(sortColumnIdx, asc) {
     curSortColIdx = sortColumnIdx;
     curSortColAsc = asc;
-    vulns_html = createVulnsHtml();
-    vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-    $("#vulns").html(vulns_html);
-    $("#process-results-display").html(createResultProcessingHtml());
-    $("select").selectpicker();
-}
-
-function ignoreGeneralVulnsToggle() {
-    if (ignoreGeneralCpeVulns)
-        localStorage.setItem("ignoreGeneralCpeVulns", 'false');
-    else
-        localStorage.setItem("ignoreGeneralCpeVulns", 'true');
-    ignoreGeneralCpeVulns = !ignoreGeneralCpeVulns;
-
-    if (!$.isEmptyObject(curVulnData)) {
-        var vulns_html = createVulnsHtml();
-        vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-        $("#vulns").html(vulns_html);
-        $("#process-results-display").html(createResultProcessingHtml());
-        $("select").selectpicker();
-    }
-}
-
-function onlyEDBExploitsToggle() {
-    if (onlyShowEDBExploits)
-        localStorage.setItem("onlyShowEDBExploits", 'false');
-    else
-        localStorage.setItem("onlyShowEDBExploits", 'true');
-    onlyShowEDBExploits = !onlyShowEDBExploits;
-
-    if (!$.isEmptyObject(curVulnData)) {
-        var vulns_html = createVulnsHtml();
-        vulns_html += `<hr style="height: 2px; border:none; border-radius: 10px 10px 10px 10px; background-color:#d7d4d4;"/>`;
-        $("#vulns").html(vulns_html);
-        $("#process-results-display").html(createResultProcessingHtml());
-        $("select").selectpicker();
-    }
+    var hasVulns = renderSearchResults(true);
+    if (!hasVulns)
+        $('#vulns').html(noVulnsFoundHtml);
 }
 
 function copyToClipboardMarkdownTable() {
-    var selectedExportOptions = JSON.parse(localStorage.getItem('exportFields'));
-    var selectFieldsTitle = "Select Fields (default: all)";
-    if (selectedExportOptions.length > 0)
-        selectFieldsTitle = selectedExportOptions.join(', ');
-
     navigator.clipboard.writeText(createVulnsMarkDownTable());
-    $("#copyMarkdownTableButton").html('<i style="font-size: 1rem" class="fa-solid fa-clipboard-check"></i>&nbsp;&nbsp;Copied Markdown Table to Clipboard');
-    $("#copyMarkdownTableButton").attr('class', 'btn btn-success');
-}
-
-function resetCopyToClipboardMarkdownButton() {
-    $("#copyMarkdownTableButton").html('<i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (Markdown Table)');
-    $("#copyMarkdownTableButton").attr('class', 'btn btn-info');
+    $('#exportMarkdownIcon').html(exportIconSuccess);
 }
 
 function copyToClipboardCSV() {
-    var selectedExportOptions = JSON.parse(localStorage.getItem('exportFields'));
-    var selectFieldsTitle = "Select Fields (default: all)";
-    if (selectedExportOptions.length > 0)
-        selectFieldsTitle = selectedExportOptions.join(', ');
-
     navigator.clipboard.writeText(createVulnsCSV());
-    $("#copyCSVButton").html('<i style="font-size: 1rem" class="fa-solid fa-clipboard-check"></i>&nbsp;&nbsp;Copied CSV to Clipboard');
-    $("#copyCSVButton").attr('class', 'btn btn-success');
+    $('#exportCSVIcon').html(exportIconSuccess);
 }
 
-function resetCopyToClipboardCSVButton() {
-    $("#copyCSVButton").html('<i style="font-size: 1rem" class="fa-solid fa-clipboard"></i>&nbsp;&nbsp;Copy to Clipboard (CSV)');
-    $("#copyCSVButton").attr('class', 'btn btn-info');
+function copyToClipboardCVSS(cvssClipboardButton) {
+    navigator.clipboard.writeText($(cvssClipboardButton).find("b").text());
+    $(cvssClipboardButton).find('span').find('span').addClass('text-success');
+    $(cvssClipboardButton).find('span').find('span').html('<i class="fa-solid fa-clipboard-check"></i>');
+    document.activeElement.blur();
 }
 
-function init() {
+function changeTheme(themeElement) {
+    var theme;
+    if (themeElement != null)
+        theme = themeElement.id.split('-').slice(-1)[0];
+    else {
+        theme = default_theme;
+        themeElement = $('#theme-option-' + default_theme);
+    }
+    document.documentElement.setAttribute("data-theme", theme);
+    $('#theme-selector').find('li a').removeClass('active');
+    $('#theme-selector').find('li a span').remove();
+    $(themeElement).find('a').addClass('active');
+    $(themeElement).find('a').append('<span class="text-right"><i class="fa-solid fa-check"></i></span>');
+    localStorage.setItem("theme", theme);
+}
+
+function changeSearchConfig(configElement) {
+    var settingEnabled = false, settingEnabledStr = "false";
+    if (configElement.checked) {
+        settingEnabled = true;
+        settingEnabledStr = "true";
+    }
+
+    if (configElement.id == "generalVulnsConfig") {
+        ignoreGeneralCpeVulns = settingEnabled;
+        localStorage.setItem("ignoreGeneralCpeVulns", settingEnabledStr);
+    }
+    else if (configElement.id == "onlyEdbExploitsConfig") {
+        onlyShowEDBExploits = settingEnabled;
+        localStorage.setItem("onlyShowEDBExploits", settingEnabledStr);
+    }
+    else if (configElement.id == "showSingleVersionVulnsConfig") {
+        showSingleVersionVulns = settingEnabled;
+        localStorage.setItem("showSingleVersionVulns", settingEnabledStr);
+    }
+    else if (configElement.id == "showTableFilteringConfig") {
+        showTableFiltering = settingEnabled;
+        localStorage.setItem("showTableFiltering", settingEnabledStr);
+    }
+
+    if (!$.isEmptyObject(curVulnData)) {
+        var hasVulns = renderSearchResults(true);
+        if (!hasVulns)
+            $('#vulns').html(noVulnsFoundHtml);
+    }
+}
+
+function changeColumnConfig(columnElement) {
+    var vulnTableColumns = [], allCheckType = null;
+
+    if (columnElement.id == 'showColumnAll')
+        allCheckType = true
+    else if (columnElement.id == 'showColumnNone')
+        allCheckType = false
+
+    if (allCheckType != null) {
+        columnCheckboxIDs = ['showColumnCVEID', 'showColumnCVSS', 'showColumnDescription', 'showColumnExploits'];
+        columnCheckboxIDs.forEach(function(columnCheckboxID) {
+            $('#' + columnCheckboxID)[0].checked = allCheckType;
+        });
+    }
+
+    if ($('#showColumnCVEID')[0].checked)
+        vulnTableColumns.push('cve');
+    if ($('#showColumnCVSS')[0].checked)
+        vulnTableColumns.push('cvss');
+    if ($('#showColumnDescription')[0].checked)
+        vulnTableColumns.push('descr');
+    if ($('#showColumnExploits')[0].checked)
+        vulnTableColumns.push('expl');
+
+    localStorage.setItem('vulnTableColumns', JSON.stringify(vulnTableColumns));
+
+    if (!$.isEmptyObject(curVulnData) && showTableFiltering)
+        renderSearchResults();
+}
+
+function changeFilterCVEs(filterCVEsButton) {
+    onlyShowCVEs = [];
+    var allOrNone = '';
+
+    if (filterCVEsButton != null) {
+        if(filterCVEsButton.id == 'filterCVEsNone')
+            allOrNone = 'none';
+        else {
+            onlyShowCVEs = null;
+            allOrNone = 'all';
+        }
+    }
+
+    $('.filter-cves').each(function(i, filterCVEDiv) {
+        filterCVEDiv = $(filterCVEDiv);
+        if (allOrNone == 'none')
+            filterCVEDiv.find('.checkbox')[0].checked = false;
+        else if (allOrNone == 'all')
+            filterCVEDiv.find('.checkbox')[0].checked = true;
+
+        if (onlyShowCVEs != null && filterCVEDiv.find('.checkbox')[0].checked)
+            onlyShowCVEs.push(filterCVEDiv.find('.label-text').text().trim());
+    });
+
+    if (!$.isEmptyObject(curVulnData) && showTableFiltering)
+        renderSearchResults();
+}
+
+function setupConfigFromLocalstorage() {
+    if (localStorage.getItem('ignoreGeneralCpeVulns') === null) {
+        localStorage.setItem('ignoreGeneralCpeVulns', 'false');
+    }
+    if (localStorage.getItem('onlyShowEDBExploits') === null) {
+        localStorage.setItem('onlyShowEDBExploits', 'false');
+    }
+    if (localStorage.getItem('showSingleVersionVulns') === null) {
+        localStorage.setItem('showSingleVersionVulns', 'false');
+    }
+    if (localStorage.getItem('showTableFiltering') === null) {
+        localStorage.setItem('showTableFiltering', 'true');
+    }
+    
+    if (localStorage.getItem('ignoreGeneralCpeVulns') == 'true') {
+        ignoreGeneralCpeVulns = true;
+        document.getElementById("generalVulnsConfig").checked = true;
+    }
+    if (localStorage.getItem('onlyShowEDBExploits') == 'true') {
+        onlyShowEDBExploits = true;
+        document.getElementById("onlyEdbExploitsConfig").checked = true;
+    }
+    if (localStorage.getItem('showSingleVersionVulns') == 'true') {
+        showSingleVersionVulns = true;
+        document.getElementById("showSingleVersionVulnsConfig").checked = true;
+    }
+    if (localStorage.getItem('showTableFiltering') == 'true') {
+        showTableFiltering = true;
+        document.getElementById("showTableFilteringConfig").checked = true;
+    }
+    
+    if (localStorage.getItem('vulnTableColumns') === null) {
+        localStorage.setItem('vulnTableColumns', '["cve", "cvss", "descr", "expl"]');
+    }
+    var vulnTableColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
+
+    if (vulnTableColumns.includes('cve'))
+        document.getElementById("showColumnCVEID").checked = true;
+    if (vulnTableColumns.includes('cvss'))
+        document.getElementById("showColumnCVSS").checked = true;
+    if (vulnTableColumns.includes('descr'))
+        document.getElementById("showColumnDescription").checked = true;
+    if (vulnTableColumns.includes('expl'))
+        document.getElementById("showColumnExploits").checked = true;
+
+}
+
+function initQuery() {
     if (location.search !== '' && location.search !== '?') {
         var url = new URL(document.location.href);
         var params = new URLSearchParams(url.search);
@@ -624,42 +747,127 @@ function init() {
             isGoodCpe = false;
 
         if (init_query !== null)
-            $("#searchVulnsButton").click();
+            $("#buttonSearchVulns").click();
     }
 }
+
+function fixDropdownClicking() {
+    $('.dropdown').find('.btn:first').on('mousedown', function(event) {
+        var closestDropdown = document.activeElement.closest('.dropdown') 
+        if (closestDropdown !== null && closestDropdown == event.target.closest('.dropdown')) {
+            event.preventDefault();
+            document.activeElement.blur();
+        }
+    });
+}
+
+function backToTop() {
+    window.scroll({ top: 0, behavior: "smooth" });
+}
+
+function doneTypingQuery () {
+    // user paused or finished typing query --> retrieve and show CPE suggestions
+    $('#cpeSuggestions').html('<div class="loading loading-spinner"></div>');
+    $('#cpeSuggestions').removeClass('hidden');
+    $("#buttonSearchVulns").addClass("btn-disabled");
+
+    var query = $('#query').val();
+    if (query === undefined)
+        query = '';
+
+    var queryEnc = encodeURIComponent(query);
+    var url_query = "query=" + queryEnc;
+
+    $.get({
+        url: "/cpe_suggestions",
+        data: url_query,
+        success: function (cpeInfos) {
+            if (!Array.isArray(cpeInfos)) {
+                console.log(cpeInfos)
+            }
+            else if (cpeInfos.length > 0) {
+                var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box">';
+                cpeInfos.forEach(function (cpeInfo) {
+                    dropdownContent += `<li><a class="text-nowrap" href="${window.location.pathname}?query=${encodeURIComponent(htmlEntities(cpeInfo[0]))}&is-good-cpe=false">${htmlEntities(cpeInfo[0])}</a></li>`
+                });
+                dropdownContent += '</ul>';
+                $('#cpeSuggestions').html(dropdownContent);
+            }
+            else {
+                $('#cpeSuggestions').html("No results found");
+            }
+            $("#buttonSearchVulns").removeClass("btn-disabled");
+        },
+        error: function (jXHR, textStatus, errorThrown) {
+            var errorMsg;
+            if ("responseText" in jXHR)
+                errorMsg = jXHR["responseText"];
+            else
+                errorMsg = errorThrown;
+            console.log(errorMsg);
+            $("#buttonSearchVulns").removeClass("btn-disabled");
+        }
+    })
+}
+
+function closeCPESuggestions() {
+    $('#cpeSuggestions').addClass('hidden');
+}
+
+
+/* init */
 
 // enables the user to press return on the query text field to make the query
 $("#query").keypress(function (event) {
     var keycode = (event.keyCode ? event.keyCode : event.which);
-    if (keycode == "13" && $("#searchVulnsButton").attr("disabled") === undefined)
-        $("#searchVulnsButton").click();
+    if (keycode == "13" && !$("#buttonSearchVulns").hasClass("btn-disabled"))
+        $("#buttonSearchVulns").click();
 });
 
-// activate tooltips
-$(document).ready(function () {
-    $("body").tooltip({ selector: '[data-toggle=tooltip]' });
+// set theme
+document.addEventListener('DOMContentLoaded', function() {
+    if (localStorage.getItem('theme') !== null)
+        changeTheme($('#theme-option-' + localStorage.getItem('theme'))[0]);
+    else
+        changeTheme();
+    document.body.classList.remove('hidden');
 });
+
+// fix dropdown open buttons to close again on click
+fixDropdownClicking();
 
 // setup configuration from LocalStorage
-if (localStorage.getItem('onlyShowEDBExploits') === null) {
-    localStorage.setItem('onlyShowEDBExploits', 'false');
-}
-if (localStorage.getItem('ignoreGeneralCpeVulns') === null) {
-    localStorage.setItem('ignoreGeneralCpeVulns', 'false');
-}
-
-if (localStorage.getItem('onlyShowEDBExploits') == 'true') {
-    onlyShowEDBExploits = true;
-    document.getElementById("toggleOnlyEDBExploits").checked = true;
-}
-if (localStorage.getItem('ignoreGeneralCpeVulns') == 'true') {
-    ignoreGeneralCpeVulns = true;
-    document.getElementById("toggleIgnoreGeneralCpeVulns").checked = true;
-}
-
-if (localStorage.getItem('exportFields') === null) {
-    localStorage.setItem('exportFields', '[]');
-}
+setupConfigFromLocalstorage();
 
 // check for existing query in URL and insert its parameters
-init();
+initQuery();
+
+// register scroll events for back to top button to display or not
+var toTopButton = $("#toTopButton");
+window.onscroll = function() {
+    if (document.body.scrollTop > 750 || document.documentElement.scrollTop > 750)
+        toTopButton.removeClass("hidden");
+    else
+        toTopButton.addClass("hidden");
+};
+
+// register timers and functions for query input field
+// on keyup, start the countdown to register finished typing
+queryInput.on('keyup', function () {
+    clearTimeout(doneTypingQueryTimer);
+    if (!searchIgnoreNextKeyup)
+        doneTypingQueryTimer = setTimeout(doneTypingQuery, doneTypingQueryInterval);
+    searchIgnoreNextKeyup = false;
+});
+
+// on keydown, clear the typing countdown and hide dropdown
+queryInput.on('keydown', function () {
+    clearTimeout(doneTypingQueryTimer);
+    $('#cpeSuggestions').addClass("hidden");
+    $('#cpeSuggestions').html();
+});
+
+// focus on query input field at the beginning
+window.onload = function () {
+    queryInput.focus();
+}
