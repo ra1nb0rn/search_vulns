@@ -38,9 +38,9 @@ class CPEVersion:
                 same_prefix = False
 
         if same_prefix:
-            if len(parts) > len(other_parts) and all(x == "0" for x in parts[part_idx+1:]):
+            if len(parts) > len(other_parts) and all(not x or x == "0" for x in parts[part_idx+1:]):
                 return True
-            if len(other_parts) > len(parts) and all(x == "0" for x in other_parts[part_idx+1:]):
+            if len(other_parts) > len(parts) and all(not x or x == "0" for x in other_parts[part_idx+1:]):
                 return True
 
     def __gt__(self, other):

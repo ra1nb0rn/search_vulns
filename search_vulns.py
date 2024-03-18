@@ -75,6 +75,10 @@ def is_cpe_included_from_field(cpe1, cpe2, field=6):
         if cpe2_remainder_fields[i] == 'beta' and cpe1_remainder_fields[i] == 'b':
             continue
 
+        if field + i == 5 or field + i == 6:  # CPE version or subversion field
+            if CPEVersion(cpe1_remainder_fields[i]) == CPEVersion(cpe2_remainder_fields[i]):
+                continue
+
         if cpe1_remainder_fields[i] != cpe2_remainder_fields[i]:
             return False
 
