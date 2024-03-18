@@ -4,6 +4,7 @@ import string
 VERSION_PART_SEP_RE = re.compile(r'[^\da-zA-Z]')
 SUBVERSION_PART_SEP_RE = re.compile(r'([a-zA-Z]+|[\d]+)')
 SUBVERSION_PART_SEP_WITH_DOTS_RE = re.compile(r'([a-zA-Z\.]+|[\d\.]+)')
+UPDATE_VERSION_FORMAT_RE = re.compile(r'((update(\d+))|(u(\d+)))')
 
 class CPEVersion:
 
@@ -30,6 +31,12 @@ class CPEVersion:
         if (parts and not other_parts) or (not parts and other_parts):
             return False
 
+        # check if versions are in form 'update123' or 'u123' (e.g. cpe:2.3:a:trendmicro:deep_security_agent:20.0:update1559:)
+        if parts[0] == 'u' and other_parts[0] == 'update':
+            other_parts[0] = 'u'
+        elif parts[0] == 'update' and other_parts[0] == 'u':
+            parts[0] = 'u'
+
         # check for equality if one version has trailing ".0"
         same_prefix = True
         for part_idx in range(min(len(parts), len(other_parts))):
@@ -42,6 +49,12 @@ class CPEVersion:
                 return True
             if len(other_parts) > len(parts) and all(not x or x == "0" for x in other_parts[part_idx+1:]):
                 return True
+            if len(parts) == len(other_parts):
+                for i in range(len(parts)):
+                    if parts[i] != other_parts[i]:
+                        return False
+                return True
+        return False
 
     def __gt__(self, other):
         return not (self <= other)
@@ -51,6 +64,12 @@ class CPEVersion:
 
     def __lt__(self, other):
         parts, other_parts = self.get_version_parts(), other.get_version_parts()
+
+        # check if versions are in form 'update123' or 'u123' (e.g. cpe:2.3:a:trendmicro:deep_security_agent:20.0:update1559:)
+        if parts and parts[0] == 'u' and other_parts and other_parts[0] == 'update':
+            other_parts[0] = 'u'
+        elif parts and parts[0] == 'update' and other_parts and other_parts[0] == 'u':
+            parts[0] = 'u'
 
         min_part_count = min(len(parts), len(other_parts))
         for part_idx in range(min_part_count):

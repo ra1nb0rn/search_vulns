@@ -450,8 +450,8 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
                 vulns[cve_id] = vuln
 
     if close_cursor_after:
-        db_conn.close()
         db_cursor.close()
+        db_conn.close()
 
     return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes}}
 
@@ -584,6 +584,7 @@ def main():
         print(json.dumps(vulns))
 
     db_cursor.close()
+    db_conn.close()
 
 
 if __name__ == "__main__":
