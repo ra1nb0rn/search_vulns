@@ -15,7 +15,7 @@
 
 
 /* Uncertain vulnerability table row (adapted from DaisyUI CSS) */
-tr.uncertain-vuln {
+tr.uncertain-vuln td {
     color: var(--fallback-bc,oklch(var(--bc)/0.75));
     background-color: var(--fallback-wa,oklch(var(--wa)/0.15));
 }
@@ -53,16 +53,17 @@ tr.uncertain-vuln {
 
 
 /* Rounded table */
+
 .table-rounded thead tr th:first-child {
     border-radius: 0.8rem 0 0 0;
 }
 
-.table-rounded thead tr {
-    border-radius: 0.8rem 0 0 0.8rem;
-}
-
 .table-rounded thead tr th:last-child {
     border-radius: 0 0.8rem 0 0;
+}
+
+.table-rounded thead tr th:first-child:last-child {
+    border-radius: 0.8rem 0.8rem 0 0;
 }
 
 .table-rounded tr:last-child td:first-child {
@@ -73,9 +74,13 @@ tr.uncertain-vuln {
     border-radius: 0 0 0.8rem 0;
 }
 
+.table-rounded tr:last-child td:first-child:last-child {
+    border-radius: 0 0 0.8rem 0.8rem;
+}
+
 
 /* Overwrite Tailwind striping for uncetain-vuln table row */
-.my-table-zebra tbody tr:nth-child(even):not(.uncertain-vuln) {
+.my-table-zebra tbody tr:nth-child(even):not(.uncertain-vuln) td {
   --tw-bg-opacity: 1;
   background-color: var(--fallback-b2,oklch(var(--b2)/var(--tw-bg-opacity)));
 }

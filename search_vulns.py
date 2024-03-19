@@ -420,10 +420,10 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
 
     # if given query is not already a CPE, try to retrieve a CPE that matches
     # the query or create alternative CPEs that could match the query
-    query = query.strip()
-    cpe, pot_cpes = query, []
-    if not MATCH_CPE_23_RE.match(query):
-        cpe_search_results = search_cpes(query, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
+    query_stripped = query.strip()
+    cpe, pot_cpes = query_stripped, []
+    if not MATCH_CPE_23_RE.match(query_stripped):
+        cpe_search_results = search_cpes(query_stripped, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
 
         if not cpe_search_results['cpes']:
             return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': cpe_search_results['pot_cpes']}}

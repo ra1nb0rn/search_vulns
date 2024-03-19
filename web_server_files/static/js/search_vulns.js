@@ -96,10 +96,10 @@ function createVulnTableRowHtml(idx, vuln) {
     if (vuln.vuln_match_reason == "general_cpe" || vuln.vuln_match_reason == "single_higher_version_cpe")
         uncertain_vuln_class = "uncertain-vuln";
 
-    vuln_row_html += `<tr class="${uncertain_vuln_class}">`;
+    vuln_row_html += `<tr class="${uncertain_vuln_class} border-none">`;
 
     if (selectedColumns.includes('cve')) {
-        vuln_row_html += `<td class="text-nowrap pr-2 relative"><a href="${htmlEntities(vuln["href"])}" target="_blank" style="color: inherit;">${vuln["id"]}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a>`;
+        vuln_row_html += `<td class="text-nowrap whitespace-nowrap pr-2 relative"><a href="${htmlEntities(vuln["href"])}" target="_blank" style="color: inherit;">${vuln["id"]}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a>`;
         if (vuln.vuln_match_reason == "general_cpe")
             vuln_row_html += `<br><center><span data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects the queried software in general and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div></center>`;
         else if (vuln.vuln_match_reason == "single_higher_version_cpe")
@@ -121,7 +121,7 @@ function createVulnTableRowHtml(idx, vuln) {
             cvss_badge_css = "badge-medium";
         else if (cvss < 4.0 && cvss >= 0.1)
             cvss_badge_css = "badge-low";
-        vuln_row_html += `<td class="text-nowrap"><div class="dropdown dropdown-hover"><div class="badge p-1.5 border-none badge-cvss ${cvss_badge_css} text-center ${uncertain_vuln_class}" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
+        vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="badge p-1.5 border-none badge-cvss ${cvss_badge_css} text-center ${uncertain_vuln_class}" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
     }
 
     if (selectedColumns.includes('descr')) {
@@ -142,7 +142,7 @@ function createVulnTableRowHtml(idx, vuln) {
                 exploits.push(`<a href="${vuln.exploits[j].replace('"', '&quot;')}" target="_blank" style="color: inherit;">${htmlEntities(exploit_url_show)}</a>`);
             }
         }
-        vuln_row_html += `<td class="text-nowrap">${exploits.join("<br>")}</td>`;
+        vuln_row_html += `<td class="text-nowrap whitespace-nowrap">${exploits.join("<br>")}</td>`;
     }
 
     vuln_row_html += "</tr>";
@@ -194,19 +194,19 @@ function renderSearchResults(reloadFilterDropdown) {
     }
     
     vulns_html = '<table class="table table-sm my-table-zebra table-rounded">';
-    vulns_html += '<thead class="bg-base-300">';
+    vulns_html += '<thead>';
     vulns_html += '<tr>'
     if (selectedColumns.includes('cve')) {
-        vulns_html += `<th onclick="${sortFunctionCVEID}" style="white-space: nowrap;">CVE-ID&nbsp;&nbsp;${sortIconCVEID}</th>`;
+        vulns_html += `<th class="bg-base-300" onclick="${sortFunctionCVEID}" style="white-space: nowrap;">CVE-ID&nbsp;&nbsp;${sortIconCVEID}</th>`;
     }
     if (selectedColumns.includes('cvss')) {
-        vulns_html += `<th onclick="${sortFunctionCVSS}" style="white-space: nowrap;">CVSS&nbsp;&nbsp;${sortIconCVSS}</th>`;
+        vulns_html += `<th class="bg-base-300" onclick="${sortFunctionCVSS}" style="white-space: nowrap;">CVSS&nbsp;&nbsp;${sortIconCVSS}</th>`;
     }
     if (selectedColumns.includes('descr')) {
-        vulns_html += '<th>Description</th>'
+        vulns_html += '<th class="bg-base-300">Description</th>'
     }
     if (selectedColumns.includes('expl')) {
-        vulns_html += `<th onclick="${sortFunctionExploits}" style="white-space: nowrap;">Exploits&nbsp;&nbsp;${sortIconExploits}</th>`;
+        vulns_html += `<th class="bg-base-300" onclick="${sortFunctionExploits}" style="white-space: nowrap;">Exploits&nbsp;&nbsp;${sortIconExploits}</th>`;
     }
     vulns_html += "</tr></thead>";
     vulns_html += "<tbody>";
@@ -227,7 +227,7 @@ function renderSearchResults(reloadFilterDropdown) {
         }
 
         // add CVE to filter
-        filter_vulns_html += `<div class="form-control filter-cves"><label class="label cursor-pointer py-1 gap-4"><span class="label-text text-nowrap">${vulns[i]["id"]}</span><input type="checkbox" class="checkbox" onclick="changeFilterCVEs()" ${checked_html} /></label></div>`;
+        filter_vulns_html += `<div class="form-control filter-cves"><label class="label cursor-pointer py-1 gap-4"><span class="label-text text-nowrap whitespace-nowrap">${vulns[i]["id"]}</span><input type="checkbox" class="checkbox" onclick="changeFilterCVEs()" ${checked_html} /></label></div>`;
     }
     vulns_html += "</tbody></table>";
     if (has_vulns)
@@ -426,8 +426,12 @@ function buildTextualReprFromCPE(cpe) {
         cpe_parts[4] = cpe_parts[4].substring(1);
 
     product_title = cpe_parts[3].split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ') + ' ';
-    if (cpe_parts[4] && cpe_parts[4] != cpe_parts[3])
-        product_title += cpe_parts[4].split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ') + ' ';
+    if (cpe_parts[4] && cpe_parts[4] != cpe_parts[3]) {
+        var append_words = cpe_parts[4].split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ') + ' ';
+        append_words = append_words.replace(/^[\W_]+/, '');
+        append_words = append_words.charAt(0).toUpperCase() + append_words.slice(1);
+        product_title += append_words;
+    }
 
     if (cpe_parts[5] && cpe_parts[5] != '-' && cpe_parts[5] != '*')
         product_title += cpe_parts[5] + ' ';
@@ -437,7 +441,7 @@ function buildTextualReprFromCPE(cpe) {
 
     cpe_parts.slice(7).forEach(cpe_part => {
         if (cpe_part && cpe_part != '-' && cpe_part != '*') {
-            cpe_part = cpe_part[0].toUpperCase() + cpe_part.substring(1);
+            var cpe_part = cpe_part[0].toUpperCase() + cpe_part.substring(1);
             cpe_condition += cpe_part.split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ') + ' ';
         }
     });
@@ -788,7 +792,7 @@ function doneTypingQuery () {
             else if (cpeInfos.length > 0) {
                 var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box">';
                 cpeInfos.forEach(function (cpeInfo) {
-                    dropdownContent += `<li><a class="text-nowrap" onmousedown="location.href = '${window.location.pathname}?query=${encodeURIComponent(htmlEntities(cpeInfo[0]))}&is-good-cpe=false'">${htmlEntities(cpeInfo[0])}</a></li>`;
+                    dropdownContent += `<li><a class="text-nowrap whitespace-nowrap" onmousedown="location.href = '${window.location.pathname}?query=${encodeURIComponent(htmlEntities(cpeInfo[0]))}&is-good-cpe=false'">${htmlEntities(cpeInfo[0])}</a></li>`;
                 });
                 dropdownContent += '</ul>';
                 $('#cpeSuggestions').html(dropdownContent);
@@ -807,7 +811,7 @@ function doneTypingQuery () {
             console.log(errorMsg);
             $("#buttonSearchVulns").removeClass("btn-disabled");
         }
-    })
+    });
 }
 
 function closeCPESuggestions() {
@@ -820,8 +824,11 @@ function closeCPESuggestions() {
 // enables the user to press return on the query text field to make the query
 $("#query").keypress(function (event) {
     var keycode = (event.keyCode ? event.keyCode : event.which);
-    if (keycode == "13" && !$("#buttonSearchVulns").hasClass("btn-disabled"))
-        $("#buttonSearchVulns").click();
+    if (keycode == "13") {
+        if (!$("#cpeSuggestions").hasClass("hidden") || !$("#buttonSearchVulns").hasClass("btn-disabled")) {
+            $("#buttonSearchVulns").click();
+        }
+    }
 });
 
 // set theme
@@ -861,10 +868,12 @@ queryInput.on('keyup', function () {
 });
 
 // on keydown, clear the typing countdown and hide dropdown
-queryInput.on('keydown', function () {
-    clearTimeout(doneTypingQueryTimer);
-    $('#cpeSuggestions').addClass("hidden");
-    $('#cpeSuggestions').html();
+queryInput.on('keydown', function (event) {
+    if (event.keyCode !== undefined && event.keyCode != 13) {
+        clearTimeout(doneTypingQueryTimer);
+        $('#cpeSuggestions').addClass("hidden");
+        $('#cpeSuggestions').html();
+    }
 });
 
 // focus on query input field at the beginning

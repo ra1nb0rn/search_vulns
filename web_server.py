@@ -9,7 +9,8 @@ from search_vulns import (
     _load_config,
     search_vulns as search_vulns_call,
     CPE_SEARCH_THRESHOLD_MATCH,
-    CPE_SEARCH_COUNT
+    CPE_SEARCH_COUNT,
+    MATCH_CPE_23_RE
 )
 from cpe_search.cpe_search import search_cpes
 
@@ -28,7 +29,11 @@ def cpe_suggestions():
     query = request.args.get('query')
     if not query:
         return "No query provided", 400
+    query = query.strip()
     query_lower = query.lower()
+
+    if MATCH_CPE_23_RE.match(query_lower):
+        return [(query_lower, -1)]
 
     if query_lower in CPE_SUGGESTIONS_CACHE:
         return jsonify(CPE_SUGGESTIONS_CACHE[query_lower])
@@ -55,6 +60,7 @@ def search_vulns():
     query = request.args.get('query')
     if not query:
         return "No query provided", 400
+    query = query.strip()
 
     if url_query_string in VULN_RESULTS_CACHE:
         return VULN_RESULTS_CACHE[url_query_string]
@@ -85,11 +91,14 @@ def search_vulns():
 
     if cpe_suggestions:
         query_cpe = cpe_suggestions[0][0]
+        is_good_cpe = False  # query was never issued as CPE --> use CPE deprecations and equivalences
         vulns = search_vulns_call(query_cpe, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
         vulns = {query: {'cpe': vulns[query_cpe]['cpe'], 'vulns': vulns[query_cpe]['vulns'], 'pot_cpes': cpe_suggestions}}
     else:
         vulns = search_vulns_call(query, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
-        CPE_SUGGESTIONS_CACHE[query.lower()] = vulns[query]['pot_cpes']
+        query_lower = query.lower()
+        if not MATCH_CPE_23_RE.match(query_lower):
+            CPE_SUGGESTIONS_CACHE[query_lower] = vulns[query]['pot_cpes']
 
     db_cursor.close()
     db_conn.close()
