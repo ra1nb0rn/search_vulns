@@ -101,7 +101,6 @@ class TestSearches(unittest.TestCase):
         expected_cves = ['CVE-2001-0027', 'CVE-2015-3306', 'CVE-2019-18217', 'CVE-2019-19270', 'CVE-2019-19271', 'CVE-2019-19272', 'CVE-2020-9272', 'CVE-2021-46854', 'CVE-2023-51713', 'CVE-2023-48795']
         self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
-           
     def test_search_xorg_xorg_server_1100901(self):
         self.maxDiff = None
         query = 'x.org xorg server 1.10.0.901'

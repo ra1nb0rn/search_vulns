@@ -146,7 +146,7 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
         detailed_vulns[cve_id] = {"id": cve_id, "description": descr, "published": str(publ), "modified": str(last_mod),
                                   "href": "https://nvd.nist.gov/vuln/detail/%s" % cve_id, "cvss_ver": str(float(cvss_ver)),
                                   "cvss": str(float(score)), "cvss_vec": vector, "vuln_match_reason": match_reason,
-                                  "cisa_known_exploited": cisa_known_exploited}
+                                  "cisa_known_exploited": bool(cisa_known_exploited)}
 
         edb_ids = edb_ids.strip()
         if edb_ids:
