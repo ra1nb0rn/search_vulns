@@ -86,7 +86,7 @@ function getCurrentVulnsSorted() {
 }
 
 function createVulnTableRowHtml(idx, vuln) {
-    var vuln_row_html = '', uncertain_vuln_class = "";
+    var vuln_row_html = '', vuln_style_class = '', vuln_flag_html = '';
     var exploits, cvss, cvss_badge_css, exploit_url_show;
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
 
@@ -94,17 +94,31 @@ function createVulnTableRowHtml(idx, vuln) {
         return '';
 
     if (vuln.vuln_match_reason == "general_cpe" || vuln.vuln_match_reason == "single_higher_version_cpe")
-        uncertain_vuln_class = "uncertain-vuln";
+        vuln_style_class = "uncertain-vuln";
+    if (vuln.cisa_known_exploited)
+        vuln_style_class += " exploited-vuln";  // overwrites color of uncertain vuln
 
-    vuln_row_html += `<tr class="${uncertain_vuln_class} border-none">`;
+    vuln_row_html += `<tr class="${vuln_style_class} border-none">`;
 
     if (selectedColumns.includes('cve')) {
         vuln_row_html += `<td class="text-nowrap whitespace-nowrap pr-2 relative"><a href="${htmlEntities(vuln["href"])}" target="_blank" style="color: inherit;">${vuln["id"]}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a>`;
+
         if (vuln.vuln_match_reason == "general_cpe")
-            vuln_row_html += `<br><center><span data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects the queried software in general and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div></center>`;
+            vuln_flag_html += `<br><center><span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects the queried software in general and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
         else if (vuln.vuln_match_reason == "single_higher_version_cpe")
-            vuln_row_html += `<br><center><span data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects only a single higher version of the product and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div></center>`;
-        vuln_row_html += "</td>";
+            vuln_flag_html += `<br><center><span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects only a single higher version of the product and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+
+        if (vuln.cisa_known_exploited) {
+            if (vuln_flag_html)
+                vuln_flag_html += `<span class="ml-2 vuln-flag-icon" data-tooltip-target="tooltip-exploit-${idx}" data-tooltip-placement="bottom"><i class="fa-solid fa-skull text-exploited"></i></span><div id="tooltip-exploit-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability has been exploited in the wild according to CISA.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+            else
+            vuln_flag_html += `<br><center><span class="ml-2 vuln-flag-icon" data-tooltip-target="tooltip-exploit-${idx}" data-tooltip-placement="bottom"><i class="fa-solid fa-skull text-exploited"></i></span><div id="tooltip-exploit-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability has been exploited in the wild according to CISA.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+        }
+
+        if (vuln_flag_html)
+            vuln_flag_html += '</center>';
+
+        vuln_row_html += vuln_flag_html + "</td>";
     }
 
     if (selectedColumns.includes('cvss')) {
@@ -121,7 +135,7 @@ function createVulnTableRowHtml(idx, vuln) {
             cvss_badge_css = "badge-medium";
         else if (cvss < 4.0 && cvss >= 0.1)
             cvss_badge_css = "badge-low";
-        vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="badge p-1.5 border-none badge-cvss ${cvss_badge_css} text-center ${uncertain_vuln_class}" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
+        vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="badge p-1.5 border-none badge-cvss ${cvss_badge_css} text-center ${vuln_style_class}" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
     }
 
     if (selectedColumns.includes('descr')) {

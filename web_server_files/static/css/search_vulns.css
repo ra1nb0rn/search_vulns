@@ -10,14 +10,30 @@
     --cvss-badge-bg-color-medium-uncertain: rgb(253, 205, 114, 0.75);
     --cvss-badge-bg-color-low: rgb(255, 255, 162);
     --cvss-badge-bg-color-low-uncertain: rgb(255, 255, 162, 0.75);
+    --color-expl: 0.5374 0.21482051691771167 14.844751311489949;
+}
 
+@supports not (color: oklch(0 0 0)) {
+    :root {
+        --fallback-color-expl: #cc0044;
+    }
 }
 
 
-/* Uncertain vulnerability table row (adapted from DaisyUI CSS) */
+/* Styled vulnerability table row (adapted from DaisyUI CSS) */
 tr.uncertain-vuln td {
     color: var(--fallback-bc,oklch(var(--bc)/0.75));
     background-color: var(--fallback-wa,oklch(var(--wa)/0.15));
+}
+tr.exploited-vuln td {
+    background-color: var(--fallback-color-expl,oklch(var(--color-expl)/0.15));
+}
+.text-exploited {
+    --tw-text-opacity: 1;
+    color: var(--fallback-color-expl,oklch(var(--color-expl)/var(--tw-text-opacity)));
+}
+.vuln-flag-icon {
+    font-size: 0.95rem;
 }
 
 
@@ -79,8 +95,8 @@ tr.uncertain-vuln td {
 }
 
 
-/* Overwrite Tailwind striping for uncetain-vuln table row */
-.my-table-zebra tbody tr:nth-child(even):not(.uncertain-vuln) td {
+/* Overwrite Tailwind striping for styled-vuln table row */
+.my-table-zebra tbody tr:nth-child(even):not(.uncertain-vuln):not(.exploited-vuln) td {
   --tw-bg-opacity: 1;
   background-color: var(--fallback-b2,oklch(var(--b2)/var(--tw-bg-opacity)));
 }
