@@ -269,6 +269,11 @@ function createVulnsMarkDownTable() {
     for (var i = 0; i < vulns.length; i++) {
         if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
             continue;
+        if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
+            continue;
+        if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+            continue;
+
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
                 has_exploits = true;
@@ -312,6 +317,10 @@ function createVulnsMarkDownTable() {
 
     for (var i = 0; i < vulns.length; i++) {
         if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
+            continue;
+        if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
+            continue;
+        if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
             continue;
 
         cur_vuln_has_exploits = false;
@@ -365,6 +374,11 @@ function createVulnsCSV() {
     for (var i = 0; i < vulns.length; i++) {
         if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
             continue;
+        if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
+            continue;
+        if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+            continue;
+
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
                 has_exploits = true;
@@ -395,6 +409,10 @@ function createVulnsCSV() {
 
     for (var i = 0; i < vulns.length; i++) {
         if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
+            continue;
+        if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
+            continue;
+        if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
             continue;
 
         if (selectedColumns.length < 1 || selectedColumns.includes('cve'))
