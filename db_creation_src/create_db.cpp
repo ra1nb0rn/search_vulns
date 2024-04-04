@@ -94,7 +94,7 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     std::unordered_map<std::string, int> nvd_exploits_refs;
     std::unordered_map<std::string, std::unordered_set<int>> cveid_exploits_map;
     std::size_t datetime_dot_pos;
-    bool vulnerable;
+    bool vulnerable, cisa_known_exploited;
     double base_score;
     int cur_node_id;
 
@@ -184,6 +184,9 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
             }
         }
 
+        // cve in CISA Known Exploited Vulnerabilities Catalog
+        cisa_known_exploited = cve_entry["cve"]["cisaExploitAdd"] != nullptr;
+
         // bind found cve info to prepared statement
         cve_query->bind(1, cve_id);
         cve_query->bind(2, description);
@@ -196,6 +199,7 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
         cve_query->bind(7, base_score);
         cve_query->bind(8, vector_string);
         cve_query->bind(9, severity);
+        cve_query->bind(10, cisa_known_exploited);
         cve_query->execute();
 
         // Next, retrieve CPE data and put into DB  
