@@ -17,6 +17,7 @@ from cpe_search.cpe_search import (
 from cpe_search.cpe_search import _load_config as _load_config_cpe_search
 
 DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
+DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'debian_equiv_cpes.json')
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
@@ -331,6 +332,8 @@ def load_equivalent_cpes(config):
 
     LOAD_EQUIVALENT_CPES_MUTEX.acquire()
     if not EQUIVALENT_CPES:
+        equivalent_cpes_dicts_list, deprecated_cpes = [], {}
+
         # first add official deprecation information from the NVD
         with open(config['cpe_search']['DEPRECATED_CPES_FILE'], "r") as f:
             cpe_deprecations_raw = json.loads(f.read())
@@ -342,32 +345,45 @@ def load_equivalent_cpes(config):
                     if deprecatedby_cpe_short not in deprecations_short:
                         deprecations_short.append(deprecatedby_cpe_short)
 
-                if cpe_short not in EQUIVALENT_CPES:
-                    EQUIVALENT_CPES[cpe_short] = deprecations_short
+                if cpe_short not in deprecated_cpes:
+                    deprecated_cpes[cpe_short] = deprecations_short
                 else:
-                    EQUIVALENT_CPES[cpe_short] = list(set(EQUIVALENT_CPES[cpe_short] + deprecations_short))
+                    deprecated_cpes[cpe_short] = list(set(deprecated_cpes[cpe_short] + deprecations_short))
 
                 for deprecatedby_cpe_short in deprecations_short:
                     if deprecatedby_cpe_short not in EQUIVALENT_CPES:
-                        EQUIVALENT_CPES[deprecatedby_cpe_short] = [cpe_short]
+                        deprecated_cpes[deprecatedby_cpe_short] = [cpe_short]
                     elif cpe_short not in EQUIVALENT_CPES[deprecatedby_cpe_short]:
-                        EQUIVALENT_CPES[deprecatedby_cpe_short].append(cpe_short)
+                        deprecated_cpes[deprecatedby_cpe_short].append(cpe_short)
+        equivalent_cpes_dicts_list.append(deprecated_cpes)
 
         # then manually add further information
         with open(config['MAN_EQUIVALENT_CPES_FILE']) as f:
             manual_equivalent_cpes = json.loads(f.read())
+        equivalent_cpes_dicts_list.append(manual_equivalent_cpes)
 
-        for man_equiv_cpe, other_equiv_cpes in manual_equivalent_cpes.items():
-            if man_equiv_cpe not in EQUIVALENT_CPES:
-                EQUIVALENT_CPES[man_equiv_cpe] = other_equiv_cpes
-            else:
-                EQUIVALENT_CPES[man_equiv_cpe] = list(set(EQUIVALENT_CPES[man_equiv_cpe] + other_equiv_cpes))
+        # finally add further information from https://salsa.debian.org/security-tracker-team/security-tracker/-/blob/master/data/CPE/aliases
+        with open(DEBIAN_EQUIV_CPES_FILE) as f:
+            debian_equivalent_cpes = json.loads(f.read())
+        equivalent_cpes_dicts_list.append(debian_equivalent_cpes)
 
+        # unite the infos from the different sources
+        for equivalent_cpes_dict in equivalent_cpes_dicts_list:
+            for equiv_cpe, other_equiv_cpes in equivalent_cpes_dict.items():
+                if equiv_cpe not in EQUIVALENT_CPES:
+                    EQUIVALENT_CPES[equiv_cpe] = other_equiv_cpes
+                else:
+                    EQUIVALENT_CPES[equiv_cpe].extend(other_equiv_cpes)
+
+        # ensure that each entry and its equivalents are properly linked in both directions
+        for equiv_cpe in list(EQUIVALENT_CPES):
+            other_equiv_cpes = list(EQUIVALENT_CPES[equiv_cpe])
             for other_equiv_cpe in other_equiv_cpes:
+                other_relevant_equiv_cpes = [equiv_cpe if cpe == other_equiv_cpe else cpe for cpe in other_equiv_cpes]
                 if other_equiv_cpe not in EQUIVALENT_CPES:
-                    EQUIVALENT_CPES[other_equiv_cpe] = [man_equiv_cpe]
-                elif man_equiv_cpe not in EQUIVALENT_CPES[other_equiv_cpe]:
-                    EQUIVALENT_CPES[other_equiv_cpe].append(man_equiv_cpe)
+                    EQUIVALENT_CPES[other_equiv_cpe] = other_relevant_equiv_cpes
+                elif equiv_cpe not in EQUIVALENT_CPES[other_equiv_cpe]:
+                    EQUIVALENT_CPES[other_equiv_cpe].extend(other_relevant_equiv_cpes)
 
     LOAD_EQUIVALENT_CPES_MUTEX.release()
 
