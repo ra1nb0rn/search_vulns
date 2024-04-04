@@ -140,12 +140,13 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
         if cve_id in detailed_vulns:
             continue
 
-        query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score, vector FROM cve WHERE cve_id = ?'
+        query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score, vector, cisa_known_exploited FROM cve WHERE cve_id = ?'
         db_cursor.execute(query, (cve_id,))
-        edb_ids, descr, publ, last_mod, cvss_ver, score, vector = db_cursor.fetchone()
+        edb_ids, descr, publ, last_mod, cvss_ver, score, vector, cisa_known_exploited = db_cursor.fetchone()
         detailed_vulns[cve_id] = {"id": cve_id, "description": descr, "published": str(publ), "modified": str(last_mod),
                                   "href": "https://nvd.nist.gov/vuln/detail/%s" % cve_id, "cvss_ver": str(float(cvss_ver)),
-                                  "cvss": str(float(score)), "cvss_vec": vector, 'vuln_match_reason': match_reason}
+                                  "cvss": str(float(score)), "cvss_vec": vector, "vuln_match_reason": match_reason,
+                                  "cisa_known_exploited": cisa_known_exploited}
 
         edb_ids = edb_ids.strip()
         if edb_ids:
@@ -301,10 +302,15 @@ def print_vulns(vulns, to_string=False):
 
         if not to_string:
             print_str = GREEN + vuln_node["id"] + SANE
-            print_str += " (" + MAGENTA + 'CVSSv' + vuln_node['cvss_ver'] + '/' + str(vuln_node["cvss"]) + SANE + "): %s\n" % description
+            print_str += " (" + MAGENTA + 'CVSSv' + vuln_node['cvss_ver'] + '/' + str(vuln_node["cvss"]) + SANE + ")"
+            if vuln_node['cisa_known_exploited']:
+                print_str += " (" + RED + "Actively exploited" + SANE + ")"
         else:
             print_str = vuln_node["id"]
-            print_str += " ("'CVSSv' + vuln_node['cvss_ver'] + '/' + str(vuln_node["cvss"]) + "): %s\n" % description
+            print_str += " ("'CVSSv' + vuln_node['cvss_ver'] + '/' + str(vuln_node["cvss"]) + ")"
+            if vuln_node['cisa_known_exploited']:
+                print_str += " (Actively exploited)"
+        print_str += ': '+description+'\n'
 
         if "exploits" in vuln_node:
             if not to_string:
