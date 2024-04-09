@@ -5,6 +5,7 @@ VERSION_PART_SEP_RE = re.compile(r'[^\da-zA-Z]')
 SUBVERSION_PART_SEP_RE = re.compile(r'([a-zA-Z]+|[\d]+)')
 SUBVERSION_PART_SEP_WITH_DOTS_RE = re.compile(r'([a-zA-Z\.]+|[\d\.]+)')
 UPDATE_VERSION_FORMAT_RE = re.compile(r'((update(\d+))|(u(\d+)))')
+MULTIPLE_ZEROES_RE = re.compile(r'0(\.?0)+')
 
 class CPEVersion:
 
@@ -12,14 +13,16 @@ class CPEVersion:
         self.version_str = ver_str
 
     def get_version_parts(self):
-        split_version_parts = VERSION_PART_SEP_RE.split(self.version_str)
+        # deduplicate zero extensions, e.g. 0.0.0.0 --> 0.0
+        version_str = MULTIPLE_ZEROES_RE.sub('0', self.version_str)
+        split_version_parts = VERSION_PART_SEP_RE.split(version_str)
         version_parts = []
 
         for split_part in split_version_parts:
             subversions = SUBVERSION_PART_SEP_RE.findall(split_part)
             version_parts += subversions
 
-        return [part.lstrip('0') for part in version_parts]  # strip leading '0' from every part
+        return version_parts
 
     def get_version_sections(self):
         return SUBVERSION_PART_SEP_WITH_DOTS_RE.findall(str(self))
@@ -31,16 +34,16 @@ class CPEVersion:
         if (parts and not other_parts) or (not parts and other_parts):
             return False
 
-        # check if versions are in form 'update123' or 'u123' (e.g. cpe:2.3:a:trendmicro:deep_security_agent:20.0:update1559:)
-        if parts[0] == 'u' and other_parts[0] == 'update':
-            other_parts[0] = 'u'
-        elif parts[0] == 'update' and other_parts[0] == 'u':
-            parts[0] = 'u'
-
         # check for equality if one version has trailing ".0"
         same_prefix = True
         for part_idx in range(min(len(parts), len(other_parts))):
             part, other_part = parts[part_idx], other_parts[part_idx]
+            # check if versions are in form 'update123' or 'u123' (e.g. cpe:2.3:a:trendmicro:deep_security_agent:20.0:update1559:)
+            if part in ('u', 'update') and other_part in ('u', 'update'):
+                continue
+            if part in ('p', 'patch') and other_part in ('p', 'patch'):
+                continue
+
             if part.lower() != other_part.lower():
                 same_prefix = False
 
@@ -51,7 +54,12 @@ class CPEVersion:
                 return True
             if len(parts) == len(other_parts):
                 for i in range(len(parts)):
-                    if parts[i] != other_parts[i]:
+                    # check if versions are in form 'update123' or 'u123' (e.g. cpe:2.3:a:trendmicro:deep_security_agent:20.0:update1559:)
+                    if parts[i] in ('u', 'update') and other_parts[i] in ('u', 'update'):
+                        continue
+                    if parts[i] in ('p', 'patch') and other_parts[i] in ('p', 'patch'):
+                        continue
+                    elif parts[i] != other_parts[i]:
                         return False
                 return True
         return False
@@ -64,27 +72,36 @@ class CPEVersion:
 
     def __lt__(self, other):
         parts, other_parts = self.get_version_parts(), other.get_version_parts()
-
-        # check if versions are in form 'update123' or 'u123' (e.g. cpe:2.3:a:trendmicro:deep_security_agent:20.0:update1559:)
-        if parts and parts[0] == 'u' and other_parts and other_parts[0] == 'update':
-            other_parts[0] = 'u'
-        elif parts and parts[0] == 'update' and other_parts and other_parts[0] == 'u':
-            parts[0] = 'u'
-
         min_part_count = min(len(parts), len(other_parts))
+
         for part_idx in range(min_part_count):
             part, other_part = parts[part_idx], other_parts[part_idx]
 
             # if parts are empty / were zeroes
             if (not part) and (not other_part):
-                # continue if not in last step and return False otherwise
+                # continue if not in last step
                 if part_idx < len(parts)-1 and part_idx < len(other_parts)-1:
                     continue
+                # if other version has more non-empty parts following, this version is smaller
+                if any(rem_part for rem_part in other_parts[part_idx:]):
+                    return True
                 return False
             if not other_part:
+                # continue if not in last step for other version
+                if part_idx < len(other_parts)-1:
+                    continue
                 return False
             if not part:
+                # continue if not in last step for this version
+                if part_idx < len(parts)-1:
+                    continue
                 return True
+
+            # check if versions are in form 'update123' or 'u123' (e.g. cpe:2.3:a:trendmicro:deep_security_agent:20.0:update1559:)
+            if part in ('u', 'update') and other_part in ('u', 'update'):
+                continue
+            if part in ('p', 'patch') and other_part in ('p', 'patch'):
+                continue
 
             # right-pad with '0' to make both parts the same length
             if len(part) < len(other_part) and part[0] in string.digits:

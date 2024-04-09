@@ -24,6 +24,7 @@ LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
 DEDUP_LINEBREAKS_RE_1 = re.compile(r'(\r\n)+')
 DEDUP_LINEBREAKS_RE_2 = re.compile(r'\n+')
 CPE_COMPARISON_STOP_CHARS_RE = re.compile(r'[\+\-\_\~]')
+NUMERIC_VERSION_RE = re.compile(r'[\d\.]+')
 CPE_SEARCH_COUNT = 5
 
 # define ANSI color escape sequences
@@ -121,9 +122,11 @@ def is_more_specific_cpe_contained(vuln_cpe, cve_cpes):
                 # assume the number of fields is the same for both, since they're official NVD CPEs
                 vuln_cpe_fields, vuln_other_cpe_fields = vuln_cpe.split(':'), vuln_other_cpe.split(':')
                 for i in range(len(vuln_other_cpe_fields)-1, -1, -1):
-                    if (not CPEVersion(vuln_cpe_fields[i])) and (not CPEVersion(vuln_other_cpe_fields[i])):
+                    vuln_cpe_field_version = CPEVersion(vuln_cpe_fields[i])
+                    vuln_other_cpe_field_version = CPEVersion(vuln_other_cpe_fields[i])
+                    if (not vuln_cpe_field_version) and (not vuln_other_cpe_field_version):
                         continue
-                    elif CPEVersion(vuln_other_cpe_fields[i]):
+                    elif (not vuln_cpe_field_version) and vuln_other_cpe_field_version:
                         return True
                     else:
                         break
@@ -197,8 +200,29 @@ def _is_version_start_end_matching(cpe_version, cpe_subversion, version_start, v
     version_end = CPEVersion(version_end)
 
     # combine version and subversion if NVD merged both for version_end as well
-    if version_end and len(version_end.get_version_sections()) > len(cpe_version.get_version_sections()):
-        cpe_version = (cpe_version + cpe_subversion)
+    if version_end:
+        version_end_sections = version_end.get_version_sections()
+        cpe_version_subsections = cpe_version.get_version_sections()
+        if len(version_end_sections) > len(cpe_version_subsections):
+            cpe_version = (cpe_version + cpe_subversion)
+            cpe_version_sections = cpe_version.get_version_sections()
+            if len(cpe_version_sections) != len(version_end_sections):
+                # try to adjust cpe_version, such that it ideally has the same number of sections as version_end
+                final_cpe_version_sections = []
+                i, j = 0, 0
+                while i < len(cpe_version_sections) and j < len(version_end_sections):
+                    # if same version type (numeric or alphanumeric), use version field, otherwise leave it out
+                    cpe_version_section_numeric_match = NUMERIC_VERSION_RE.match(cpe_version_sections[i])
+                    version_end_section_numeric_match = NUMERIC_VERSION_RE.match(version_end_sections[j])
+
+                    if cpe_version_section_numeric_match and version_end_section_numeric_match:
+                        final_cpe_version_sections.append(cpe_version_sections[i])
+                        j += 1
+                    elif not cpe_version_section_numeric_match and not version_end_section_numeric_match:
+                        final_cpe_version_sections.append(cpe_version_sections[i])
+                        j += 1
+                    i += 1
+                cpe_version = CPEVersion(' '.join(final_cpe_version_sections))
 
     if version_start and version_end:
         if version_start_incl == True and version_end_incl == True:

@@ -108,6 +108,13 @@ class TestSearches(unittest.TestCase):
         expected_cves = ['CVE-2024-0409', 'CVE-2024-0408', 'CVE-2023-6816', 'CVE-2023-1393', 'CVE-2020-14362', 'CVE-2020-14361', 'CVE-2020-14347', 'CVE-2020-14346', 'CVE-2018-14665', 'CVE-2017-2624', 'CVE-2017-13723', 'CVE-2017-13721', 'CVE-2017-12187', 'CVE-2017-12186', 'CVE-2017-12185', 'CVE-2017-12184', 'CVE-2017-12183', 'CVE-2017-12182', 'CVE-2017-12181', 'CVE-2017-12180', 'CVE-2017-12179', 'CVE-2017-12178', 'CVE-2017-12177', 'CVE-2017-12176', 'CVE-2017-10972', 'CVE-2017-10971', 'CVE-2015-3418', 'CVE-2015-0255', 'CVE-2014-8102', 'CVE-2014-8101', 'CVE-2014-8100', 'CVE-2014-8099', 'CVE-2014-8098', 'CVE-2014-8097', 'CVE-2014-8096', 'CVE-2014-8095', 'CVE-2014-8094', 'CVE-2014-8093', 'CVE-2014-8092', 'CVE-2014-8091', 'CVE-2013-1940', 'CVE-2012-0064', 'CVE-2011-0465', 'CVE-2006-6103', 'CVE-2006-6101', 'CVE-2006-0197', 'CVE-2002-1510', 'CVE-1999-0241', 'CVE-1999-0126']
         self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
+    def test_search_trendmicro_dsa_20_0_u1558(self):
+        self.maxDiff = None
+        query = 'cpe:2.3:a:trendmicro:deep_security_agent:20.0:u1559:*:*:*:*:*:*'
+        result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
+        expected_cves = ['CVE-2023-52337', 'CVE-2022-23120', 'CVE-2022-23119', 'CVE-2023-52338', 'CVE-2022-40707', 'CVE-2022-40709', 'CVE-2022-40710', 'CVE-2022-40708']
+        self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
+
 
 if __name__ == '__main__':
     unittest.main()
