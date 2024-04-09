@@ -13,6 +13,7 @@ from cpe_search.database_wrapper_functions import *
 from cpe_search.cpe_search import (
     search_cpes,
     match_cpe23_to_cpe23_from_dict,
+    get_cpe_parts,
     MATCH_CPE_23_RE
 )
 from cpe_search.cpe_search import _load_config as _load_config_cpe_search
@@ -61,7 +62,7 @@ def is_useful_cpe(cpe, distribution):
     '''Return whether a given cpe is useful (nvd cpe or suiting distro cpe)'''
     #if not distribution[0] and MATCH_DISTRO_CPE.match(cpe):
     #    return False
-    target_sw = cpe.split(':')[10]
+    target_sw = get_cpe_parts(cpe)[10]
     if not MATCH_DISTRO_CPE.match(cpe) or not MATCH_DISTRO.search(target_sw):
         return True
     distro, distro_version = distribution
@@ -84,7 +85,7 @@ def is_useful_cpe(cpe, distribution):
 
 
 def add_distribution_infos_to_cpe(cpe, distribution):
-    cpe_parts = cpe.split(':')
+    cpe_parts = get_cpe_parts(cpe)
     if distribution[1] == 'inf':
         cpe_parts[10] = distribution[0]
     else:
@@ -94,8 +95,8 @@ def add_distribution_infos_to_cpe(cpe, distribution):
 
 def is_cpe_included_from_field(cpe1, cpe2, field=6):
     '''Return True if cpe1 is included in cpe2 starting from the provided field'''
-    cpe1_remainder_fields = cpe1.split(':')[field:]
-    cpe2_remainder_fields = cpe2.split(':')[field:]
+    cpe1_remainder_fields = get_cpe_parts(cpe1)[field:]
+    cpe2_remainder_fields = get_cpe_parts(cpe2)[field:]
 
     for i in range(min(len(cpe1_remainder_fields), len(cpe2_remainder_fields))):
         # CPE wildcards
@@ -166,7 +167,7 @@ def check_version_start_end(cpe, cpe_version, pot_vuln, distribution, ignore_gen
             is_cpe_vuln = cpe_version < CPEVersion(version_end)
     else:
         # if configured, ignore vulnerabilities that only affect a general CPE
-        if ignore_general_cpe_vulns and all(val in ('*', '-') for val in vuln_cpe.split(':')[5:]):
+        if ignore_general_cpe_vulns and all(val in ('*', '-') for val in get_cpe_parts(vuln_cpe)[5:]):
             is_cpe_vuln = False
         is_cpe_vuln = is_cpe_included_after_version(cpe, vuln_cpe)
         vuln_match_reason = 'general_cpe'
@@ -240,8 +241,8 @@ def is_cpe_included_after_version(cpe1, cpe2, is_distro_query=False):
 def has_cpe_lower_versions(cpe1, cpe2, is_distro_query=False):
     '''Return True if cpe1 is considered to have a lower product version than cpe2'''
 
-    cpe1_remainder_fields = cpe1.split(':')[5:]
-    cpe2_remainder_fields = cpe2.split(':')[5:]
+    cpe1_remainder_fields = get_cpe_parts(cpe1)[5:]
+    cpe2_remainder_fields = get_cpe_parts(cpe2)[5:]
 
     for i in range(min(len(cpe1_remainder_fields), len(cpe2_remainder_fields))):
         if i == 4 and is_distro_query and (MATCH_DISTRO_TARGET_SW.match(cpe1_remainder_fields[i]) or MATCH_DISTRO_TARGET_SW.match(cpe2_remainder_fields[i])):
@@ -292,7 +293,7 @@ def is_more_specific_cpe_contained(vuln_cpe, cve_cpes):
         if vuln_cpe != vuln_other_cpe:
             if is_cpe_included_from_field(vuln_cpe, vuln_other_cpe, 5):
                 # assume the number of fields is the same for both, since they're official NVD CPEs
-                vuln_cpe_fields, vuln_other_cpe_fields = vuln_cpe.split(':'), vuln_other_cpe.split(':')
+                vuln_cpe_fields, vuln_other_cpe_fields = get_cpe_parts(vuln_cpe), get_cpe_parts(vuln_other_cpe)
                 for i in range(len(vuln_other_cpe_fields)-1, -1, -1):
                     if (not CPEVersion(vuln_cpe_fields[i])) and (not CPEVersion(vuln_other_cpe_fields[i])):
                         continue
@@ -399,12 +400,12 @@ def _is_version_start_end_matching(cpe_version, cpe_subversion, version_start, v
 def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_version_vulns=False, add_other_exploit_refs=False):
     """Get known vulnerabilities for the given CPE 2.3 string"""
 
-    cpe_parts = cpe.split(':')
+    cpe_parts = get_cpe_parts(cpe)
     cpe_version = CPEVersion(cpe_parts[5])
     cpe_subversion = CPEVersion(cpe_parts[6])
     vulns = []
 
-    general_cpe_prefix = ':'.join(cpe.split(':')[:5]) + ':'
+    general_cpe_prefix = ':'.join(get_cpe_parts(cpe)[:5]) + ':'
     query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
              'is_cpe_version_end_including FROM cve_cpe WHERE cpe LIKE ?')
     db_cursor.execute(query, (general_cpe_prefix + '%%', ))
@@ -438,7 +439,7 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
                 bad_nvd_entry = is_more_specific_cpe_contained(vuln_cpe, cve_cpes)
 
                 # check for general CPE vuln match
-                if not CPEVersion(vuln_cpe.split(':')[5]):
+                if not CPEVersion(get_cpe_parts(vuln_cpe)[5]):
                     if not cpe_version:
                         match_reason = 'general_cpe_but_ok'
                     else:
@@ -517,10 +518,10 @@ def load_equivalent_cpes(config):
         with open(config['cpe_search']['DEPRECATED_CPES_FILE'], 'r') as f:
             cpe_deprecations_raw = json.loads(f.read())
             for cpe, deprecations in cpe_deprecations_raw.items():
-                cpe_short = ':'.join(cpe.split(':')[:5]) + ':'
+                cpe_short = ':'.join(get_cpe_parts(cpe)[:5]) + ':'
                 deprecations_short = []
                 for deprecatedby_cpe in deprecations:
-                    deprecatedby_cpe_short = ':'.join(deprecatedby_cpe.split(':')[:5]) + ':'
+                    deprecatedby_cpe_short = ':'.join(get_cpe_parts(deprecatedby_cpe)[:5]) + ':'
                     if deprecatedby_cpe_short not in deprecations_short:
                         deprecations_short.append(deprecatedby_cpe_short)
 
@@ -573,7 +574,7 @@ def get_equivalent_cpes(cpe, config):
     load_equivalent_cpes(config)
 
     cpes = [cpe]
-    cpe_split = cpe.split(':')
+    cpe_split = get_cpe_parts(cpe)
     cpe_prefix = ':'.join(cpe_split[:5]) + ':'
     cpe_version = cpe_split[5]
     cpe_subversion = cpe_split[6]
@@ -594,7 +595,7 @@ def get_equivalent_cpes(cpe, config):
     equiv_cpes = cpes.copy()
     for cpe in cpes:
         for equivalent_cpe in EQUIVALENT_CPES.get(cpe_prefix, []):
-            equivalent_cpe_prefix = ':'.join(equivalent_cpe.split(':')[:5]) + ':'
+            equivalent_cpe_prefix = ':'.join(get_cpe_parts(equiv_cpes)[:5]) + ':'
             if equivalent_cpe != cpe_prefix:
                 equiv_cpes.append(equivalent_cpe_prefix + ':'.join(cpe_split[5:]))
 
@@ -615,7 +616,7 @@ def get_distro_infos_from_query(original_query, config):
     all_distro_versions_codenames = [version for distro_version in all_distro_versions_codenames_tuples for version in distro_version]
     possible_distro_query = MATCH_DISTRO_QUERY.search(original_query)
     if MATCH_CPE_23_RE.match(original_query):
-        possible_distro_query = MATCH_DISTRO_QUERY.search(original_query.split(':')[10])
+        possible_distro_query = MATCH_DISTRO_QUERY.search(get_cpe_parts(original_query)[10])
     if possible_distro_query:
         distro, distro_version = possible_distro_query.groups()
         if distro_version in all_distro_versions_codenames:
@@ -656,7 +657,7 @@ def get_distro_infos_from_query(original_query, config):
     all_distro_versions_codenames = [version for distro_version in all_distro_versions_codenames_tuples for version in distro_version]
     possible_distro_query = MATCH_DISTRO_QUERY.search(original_query)
     if MATCH_CPE_23_RE.match(original_query):
-        possible_distro_query = MATCH_DISTRO_QUERY.search(original_query.split(':')[10])
+        possible_distro_query = MATCH_DISTRO_QUERY.search(get_cpe_parts(original_query)[10])
     if possible_distro_query:
         distro, distro_version = possible_distro_query.groups()
         if distro_version in all_distro_versions_codenames:
@@ -816,7 +817,7 @@ def main():
         else:
             distribution, cpe_search_query = ('', 'inf'), query
         if not MATCH_CPE_23_RE.match(query):
-            cpe_search_results = search_cpes(query, count=1, threshold=args.cpe_search_threshold, config=config['cpe_search'])
+            cpe_search_results = search_cpes(cpe_search_query, count=1, threshold=args.cpe_search_threshold, config=config['cpe_search'])
             if cpe_search_results.get('cpes', []):
                 cpe = cpe_search_results['cpes'][0][0]
             else:
