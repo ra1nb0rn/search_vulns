@@ -112,3 +112,8 @@ tr.exploited-vuln td {
     width:302px;
     height:76px;
 }
+
+/* misc */
+.text-smxs {
+    font-size: 0.825rem;
+}

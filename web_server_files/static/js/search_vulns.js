@@ -512,11 +512,19 @@ function searchVulns(query, url_query, recaptcha_response) {
             }
             else {
                 vulns = Object.values(vulns)[0]
-                cpe = vulns['cpe'];
+                var cpe = vulns['cpe'];
                 if (cpe != undefined) {
                     curVulnData = vulns['vulns'];
-                    cpe = cpe.replaceAll('/', ' / ');
-                    search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe)})</h5></div></div>`;
+                    cpe = cpe.split('/')
+                    search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} (${htmlEntities(cpe[0])}`;
+                    if (cpe.length > 1) {  // query has equivalent CPEs
+                        search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xs"><span class="text-smxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></span></div><div class="dropdown-content z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-104" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent CPEs that were included into your search:</h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
+                        cpe.forEach(function (curCpe) {
+                            search_display_html += `<li>${htmlEntities(curCpe)}</li>`;
+                        });
+                        search_display_html += '</ul></div>';
+                    }
+                    search_display_html += `)</h5></div></div>`;
                 }
                 else {
                     search_display_html = `<h5 class="text-error w-full text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
