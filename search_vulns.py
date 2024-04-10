@@ -223,28 +223,16 @@ def _is_version_start_end_matching(cpe_version, cpe_subversion, version_start, v
                         j += 1
                     i += 1
                 cpe_version = CPEVersion(' '.join(final_cpe_version_sections))
+    else:
+        # set a max version if end is not given explicitly
+        version_end = CPEVersion('~' * 256)
 
-    if version_start and version_end:
-        if version_start_incl == True and version_end_incl == True:
-            return version_start <= cpe_version <= version_end
-        elif version_start_incl == True and version_end_incl == False:
-            return version_start <= cpe_version < version_end
-        elif version_start_incl == False and version_end_incl == True:
-            return version_start < cpe_version <= version_end
-        else:
-            return version_start < cpe_version < version_end
-    elif version_start:
-        if version_end_incl == True:
-            return version_start <= cpe_version
-        elif version_end_incl == False:
-            return version_start < cpe_version
-    elif version_end:
-        if version_end_incl == True:
-            return cpe_version <= version_end
-        elif version_end_incl == False:
-            return cpe_version < version_end
-
-    return False
+    # check if version start or end matches exactly, otherwise return if in range
+    if version_start_incl and cpe_version == version_start:
+        return True
+    if version_end_incl and cpe_version == version_end:
+        return True
+    return version_start < cpe_version < version_end
 
 
 def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_version_vulns=False, add_other_exploit_refs=False):

@@ -10,7 +10,9 @@ MULTIPLE_ZEROES_RE = re.compile(r'0(\.?0)+')
 class CPEVersion:
 
     def __init__(self, ver_str: str):
-        self.version_str = ver_str
+        if ver_str is None:
+            ver_str = ''
+        self.version_str = ver_str.strip()
 
     def get_version_parts(self):
         # deduplicate zero extensions, e.g. 0.0.0.0 --> 0.0
@@ -145,7 +147,7 @@ class CPEVersion:
         return self.version_str
 
     def __bool__(self):
-        return str(self) not in ('-', '*') or not str(self)
+        return str(self) not in ('-', '*', '')
 
     def __add__(self, other):
         if not self:
