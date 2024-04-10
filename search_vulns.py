@@ -451,11 +451,12 @@ def get_equivalent_cpes(cpe, config):
         cpes.append(':'.join(cpe_split))
 
     equiv_cpes = cpes.copy()
-    for cpe in cpes:
+    for cur_cpe in cpes:
+        cur_cpe_split = cur_cpe.split(':')
         for equivalent_cpe in EQUIVALENT_CPES.get(cpe_prefix, []):
             equivalent_cpe_prefix = ':'.join(equivalent_cpe.split(':')[:5]) + ':'
             if equivalent_cpe != cpe_prefix:
-                equiv_cpes.append(equivalent_cpe_prefix + ':'.join(cpe_split[5:]))
+                equiv_cpes.append(equivalent_cpe_prefix + ':'.join(cur_cpe_split[5:]))
 
     return equiv_cpes
 
