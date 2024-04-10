@@ -115,6 +115,13 @@ class TestSearches(unittest.TestCase):
         expected_cves = ['CVE-2023-52337', 'CVE-2022-23120', 'CVE-2022-23119', 'CVE-2023-52338', 'CVE-2022-40707', 'CVE-2022-40709', 'CVE-2022-40710', 'CVE-2022-40708']
         self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
+    def test_search_vmware_esxi_802(self):
+        self.maxDiff = None
+        query = 'cpe:2.3:o:vmware:esxi:8.0.2:*:*:*:*:*:*:*'
+        result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
+        expected_cves = []
+        self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
+
 
 if __name__ == '__main__':
     unittest.main()

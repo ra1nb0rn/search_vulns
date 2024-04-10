@@ -25,6 +25,7 @@ DEDUP_LINEBREAKS_RE_1 = re.compile(r'(\r\n)+')
 DEDUP_LINEBREAKS_RE_2 = re.compile(r'\n+')
 CPE_COMPARISON_STOP_CHARS_RE = re.compile(r'[\+\-\_\~]')
 NUMERIC_VERSION_RE = re.compile(r'[\d\.]+')
+NON_ALPHANUMERIC_SPLIT_RE = re.compile(r'[^a-zA-Z]')
 CPE_SEARCH_COUNT = 5
 
 # define ANSI color escape sequences
@@ -193,36 +194,56 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
     return detailed_vulns
 
 
-def _is_version_start_end_matching(cpe_version, cpe_subversion, version_start, version_start_incl, version_end, version_end_incl):
+def _is_version_start_end_matching(cpe_parts, version_start, version_start_incl, version_end, version_end_incl):
     """Return boolean whether the provided CPE version lies within the provided range modifiers"""
 
     version_start = CPEVersion(version_start)
     version_end = CPEVersion(version_end)
 
     # combine version and subversion if NVD merged both for version_end as well
+    cpe_product = cpe_parts[4]
+    cpe_version, cpe_subversion = CPEVersion(cpe_parts[5]), CPEVersion(cpe_parts[6])
     if version_end:
         version_end_sections = version_end.get_version_sections()
         cpe_version_subsections = cpe_version.get_version_sections()
         if len(version_end_sections) > len(cpe_version_subsections):
-            cpe_version = (cpe_version + cpe_subversion)
-            cpe_version_sections = cpe_version.get_version_sections()
-            if len(cpe_version_sections) != len(version_end_sections):
-                # try to adjust cpe_version, such that it ideally has the same number of sections as version_end
-                final_cpe_version_sections = []
-                i, j = 0, 0
-                while i < len(cpe_version_sections) and j < len(version_end_sections):
-                    # if same version type (numeric or alphanumeric), use version field, otherwise leave it out
-                    cpe_version_section_numeric_match = NUMERIC_VERSION_RE.match(cpe_version_sections[i])
-                    version_end_section_numeric_match = NUMERIC_VERSION_RE.match(version_end_sections[j])
+            # if queried CPE has a subversion / patch-level, merge this with the base version
+            if cpe_subversion:
+                cpe_version = (cpe_version + cpe_subversion)
+                cpe_version_sections = cpe_version.get_version_sections()
+                if len(cpe_version_sections) != len(version_end_sections):
+                    # try to adjust cpe_version, such that it ideally has the same number of sections as version_end
+                    final_cpe_version_sections = []
+                    i, j = 0, 0
+                    while i < len(cpe_version_sections) and j < len(version_end_sections):
+                        # if same version type (numeric or alphanumeric), use version field, otherwise leave it out
+                        cpe_version_section_numeric_match = NUMERIC_VERSION_RE.match(cpe_version_sections[i])
+                        version_end_section_numeric_match = NUMERIC_VERSION_RE.match(version_end_sections[j])
 
-                    if cpe_version_section_numeric_match and version_end_section_numeric_match:
-                        final_cpe_version_sections.append(cpe_version_sections[i])
-                        j += 1
-                    elif not cpe_version_section_numeric_match and not version_end_section_numeric_match:
-                        final_cpe_version_sections.append(cpe_version_sections[i])
-                        j += 1
-                    i += 1
-                cpe_version = CPEVersion(' '.join(final_cpe_version_sections))
+                        if cpe_version_section_numeric_match and version_end_section_numeric_match:
+                            final_cpe_version_sections.append(cpe_version_sections[i])
+                            j += 1
+                        elif not cpe_version_section_numeric_match and not version_end_section_numeric_match:
+                            final_cpe_version_sections.append(cpe_version_sections[i])
+                            j += 1
+                        i += 1
+                    cpe_version = CPEVersion(' '.join(final_cpe_version_sections))
+            else:
+                # check if the version_end string starts with the product name
+                # (e.g. 'esxi70u1c-17325551' from https://nvd.nist.gov/vuln/detail/CVE-2020-3999)
+                product_parts = [word.strip() for word in NON_ALPHANUMERIC_SPLIT_RE.split(cpe_product)]
+                cpe_version_sections = cpe_version.get_version_sections()
+                for part in product_parts:
+                    # ... if it does, prefix cpe_version with the CPE product name
+                    if str(version_end).startswith(part):
+                        if '.' not in str(version_end):
+                            cpe_version = CPEVersion(str(cpe_version).replace('.', ''))
+                        cpe_version = CPEVersion(part) + cpe_version
+                        break
+
+        # fallback if subversion merging did not work
+        if not cpe_version:
+            cpe_version = CPEVersion(cpe_parts[5])
     else:
         # set a max version if end is not given explicitly
         version_end = CPEVersion('~' * 256)
@@ -240,7 +261,6 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
 
     cpe_parts = cpe.split(':')
     cpe_version = CPEVersion(cpe_parts[5])
-    cpe_subversion = CPEVersion(cpe_parts[6])
     vulns = []
 
     general_cpe_prefix = ':'.join(cpe.split(':')[:5]) + ':'
@@ -270,7 +290,7 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
 
             if cpe_version and (version_start or version_end):
                 # additionally check if version matches range
-                is_cpe_vuln = _is_version_start_end_matching(cpe_version, cpe_subversion, version_start, version_start_incl, version_end, version_end_incl)
+                is_cpe_vuln = _is_version_start_end_matching(cpe_parts, version_start, version_start_incl, version_end, version_end_incl)
                 match_reason = 'version_in_range'
             elif is_cpe_vuln:
                 # check if the NVD's affected products entry for the CPE is considered faulty
