@@ -113,7 +113,42 @@ tr.exploited-vuln td {
     height:76px;
 }
 
+/* Smaller button */
+.btn-circle:where(.btn-xxs) {
+    height: 1.2rem;
+    width: 1.2rem;
+    border-radius: 9999px;
+    padding: 0px;
+}
+
+.btn-xxs {
+    height: 1.2rem;
+    min-height: 1.2rem;
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+    font-size: 0.7rem;
+}
+
+.btn-square:where(.btn-xxs) {
+    height: 1.2rem;
+    width: 1.2rem;
+    padding: 0px;
+}
+
+
 /* misc */
 .text-smxs {
     font-size: 0.825rem;
+}
+
+.dont-break-out {  /* from https://stackoverflow.com/a/50777367 */
+    /* These are technically the same, but use both */
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+
+    -ms-word-break: break-all;
+    /* This is the dangerous one in WebKit, as it breaks things wherever */
+    word-break: break-all;
+    /* Instead use this non-standard one: */
+    word-break: break-word;
 }

@@ -138,11 +138,11 @@ function createVulnTableRowHtml(idx, vuln) {
             cvss_badge_css = "badge-medium";
         else if (cvss < 4.0 && cvss >= 0.1)
             cvss_badge_css = "badge-low";
-        vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="badge p-1.5 border-none badge-cvss ${cvss_badge_css} text-center ${vuln_style_class}" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
+        vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="z-10 badge p-1.5 border-none badge-cvss ${cvss_badge_css} text-center ${vuln_style_class}" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
     }
 
     if (selectedColumns.includes('descr')) {
-        vuln_row_html += `<td>${htmlEntities(vuln["description"])}</td>`;
+        vuln_row_html += `<td class="text-wrap dont-break-out mx-auto">${htmlEntities(vuln["description"])}</td>`;
     }
 
     if (selectedColumns.includes('expl')) {
@@ -210,7 +210,7 @@ function renderSearchResults(reloadFilterDropdown) {
         return false;
     }
     
-    vulns_html = '<table class="table table-sm my-table-zebra table-rounded">';
+    vulns_html = '<table class="table table-sm my-table-zebra table-rounded table-auto">';
     vulns_html += '<thead>';
     vulns_html += '<tr>'
     if (selectedColumns.includes('cve')) {
@@ -518,13 +518,13 @@ function searchVulns(query, url_query, recaptcha_response) {
                     cpe = cpe.split('/')
                     search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} <span class="nowrap whitespace-nowrap">(${htmlEntities(cpe[0])}`;
                     if (cpe.length > 1) {  // query has equivalent CPEs
-                        search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xs"><span class="text-smxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></span></div><div class="dropdown-content z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-fit" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent CPEs that were included into your search: <div class="tooltip tooltip-top text-wrap ml-1" data-tip="Sometimes there are multiple CPEs for one product, e.g. because of a rebranding."><i class="fas fa-info-circle text-content"></i></div></h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
+                        search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div><div class="dropdown-content z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-fit" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent CPEs that were included into your search: <div class="tooltip tooltip-top text-wrap ml-1" data-tip="Sometimes there are multiple CPEs for one product, e.g. because of a rebranding."><i class="fas fa-info-circle text-content"></i></div></h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
                         cpe.shift();  // remove first element, i.e. the primarily matched CPE
                         cpe = cpe.sort();
                         cpe.forEach(function (curCpe) {
                             search_display_html += `<li class="mt-1">${htmlEntities(curCpe)}</li>`;
                         });
-                        search_display_html += '</ul></div>';
+                        search_display_html += '</ul></div></div>';
                     }
                     search_display_html += `)</span></h5></div></div>`;
                 }
@@ -543,7 +543,7 @@ function searchVulns(query, url_query, recaptcha_response) {
                     if (related_queries_html_li != "") {
                         related_queries_html = `<div class="divider divider-info text-lg">Related Queries</div>`;
                         related_queries_html += `<div class="grid place-items-center">`;
-                        related_queries_html += `<ul class="list-disc text-left">`;
+                        related_queries_html += `<ul class="list-disc text-left pl-6">`;
                         related_queries_html += related_queries_html_li;
                         related_queries_html += `</ul></div>`;
                     }

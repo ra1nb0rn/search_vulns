@@ -2433,14 +2433,6 @@ html {
   bottom: auto;
 }
 
-.tooltip-right:before {
-  transform: translateY(-50%);
-  top: 50%;
-  left: var(--tooltip-offset);
-  right: auto;
-  bottom: auto;
-}
-
 .menu-horizontal > li:not(.menu-title) > details > ul {
   margin-inline-start: 0px;
   margin-top: 1rem;
@@ -2587,15 +2579,6 @@ html {
   bottom: auto;
 }
 
-.tooltip-right:after {
-  transform: translateY(-50%);
-  border-color: transparent var(--tooltip-color) transparent transparent;
-  top: 50%;
-  left: calc(var(--tooltip-tail-offset) + 0.0625rem);
-  right: auto;
-  bottom: auto;
-}
-
 .invisible {
   visibility: hidden;
 }
@@ -2658,6 +2641,10 @@ html {
 
 .z-\[1\] {
   z-index: 1;
+}
+
+.z-20 {
+  z-index: 20;
 }
 
 .m-1 {
@@ -2758,6 +2745,10 @@ html {
   margin-top: 1.25rem;
 }
 
+.mr-0 {
+  margin-right: 0px;
+}
+
 .flex {
   display: flex;
 }
@@ -2849,6 +2840,10 @@ html {
 
 .grow {
   flex-grow: 1;
+}
+
+.table-auto {
+  table-layout: auto;
 }
 
 .-translate-x-1\/2 {
@@ -2992,6 +2987,18 @@ html {
 
 .pl-6 {
   padding-left: 1.5rem;
+}
+
+.pl-4 {
+  padding-left: 1rem;
+}
+
+.pr-0 {
+  padding-right: 0px;
+}
+
+.pr-2 {
+  padding-right: 0.5rem;
 }
 
 .text-left {
