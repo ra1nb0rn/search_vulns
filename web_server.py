@@ -119,9 +119,10 @@ def search_has_valid_auth(request):
 @app.route("/api/cpe-suggestions")
 def cpe_suggestions():
     # check auth if CAPTCHA or API key is required
-    has_valid_auth, auth_error = search_has_valid_auth(request)
-    if config['RECAPTCHA_AND_API']['ENABLED'] and not has_valid_auth:
-        return auth_error
+    if config['RECAPTCHA_AND_API']['ENABLED']:
+        has_valid_auth, auth_error = search_has_valid_auth(request)
+        if not has_valid_auth:
+            return auth_error
 
     query = request.args.get('query')
     if not query:
@@ -157,9 +158,10 @@ def cpe_suggestions():
 @app.route("/api/search-vulns")
 def search_vulns():
     # check auth if CAPTCHA or API key is required
-    has_valid_auth, auth_error = search_has_valid_auth(request)
-    if config['RECAPTCHA_AND_API']['ENABLED'] and not has_valid_auth:
-        return auth_error
+    if config['RECAPTCHA_AND_API']['ENABLED']:
+        has_valid_auth, auth_error = search_has_valid_auth(request)
+        if not has_valid_auth:
+            return auth_error
 
     url_query_string = request.query_string.lower()
     query = request.args.get('query')
