@@ -58,7 +58,7 @@ PORT=$(jq -r '.DATABASE.PORT' $CONFIG_FILE)
 DATABASE_NAME=$(jq -r '.DATABASE_NAME' $CONFIG_FILE)
 CPE_DATABASE_NAME=$(jq -r '.cpe_search.DATABASE_NAME' $CONFIG_FILE)
 CREATE_TABLES_QUERIES_VULNDB=$ABS_PATH/create_sql_statements.json
-CREATE_TABLES_QUERIES_CPE_SEARCH=$ABS_PATH/cpe_search/create_sql_statements.json
+CREATE_TABLES_QUERIES_CPE_SEARCH=$ABS_PATH/../cpe_search/create_sql_statements.json
 
 
 # Export sqlite databases

@@ -17,7 +17,8 @@ from cpe_search.cpe_search import (
 from cpe_search.cpe_search import _load_config as _load_config_cpe_search
 
 DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
-DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'debian_equiv_cpes.json')
+MAN_EQUIVALENT_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'man_equiv_cpes.json'))
+DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'debian_equiv_cpes.json'))
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
@@ -396,7 +397,7 @@ def load_equivalent_cpes(config):
         equivalent_cpes_dicts_list.append(deprecated_cpes)
 
         # then manually add further information
-        with open(config['MAN_EQUIVALENT_CPES_FILE']) as f:
+        with open(MAN_EQUIVALENT_CPES_FILE) as f:
             manual_equivalent_cpes = json.loads(f.read())
         equivalent_cpes_dicts_list.append(manual_equivalent_cpes)
 

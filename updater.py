@@ -34,7 +34,7 @@ REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko
 NVD_UPDATE_SUCCESS = None
 CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 MARIADB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'mariadb_dump.sql')
-CREATE_SQL_STATEMENTS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'create_sql_statements.json')
+CREATE_SQL_STATEMENTS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'create_sql_statements.json'))
 QUIET = False
 DEBUG = False
 API_RESULTS_PER_PAGE = 2000
@@ -504,8 +504,7 @@ def run(full=False, nvd_api_key=None, config_file=''):
         CREATE_SQL_STATEMENTS = json.loads(f.read())
 
     # create file dirs as needed
-    update_files = [CONFIG['CVE_EDB_MAP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'],
-                    CONFIG['MAN_EQUIVALENT_CPES_FILE']]
+    update_files = [CONFIG['CVE_EDB_MAP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE']]
     if CONFIG['DATABASE']['TYPE'] == 'sqlite':
         update_files += [CONFIG['DATABASE_NAME'], CONFIG['cpe_search']['DATABASE_NAME']]
     for file in update_files:
@@ -606,7 +605,7 @@ def run(full=False, nvd_api_key=None, config_file=''):
             # migrate SQLite to MariaDB if specified database type is mariadb
             if CONFIG['DATABASE']['TYPE'] == 'mariadb':
                 print('[+] Migrating from SQLite to MariaDB (takes around 2 minutes)...')
-                return_code = subprocess.call('./migrate_sqlite_to_mariadb.sh %s %s %s' % (shlex.quote(CONFIG['DATABASE_NAME']), shlex.quote(CONFIG['cpe_search']['DATABASE_NAME']), CONFIG_FILE), shell=True, stderr=subprocess.DEVNULL)
+                return_code = subprocess.call('./resources/migrate_sqlite_to_mariadb.sh %s %s %s' % (shlex.quote(CONFIG['DATABASE_NAME']), shlex.quote(CONFIG['cpe_search']['DATABASE_NAME']), CONFIG_FILE), shell=True, stderr=subprocess.DEVNULL)
                 if return_code != 0:
                     raise(Exception('Migration of database failed'))
                 os.remove(MARIADB_BACKUP_FILE)
