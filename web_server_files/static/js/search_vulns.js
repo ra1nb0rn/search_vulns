@@ -1,5 +1,5 @@
 
-var curVulnData = {}, onlyShowCVEs = null;
+var curVulnData = {}, curEOLData = {}, onlyShowCVEs = null;
 var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
 var ignoreGeneralCpeVulns = false, onlyShowEDBExploits = false;
 var showSingleVersionVulns = false, isGoodCpe = true, showTableFiltering = false;
@@ -527,6 +527,21 @@ function searchVulns(query, url_query, recaptcha_response) {
                         search_display_html += '</ul></div></div>';
                     }
                     search_display_html += `)</span></h5></div></div>`;
+                    curEOLData = {query: query, 'version_status': vulns.version_status};
+                    if (vulns.version_status) {
+                        if (vulns.version_status.status == 'eol') {
+                            search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is end of life. The latest version is ${htmlEntities(vulns.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(vulns.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
+                        }
+                        else if (vulns.version_status.status == 'outdated') {
+                            search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is out of date. The latest version is ${htmlEntities(vulns.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(vulns.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
+                        }
+                        else if (vulns.version_status.status == 'current') {
+                            search_display_html += `<div class="row mt-1 mb-3 text-success text-smxs font-light">${htmlEntities(query)} is up to date (see <a class="link" target="_blank" href="${htmlEntities(vulns.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle"><i class="fa-brands fa-markdown" onclick="copyToClipboardEOLProof(this)"></i></button></span></div>`;
+                        }
+                        else if (vulns.version_status.status == 'N/A') {
+                            search_display_html += `<div class="row mt-1 mb-3 text-base-content text-smxs font-light">The latest version of ${htmlEntities(query)} is ${htmlEntities(vulns.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(vulns.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
+                        }
+                    }
                 }
                 else {
                     search_display_html = `<h5 class="text-error w-full text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
@@ -622,6 +637,7 @@ function searchVulnsAction() {
     curSortColIdx = 1;
     curSortColAsc = false;
     curVulnData = {};
+    curEOLData = {};
 
     if (typeof grecaptcha !== 'undefined') {
         grecaptcha.ready(function() {
@@ -641,6 +657,34 @@ function reorderVulns(sortColumnIdx, asc) {
     var hasVulns = renderSearchResults(true);
     if (!hasVulns)
         $('#vulns').html(noVulnsFoundHtml);
+}
+
+function copyToClipboardEOLProof(clickedButton) {
+    // copy Markdown proof to clipboard depending on version status
+    var markdownProof = '';
+    if (curEOLData.version_status) {
+        if (curEOLData.version_status.status == 'eol') {
+            markdownProof = `${htmlEntities(curEOLData.query)} is end of life. The latest version is ${htmlEntities(curEOLData.version_status.latest)} (see [here](${htmlEntities(curEOLData.version_status.ref)})).`;
+        }
+        else if (curEOLData.version_status.status == 'outdated') {
+            markdownProof = `${htmlEntities(curEOLData.query)} is out of date. The latest version is ${htmlEntities(curEOLData.version_status.latest)} (see [here](${htmlEntities(curEOLData.version_status.ref)})).`;
+        }
+        else if (curEOLData.version_status.status == 'current') {
+            markdownProof = `${htmlEntities(curEOLData.query)} is up to date (see [here](${htmlEntities(curEOLData.version_status.ref)})).`;
+        }
+        else if (curEOLData.version_status.status == 'N/A') {
+            markdownProof = `The latest version of ${htmlEntities(curEOLData.query)} is ${htmlEntities(curEOLData.version_status.latest)} (see [here](${htmlEntities(curEOLData.version_status.ref)})).`;
+        }
+    }
+    navigator.clipboard.writeText(markdownProof);
+
+    // indicate success
+    $(clickedButton).removeClass('text-base-content');
+    $(clickedButton).addClass('text-success');
+    setTimeout(function() {
+        $(clickedButton).removeClass('text-success');
+        $(clickedButton).addClass('text-base-content');
+    }, 1750);
 }
 
 function copyToClipboardMarkdownTable() {

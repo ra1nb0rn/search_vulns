@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import json
 import os
 import re
@@ -465,6 +466,56 @@ def get_equivalent_cpes(cpe, config):
     return equiv_cpes
 
 
+def retrieve_eol_info(cpe, db_cursor):
+    """Retrieve information from endoflife.date whether the provided version is eol or outdated"""
+
+    version_status = {}
+    cpe_split = cpe.split(':')
+    cpe_prefix, query_version = ':'.join(cpe_split[:5]) + ':', CPEVersion(cpe_split[5])
+    eol_releases = []
+    db_cursor.execute('SELECT eold_id, version_start, version_latest, eol_info FROM eol_date_data WHERE cpe_prefix = ? ORDER BY release_id DESC', (cpe_prefix,))
+    if db_cursor:
+        eol_releases = db_cursor.fetchall()
+
+    latest = ''
+    for release in eol_releases:
+        # set up release information
+        eol_ref = 'https://endoflife.date/' + release[0]
+        release_start, release_end = CPEVersion(release[1]), CPEVersion(release[2])
+        release_eol, now = release[3], datetime.datetime.now()
+        if release_eol not in ('true', 'false'):
+            release_eol = datetime.datetime.strptime(release_eol, '%Y-%m-%d')
+        elif release_eol != 'true':
+            release_eol = False
+
+        # set latest version in first iteration
+        if not latest:
+            latest = release_end
+
+        if not query_version:
+            if release_eol and now >= release_eol:
+                version_status = {'status': 'eol', 'latest': str(latest), 'ref': eol_ref}
+            else:
+                version_status = {'status': 'N/A', 'latest': str(latest), 'ref': eol_ref}
+        else:
+            # check query version status
+            if query_version >= release_end:
+                if release_eol and (release_eol == 'true' or now >= release_eol):
+                    version_status = {'status': 'eol', 'latest': str(latest), 'ref': eol_ref}
+                else:
+                    version_status = {'status': 'current', 'latest': str(latest), 'ref': eol_ref}
+            elif release_start <= query_version < release_end:
+                if release_eol and (release_eol == 'true' or now >= release_eol):
+                    version_status = {'status': 'eol', 'latest': str(latest), 'ref': eol_ref}
+                else:
+                    version_status = {'status': 'outdated', 'latest': str(latest), 'ref': eol_ref}
+
+        if version_status:
+            break
+
+    return version_status
+
+
 def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD_MATCH, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, include_single_version_vulns=False, config=None):
     """Search for known vulnerabilities based on the given query"""
 
@@ -486,13 +537,13 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         cpe_search_results = search_cpes(query_stripped, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
 
         if not cpe_search_results['cpes']:
-            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': cpe_search_results['pot_cpes']}}
+            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': cpe_search_results['pot_cpes'], 'version_status': {}}}
 
         cpes = cpe_search_results['cpes']
         pot_cpes = cpe_search_results['pot_cpes']
 
         if not cpes:
-            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': pot_cpes}}
+            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': pot_cpes, 'version_status': {}}}
 
         cpe = cpes[0][0]
 
@@ -509,11 +560,14 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
             if cve_id not in vulns:
                 vulns[cve_id] = vuln
 
+    # add outdated software / endoflife.date information
+    eol_info = retrieve_eol_info(cpe, db_cursor)
+
     if close_cursor_after:
         db_cursor.close()
         db_conn.close()
 
-    return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes}}
+    return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes, 'version_status': eol_info}}
 
 
 def parse_args():
@@ -613,11 +667,14 @@ def main():
                 print()
                 printit('[+] %s (%s)' % (query, '/'.join(equivalent_cpes)), color=BRIGHT_BLUE)
 
+        eol_info = {}
         for cur_cpe in equivalent_cpes:
             cur_vulns = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns, args.include_single_version_vulns, config)
             for cve_id, vuln in cur_vulns[cur_cpe]['vulns'].items():
                 if cve_id not in vulns[query]:
                     vulns[query][cve_id] = vuln
+            if cur_vulns[cur_cpe]['version_status']:
+                eol_info = cur_vulns[cur_cpe]['version_status']
 
         # print found vulnerabilities
         if args.format.lower() == 'txt':
@@ -632,7 +689,8 @@ def main():
             cpe_vulns_sorted = {}
             for cve_id in cve_ids_sorted:
                 cpe_vulns_sorted[cve_id] = cpe_vulns[cve_id]
-            vulns[query] = {'cpe': '/'.join(equivalent_cpes), 'vulns': cpe_vulns_sorted}
+            vulns[query] = {'cpe': '/'.join(equivalent_cpes), 'vulns': cpe_vulns_sorted,
+                            'version_status': eol_info}
 
     if args.output:
         with open(args.output, 'w') as f:

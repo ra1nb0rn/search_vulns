@@ -15,6 +15,7 @@ import time
 import aiohttp
 from aiolimiter import AsyncLimiter
 from cpe_search.cpe_search import update as update_cpe
+from cpe_search.cpe_search import search_cpes
 from cpe_search.database_wrapper_functions import get_database_connection
 from search_vulns import _load_config
 
@@ -30,6 +31,9 @@ CPE_DEPRECATIONS_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releas
 CVE_EDB_MAP_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cveid_to_edbid.json"
 POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
 POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PoC-in-GitHub")
+EOLD_GITHUB_REPO = "https://github.com/endoflife-date/endoflife.date"
+EOLD_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "endoflife.date")
+EOLD_HARDCODED_MATCHES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'eold_hardcoded_matches.json'))
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
@@ -137,13 +141,17 @@ async def update_vuln_db(nvd_api_key=None):
     cve_edb_map_thread = threading.Thread(target=create_cveid_edbid_mapping)
     cve_edb_map_thread.start()
 
+    # start endoflife.date integration in background thread
+    build_eold_data_thread = threading.Thread(target=create_endoflife_date_table)
+    build_eold_data_thread.start()
+
     # download vulnerability data via NVD's API
     if os.path.exists(NVD_DATAFEED_DIR):
         shutil.rmtree(NVD_DATAFEED_DIR)
     os.makedirs(NVD_DATAFEED_DIR)
 
     if not QUIET:
-        print('[+] Downloading NVD data feeds and EDB information')
+        print('[+] Downloading NVD data and EDB information and creating end of life data')
 
     offset = 0
 
@@ -161,11 +169,13 @@ async def update_vuln_db(nvd_api_key=None):
             communicate_warning('An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0')
             rollback()
             cve_edb_map_thread.join()
+            build_eold_data_thread.join()
             return 'An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0'
     if cve_api_initial_response.status_code != requests.codes.ok:
         NVD_UPDATE_SUCCESS = False
         rollback()
         cve_edb_map_thread.join()
+        build_eold_data_thread.join()
         return 'An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0; received a non-ok response code.'
 
     numTotalResults = cve_api_initial_response.json().get('totalResults')
@@ -190,6 +200,7 @@ async def update_vuln_db(nvd_api_key=None):
         communicate_warning('Could not download vuln data from https://services.nvd.nist.gov/rest/json/cves/2.0')
         rollback()
         cve_edb_map_thread.join()
+        build_eold_data_thread.join()
         return 'Could not download vuln data from https://services.nvd.nist.gov/rest/json/cves/2.0'
 
     # build local NVD copy with downloaded data feeds
@@ -203,11 +214,13 @@ async def update_vuln_db(nvd_api_key=None):
         communicate_warning('Building NVD database failed')
         rollback()
         cve_edb_map_thread.join()
+        build_eold_data_thread.join()
         return f"Building NVD database failed with status code {return_code}."
 
     shutil.rmtree(NVD_DATAFEED_DIR)
     NVD_UPDATE_SUCCESS = True
     cve_edb_map_thread.join()
+    build_eold_data_thread.join()
 
     # build and add table of PoC-in-GitHub
     print('[+] Adding PoC-in-GitHub information')
@@ -457,8 +470,9 @@ def create_poc_in_github_table():
     db_cursor = db_conn.cursor()
     create_poc_in_github_table = CREATE_SQL_STATEMENTS['TABLES']['CVE_POC_IN_GITHUB_MAP'][CONFIG['DATABASE']['TYPE']]
     # necessary because SQLite can't handle more than one query a time
-    for query in create_poc_in_github_table[:-1].split(';'):
-        db_cursor.execute(query+';')
+    for query in create_poc_in_github_table.split(';'):
+        if query:
+            db_cursor.execute(query+';')
     db_conn.commit()
 
     for file in os.listdir(POC_IN_GITHUB_DIR):
@@ -483,6 +497,157 @@ def create_poc_in_github_table():
 
     if os.path.isdir(POC_IN_GITHUB_DIR):
         shutil.rmtree(POC_IN_GITHUB_DIR)
+
+
+def parse_eold_product_releases(release_info_raw):
+    # parse manually instead of using a third-party YAML parser
+    releases = []
+
+    for release_raw in release_info_raw.split('-   releaseCycle'):
+        release_raw = release_raw.strip()
+        release_raw = release_raw.strip()
+        if not release_raw:
+            continue
+
+        release = {}
+        added_back_cycle_key = False
+        for line in release_raw.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith('#'):
+                continue
+            elif '#' in line:
+                line = line[:line.find('#')]
+            if not added_back_cycle_key:
+                line = '-   releaseCycle' + line
+                added_back_cycle_key
+
+            if line.startswith('-'):
+                line = line[1:]
+                line = line.strip()
+
+            key, val = line.split(':', maxsplit=1)
+            key, val = key.strip(), val.strip()
+            if len(key) > 1 and key.startswith('"') and key.endswith('"'):
+                key = key[1:-1].strip()
+            if len(val) > 1 and val.startswith('"') and val.endswith('"'):
+                val = val[1:-1].strip()
+            if len(key) > 1 and key.startswith("'") and key.endswith("'"):
+                key = key[1:-1].strip()
+            if len(val) > 1 and val.startswith("'") and val.endswith("'"):
+                val = val[1:-1].strip()
+            release[key] = val
+        if release:
+            releases.append(release)
+
+    return releases
+
+
+def create_endoflife_date_table():
+    """ Create table containing product release data from endoflife.date """
+
+    if os.path.isdir(EOLD_GITHUB_DIR):
+        shutil.rmtree(EOLD_GITHUB_DIR)
+
+    # download endoflife.date repo
+    return_code = subprocess.call(
+        "git clone --depth 1 %s '%s'"
+        % (EOLD_GITHUB_REPO, EOLD_GITHUB_DIR),
+        shell=True,
+        stderr=subprocess.DEVNULL
+    )
+    if return_code != 0:
+        raise (Exception("Could not download latest resources of endoflife.date"))
+
+    # load hardcoded EOLD product --> CPE matches
+    hardcoded_matches = {}
+    with open(EOLD_HARDCODED_MATCHES_FILE) as f:
+        hardcoded_matches = json.loads(f.read())
+
+    eold_products_dir = os.path.join(EOLD_GITHUB_DIR, 'products')
+    product_title_re = re.compile(r'---\s*[tT]itle: ([^\n]+)')
+    product_eold_id_re = re.compile(r'permalink: /([^\n]+)')
+    product_releases_re = re.compile(r'^[Rr]eleases:(.*?)---', re.MULTILINE | re.DOTALL)
+
+    # create endoflife.date data
+    eold_data, printed_wait = {}, False
+    for filename in os.listdir(eold_products_dir):
+
+        if not QUIET and NVD_UPDATE_SUCCESS and not printed_wait:
+            print("Waiting for end of life data creation to finish ...")
+            printed_wait = True
+        elif (NVD_UPDATE_SUCCESS is not None) and (not NVD_UPDATE_SUCCESS):
+            if os.path.isdir(EOLD_GITHUB_DIR):
+                shutil.rmtree(EOLD_GITHUB_DIR)
+            return
+
+        with open(os.path.join(eold_products_dir, filename)) as f:
+            product_content = f.read()
+
+        eold_product_title = product_title_re.search(product_content)
+        if not eold_product_title:
+            continue
+        eold_product_title = eold_product_title.group(1)
+
+        eold_product_id = product_eold_id_re.search(product_content)
+        if not eold_product_id:
+            eold_product_id = os.path.basename(filename)
+        else:
+            eold_product_id = eold_product_id.group(1)
+
+        product_releases = product_releases_re.search(product_content)
+        if not product_releases:
+            continue
+
+        product_releases = parse_eold_product_releases(product_releases.group(1))
+        cpes = []
+        if eold_product_id in hardcoded_matches or eold_product_id.lower() in hardcoded_matches:
+            cpes = hardcoded_matches[eold_product_id]
+            cpes = [':'.join(cpe.split(':')[:5]) + ':' for cpe in cpes]
+        else:
+            cpe_results = search_cpes(eold_product_title, config=CONFIG['cpe_search'])
+            cpe = ''
+            if cpe_results and cpe_results['cpes']:
+                cpe = cpe_results['cpes'][0][0]
+            elif cpe_results['pot_cpes']:
+                cpe = cpe_results['pot_cpes'][0][0]
+            if cpe:
+                cpe = ':'.join(cpe.split(':')[:5]) + ':'
+                cpes = [cpe]
+
+        eold_entry = {'eold-id': eold_product_id, 'eold-title': eold_product_title, 'releases': product_releases}
+        for cpe in cpes:
+            eold_data[cpe] = eold_entry
+
+    while NVD_UPDATE_SUCCESS is None:
+        time.sleep(1)
+
+    if NVD_UPDATE_SUCCESS:
+        # put endoflife.data data into DB
+        db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
+        db_cursor = db_conn.cursor()
+        create_eol_date_table = CREATE_SQL_STATEMENTS['TABLES']['EOL_DATE'][CONFIG['DATABASE']['TYPE']]
+        # necessary because SQLite can't handle more than one query a time
+        for query in create_eol_date_table.split(';'):
+            if query:
+                db_cursor.execute(query+';')
+
+        for cpe, eold_entry in eold_data.items():
+            # iterate over releases in reversed order, s.t. oldest release always has unique ID 0
+            for i, release in enumerate(reversed(eold_entry['releases'])):
+                version_start = release['releaseCycle']
+                version_latest = release.get('releaseCyclelatest', '')  # e.g. slackware
+                eol_info = release.get('releaseCycleeol', 'false')
+                db_data = (cpe, i, eold_entry['eold-id'], eold_entry['eold-title'],
+                            version_start, version_latest, eol_info)
+                db_cursor.execute('INSERT INTO eol_date_data VALUES (?, ?, ?, ?, ?, ?, ?)', db_data)
+
+        db_conn.commit()
+        db_conn.close()
+
+    if os.path.isdir(EOLD_GITHUB_DIR):
+        shutil.rmtree(EOLD_GITHUB_DIR)
 
 
 def run(full=False, nvd_api_key=None, config_file=''):

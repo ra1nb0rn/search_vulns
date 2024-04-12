@@ -51,3 +51,6 @@ jobs:
 
       - name: Test Exploit Completeness
         run: python3 ./tests/test_exploit_completeness.py
+
+      - name: Test endoflife.date Correctness
+        run: python3 ./tests/test_eol_date.py

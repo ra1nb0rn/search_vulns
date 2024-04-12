@@ -1,0 +1,146 @@
+{
+    "jira-software": [
+        "cpe:2.3:a:atlassian:jira_software_data_center:*:*:*:*:*:*:*:*",
+        "cpe:2.3:a:atlassian:jira_server:*:*:*:*:*:*:*:*",
+        "cpe:2.3:a:atlassian:jira:*:*:*:*:*:*:*:*"
+    ],
+    "cert-manager": [
+        "cpe:2.3:a:linuxfoundation:cert_manager:*:*:*:*:*:*:*:*"
+    ],
+    "raspberry-pi": [],
+    "pop_os": [],
+    "surface": [],
+    "go": [
+        "cpe:2.3:a:golang:go:*:*:*:*:*:*:*:*"
+    ],
+    "nokia": [],
+    "motorola-mobility": [],
+    "ansible": [],
+    "elixir": [],
+    "bellsoft-liberica": [],
+    "filemaker": [
+        "cpe:2.3:a:claris:filemaker_pro:*:*:*:*:*:*:*:*",
+        "cpe:2.3:a:claris:filemaker_go:*:*:*:*:*:*:*:*",
+        "cpe:2.3:a:claris:filemaker_server:*:*:*:*:*:*:*:*"
+    ],
+    "gradle": [
+        "cpe:2.3:a:gradle:gradle:*:*:*:*:*:*:*:*",
+        "cpe:2.3:a:gradle:gradle_enterprise:*:*:*:*:*:*:*:*"
+    ],
+    "pangp": [
+        "cpe:2.3:a:paloaltonetworks:globalprotect:*:*:*:*:*:*:*:*"
+    ],
+    "android": [
+        "cpe:2.3:o:google:android:*:*:*:*:*:*:*:*"
+    ],
+    "apple-watch": [],
+    "pixel": [],
+    "vmware-srm": [],
+    "windows-embedded": [],
+    "vue": [
+        "cpe:2.3:a:vuejs:vue:*:*:*:*:*:*:*:*"
+    ],
+    "apache-groovy": [
+        "cpe:2.3:a:apache:groovy:*:*:*:*:*:*:*:*"
+    ],
+    "nvidiaproduct": [],
+    "amazon-cdk": [
+        "cpe:2.3:a:amazon:aws_cloud_development_kit:*:*:*:*:*:*:*:*"
+    ],
+    "ipad": [],
+    "grails": [
+        "cpe:2.3:a:grails:grails:*:*:*:*:*:*:*:*"
+    ],
+    "intel-processors": [],
+    "iphone": [],
+    "pci-dss": [],
+    "amazon-glue": [],
+    "robo": [],
+    "fedora": [
+        "cpe:2.3:o:fedoraproject:fedora:*:*:*:*:*:*:*:*"
+    ],
+    "dbt-core": [],
+    "ckeditor": [
+        "cpe:2.3:a:ckeditor:ckeditor5:*:*:*:*:*:*:*:*",
+        "cpe:2.3:a:ckeditor:ckeditor:*:*:*:*:*:*:*:*"
+    ],
+    "yokto": [
+        "cpe:2.3:a:linuxfoundation:yocto:*:*:*:*:*:*:*:*"
+    ],
+    "alibaba-dragonwell": [],
+    "google-nexus": [],
+    "amazon-eks": [],
+    "telegraf": [
+        "cpe:2.3:a:influxdata:telegraf:*:*:*:*:*:*:*:*"
+    ],
+    "nutanix-files": [
+        "cpe:2.3:o:nutanix:files:*:*:*:*:*:*:*:*"
+    ],
+    "composer": [
+        "cpe:2.3:a:getcomposer:composer:*:*:*:*:*:*:*:*"
+    ],
+    "opensearch": [
+        "cpe:2.3:a:amazon:opensearch:*:*:*:*:*:*:*:*"
+    ],
+    "aws-lambda": [
+        "cpe:2.3:a:amazon:aws_lambda:*:*:*:*:*:*:*:*",
+        "cpe:2.3:a:amazon:aws-lambda:*:*:*:*:*:*:*:*"
+    ],
+    "amazon-neptune": [],
+    "apache-spark": [
+        "cpe:2.3:a:apache:spark:*:*:*:*:*:*:*:*"
+    ],
+    "cfengine": [
+        "cpe:2.3:a:northern.tech:cfengine:*:*:*:*:*:*:*:*"
+    ],
+    "django": [
+        "cpe:2.3:a:djangoproject:django:*:*:*:*:*:*:*:*"
+    ],
+    "hashicorp-vault": [
+        "cpe:2.3:a:hashicorp:vault:*:*:*:*:*:*:*:*"
+    ],
+    "apache-airflow": [
+        "cpe:2.3:a:apache:airflow:*:*:*:*:*:*:*:*"
+    ],
+    "react": [
+        "cpe:2.3:a:facebook:react:*:*:*:*:*:*:*:*"
+    ],
+    "ibm-i": [],
+    "gorilla": [
+        "cpe:2.3:a:gorillatoolkit:websocket:*:*:*:*:*:*:*:*",
+        "cpe:2.3:a:gorillatoolkit:handlers:*:*:*:*:*:*:*:*"
+    ],
+    "ios": [
+        "cpe:2.3:o:apple:iphone_os:*:*:*:*:*:*:*:*"
+    ],
+    "zabbix": [
+        "cpe:2.3:a:zabbix:zabbix:*:*:*:*:*:*:*:*"
+    ],
+    "icinga-web": [
+        "cpe:2.3:a:icinga:icinga:*:*:*:*:*:*:*:*",
+        "cpe:2.3:a:icinga:icinga_web_2:*:*:*:*:*:*:*:*"
+    ],
+    "nutanix-prism": [
+        "cpe:2.3:o:nutanix:prism:*:*:*:*:*:*:*:*"
+    ],
+    "kindle": [],
+    "grafana": [
+        "cpe:2.3:a:grafana:grafana:*:*:*:*:*:*:*:*"
+    ],
+    "amazon-rds-mysql": [],
+    "xcp-ng": [],
+    "microsoft-build-of-openjdk": [],
+    "quasar": [],
+    "microsoft-windows-server": [
+        "cpe:2.3:o:microsoft:windows_server:*:*:*:*:*:*:*:*"
+    ],
+    "emberjs": [
+        "cpe:2.3:a:emberjs:ember.js:*:*:*:*:*:*:*:*"
+    ],
+    "cortex-xdr": [
+        "cpe:2.3:a:paloaltonetworks:cortex_xdr_agent:*:*:*:*:*:*:*:*"
+    ],
+    "cos": [],
+    "amazon-rds-postgresql": [],
+    "redhat-build-of-openjdk": []
+}

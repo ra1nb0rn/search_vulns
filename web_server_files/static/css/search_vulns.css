@@ -135,6 +135,10 @@ tr.exploited-vuln td {
     padding: 0px;
 }
 
+.btn-copy-md {
+    height: 1.4rem;
+    min-height: 1.4rem;
+}
 
 /* misc */
 .text-smxs {

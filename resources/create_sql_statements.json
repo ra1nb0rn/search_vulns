@@ -19,6 +19,10 @@
         "NVD_EXPLOITS_REFS": {
             "sqlite": "DROP TABLE IF EXISTS nvd_exploits_refs; CREATE TABLE nvd_exploits_refs (ref_id INTEGER, exploit_ref text, PRIMARY KEY (ref_id))",
             "mariadb": "CREATE OR REPLACE TABLE nvd_exploits_refs (ref_id INTEGER, exploit_ref TEXT CHARACTER SET ascii, PRIMARY KEY (ref_id));"
+        },
+        "EOL_DATE": {
+            "sqlite": "DROP TABLE IF EXISTS eol_date_data; CREATE TABLE eol_date_data (cpe_prefix VARCHAR(255), release_id INTEGER, eold_id VARCHAR(255), eold_title VARCHAR(255), version_start VARCHAR(100), version_latest VARCHAR(100), eol_info VARCHAR(25), PRIMARY KEY (cpe_prefix, release_id));",
+            "mariadb": "CREATE OR REPLACE TABLE eol_date_data (cpe_prefix VARCHAR(255), release_id INTEGER, eold_id VARCHAR(255), eold_title VARCHAR(255), version_start VARCHAR(100), version_latest VARCHAR(100), eol_info VARCHAR(25), PRIMARY KEY (cpe_prefix, release_id));"
         }
     },
     "VIEWS" : {

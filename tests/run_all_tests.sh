@@ -30,5 +30,9 @@ if [ $CREATED_SYMLINK -eq 0 ]; then
     rm "${SCRIPT_DIR}/../cpe_search/cpe-search-dictionary.db3"
 fi
 
+echo '[+] Running test_eol_date.py'
+python3 "${SCRIPT_DIR}/test_eol_date.py"
+EXIT_6=$?
+
 # https://stackoverflow.com/a/16358989
-! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_5 ))
+! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_5 || $EXIT_6 ))
