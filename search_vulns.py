@@ -264,10 +264,13 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
     cpe_version = CPEVersion(cpe_parts[5])
     vulns = []
 
-    general_cpe_prefix = ':'.join(cpe.split(':')[:5]) + ':'
+    general_cpe_prefix_query = ':'.join(cpe.split(':')[:5]) + ':'
+    if 'mariadb' in str(type(db_cursor)):  # backslashes have to be escaped for MariaDB
+        general_cpe_prefix_query = general_cpe_prefix_query.replace('\\', '\\\\')
+
     query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
              'is_cpe_version_end_including FROM cve_cpe WHERE cpe LIKE ?')
-    db_cursor.execute(query, (general_cpe_prefix + '%%', ))
+    db_cursor.execute(query, (general_cpe_prefix_query + '%%', ))
     general_cpe_nvd_data = set()
     if db_cursor:
         general_cpe_nvd_data =  set(db_cursor.fetchall())

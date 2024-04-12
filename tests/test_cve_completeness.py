@@ -122,6 +122,12 @@ class TestSearches(unittest.TestCase):
         expected_cves = []
         self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
+    def test_search_openstack_glance(self):
+        self.maxDiff = None
+        query = 'cpe:2.3:a:openstack:glance:*:*:*:*:*:*:*:*'
+        result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=False)
+        expected_cves = ['CVE-2022-47951', 'CVE-2013-1840', 'CVE-2015-8234', 'CVE-2015-3289', 'CVE-2015-5163', 'CVE-2015-5162', 'CVE-2013-4428', 'CVE-2016-8611', 'CVE-2017-7200', 'CVE-2022-4134', 'CVE-2015-5251', 'CVE-2014-0162', 'CVE-2014-5356', 'CVE-2016-0757', 'CVE-2015-5286', 'CVE-2014-9623', 'CVE-2015-1195', 'CVE-2014-1948', 'CVE-2012-5482', 'CVE-2013-0212', 'CVE-2013-4354', 'CVE-2015-1881', 'CVE-2014-9493', 'CVE-2014-9684', 'CVE-2012-4573']
+        self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
 if __name__ == '__main__':
     unittest.main()
