@@ -1,6 +1,41 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.5.0 - 2024-04-13
+### Added
+- Added a completely new web frontend, which is not just more beautiful but also comes with
+  additional functionalities.
+- Added endoflife.date as new data source.
+- Added information from CISA about known exploited vulnerabilities.
+- The web server can be configured to use reCAPTCHA protection and manage API keys.
+- The web server now provides an official API.
+- Added MariaDB as second database option.
+- Vulnerability search is now more accurate by managing some of the NVD's
+  poorly formatted entries better.
+- Added an option to return vulnerabilities, which only apply to one singular product
+  version according to the NVD entry, when an earlier version is queried.
+- Added equivalent CPEs and improvements in cpe_search.
+- Use an additional resource for equivalent CPEs from Debian.
+- Implement more extensive CPE creation capabilities.
+
+### Changed
+- CPE creation was moved into the cpe_search module.
+- The vulnerability search code was deduplicated.
+- The vulnerability search code was simplified.
+- Improved cpe_search such that a more holistic view of all available CPEs for a
+  query is provided.
+- Removed the unused "with_cpes" column from the vulnerability database.
+- Removed the in-memory mode if SQLite is used.
+- Improved version comparison with complex versions or somewhat artifical versions
+  created by the NVD.
+- Update test cases with new data and coverage of new functionalities.
+- Created a separate resource folder to store resources in.
+- Improve performance.
+
+### Fixed
+- Fixed some small bugs here and there.
+
+
 ## v0.4.13 - 2024-02-22
 ### Added
 - Store a client's configuration in the web app persistently on the client.

@@ -2,7 +2,14 @@
 Search for known vulnerabilities in software using software titles or a CPE 2.3 string.
 
 ## About
-*search_vulns* can be used to search for known vulnerabilities in software. To achieve this, the tool utilizes a locally built vulnerability database, currently containing CVE information from the [National Vulnerability Database (NVD)](https://nvd.nist.gov/) and exploit information from the [Exploit-DB (EDB)](https://www.exploit-db.com/) and from [PoC-in-GitHub](https://github.com/nomi-sec/PoC-in-GitHub). Using the *search_vulns* tool, this local information can be queried, either by providing software titles like 'Apache 2.4.39' or by providing a CPE 2.3 string like ``cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*``.
+*search_vulns* can be used to search for known vulnerabilities in software. To achieve this, the tool utilizes a locally built vulnerability database, currently containing:
+
+* CVE information from the [National Vulnerability Database (NVD)](https://nvd.nist.gov/)
+* Exploit information from the [Exploit-DB (EDB)](https://www.exploit-db.com/)
+* Exploit information from [PoC-in-GitHub](https://github.com/nomi-sec/PoC-in-GitHub)
+* Software currency information from [endoflife.date](https://github.com/endoflife-date/endoflife.date)
+
+Using the *search_vulns* tool, this local information can be queried, either by providing software titles like 'Apache 2.4.39' or by providing a CPE 2.3 string like ``cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*``.
 
 *search_vulns* can either be used as a CLI tool or via a web server. It is recommended to use the CLI tool for automated workflows that might be resource-constrained. Otherwise, using the web server is recommended, because it offers more features and flexibility. This includes the ability to achieve more complete results. Also, the presentation of results is clearer and results can be exported for further use.
 
@@ -17,7 +24,7 @@ git submodule update
 ./search_vulns.py -u
 ```
 
-Alternatively, for a full install, simply run the ``install.sh`` script. First, this script automatically installs the required dependencies. Thereafter it downloads the required software and vulnerability resources (see the [Release artifacts](https://github.com/ra1nb0rn/search_vulns/releases/latest)). These resources can also be built directly by invoking the install script with the according flag: ``install.sh --full``. Note, however, that this may take more time than simply downloading the resources. Of course, you can also look at the installation script and setup everything manually. Finally, you can also use the provided ``Dockerfile`` to build a container:
+Alternatively, for a full install, simply run the ``install.sh`` script. First, this script automatically installs the required dependencies. Thereafter it downloads the required software and vulnerability resources (see the [Release artifacts](https://github.com/ra1nb0rn/search_vulns/releases/latest)). These resources can also be built directly by invoking the install script with the according flag: ``install.sh --full``. Note, however, that this may take more time than simply downloading the resources. Of course, you can also look at the installation script and set up everything manually. Finally, you can also use the provided ``Dockerfile`` to build a container:
 ```
 docker build -t search_vulns .
 ```
@@ -29,9 +36,9 @@ docker run -it search_vulns
 ## Usage
 *search_vulns*'s usage information is shown in the following:
 ```
-usage: search_vulns.py [-h] [-u] [--full-update] [-k API_KEY] [-f {json,txt}] [-o OUTPUT]
+usage: search_vulns.py [-h] [-u] [--full-update] [-k API_KEY] [-f {txt,json}] [-o OUTPUT]
                        [-q QUERY] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
-                       [--ignore-general-cpe-vulns]
+                       [--ignore-general-cpe-vulns] [--include-single-version-vulns] [-c CONFIG]
 
 Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)
 
@@ -43,7 +50,7 @@ options:
   -k API_KEY, --api-key API_KEY
                         NVD API key to use for updating the local vulnerability and software
                         database
-  -f {json,txt}, --format {json,txt}
+  -f {txt,json}, --format {txt,json}
                         Output format, either 'txt' or 'json' (default: 'txt')
   -o OUTPUT, --output OUTPUT
                         File to write found vulnerabilities to
@@ -54,6 +61,11 @@ options:
   --ignore-general-cpe-vulns
                         Ignore vulnerabilities that only affect a general CPE (i.e. without
                         version)
+  --include-single-version-vulns
+                        Include vulnerabilities that only affect one specific version of a
+                        product when querying a lower version
+  -c CONFIG, --config CONFIG
+                        A config file to use (default: config.json)
 ```
 Note that when querying software with ``-q`` you have to put the software information in quotes if it contains any spaces. Also, you can use ``-q`` multiple times to make multiple queries at once. For one, a query can be a software name / title like 'Apache 2.4.39' or 'Wordpress 5.7.2'. Furthermore, a query can also be a [CPE 2.3](https://csrc.nist.gov/projects/security-content-automation-protocol/specifications/cpe) string.
 
@@ -82,7 +94,7 @@ Here are some examples:
   Reference: https://nvd.nist.gov/vuln/detail/CVE-2018-1133, 2018-05-25
   [...]
   ```
-Again, note that when *search_vulns* is initially installed, it takes quite some time to setup the local vulnerability and software database.
+Again, note that when *search_vulns* is initially installed, it takes quite some time to set up the local vulnerability and software database.
 
 ## Running a Web Server
 It is also possible to run a web server that provides this tool's functionality to clients over the network. ``web_server.py`` contains a working example using Flask. Depending on your environment, you may want to modify the server IP and port at the end of this file. To run a simple Flask web server, just run:
