@@ -479,6 +479,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     query_stripped = query.strip()
     cpe, pot_cpes = query_stripped, []
     if not MATCH_CPE_23_RE.match(query_stripped):
+        is_good_cpe = False
         cpe_search_results = search_cpes(query_stripped, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
 
         if not cpe_search_results['cpes']:
