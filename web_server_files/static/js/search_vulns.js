@@ -1096,7 +1096,7 @@ queryInput.on('keyup', function (event) {
             event.preventDefault();  // prevent jumping of cursor to start or end
         }
         // any key except CTRL, OPTION, CMD/SUPER/Windows
-        else if (![13, 17, 18, 91].includes(event.keyCode)) {
+        else if (![13, 17, 18, 91, 229].includes(event.keyCode)) {
             clearTimeout(doneTypingQueryTimer);
             if (!searchIgnoreNextKeyup)
                 doneTypingQueryTimer = setTimeout(doneTypingQuery, doneTypingQueryInterval);
@@ -1112,7 +1112,7 @@ queryInput.on('keydown', function (event) {
             event.preventDefault();  // prevent jumping of cursor to start or end
         }
         // any key except CTRL, OPTION, CMD/SUPER/Windows
-        else if(![13, 17, 18, 37, 39, 91].includes(event.keyCode)) {
+        else if(![13, 17, 18, 37, 39, 91, 229].includes(event.keyCode)) {
             clearTimeout(doneTypingQueryTimer);
             $('#cpeSuggestions').addClass("hidden");
             $('#cpeSuggestions').html();
