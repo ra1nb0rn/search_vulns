@@ -36,9 +36,10 @@ docker run -it search_vulns
 ## Usage
 *search_vulns*'s usage information is shown in the following:
 ```
-usage: search_vulns.py [-h] [-u] [--full-update] [-k API_KEY] [-f {txt,json}] [-o OUTPUT]
+usage: search_vulns.py [-h] [-u] [--full-update] [-k API_KEY] [-f {json,txt}] [-o OUTPUT]
                        [-q QUERY] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
-                       [--ignore-general-cpe-vulns] [--include-single-version-vulns] [-c CONFIG]
+                       [--ignore-general-cpe-vulns] [--include-single-version-vulns]
+                       [--use-created-cpes] [-c CONFIG]
 
 Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)
 
@@ -50,7 +51,7 @@ options:
   -k API_KEY, --api-key API_KEY
                         NVD API key to use for updating the local vulnerability and software
                         database
-  -f {txt,json}, --format {txt,json}
+  -f {json,txt}, --format {json,txt}
                         Output format, either 'txt' or 'json' (default: 'txt')
   -o OUTPUT, --output OUTPUT
                         File to write found vulnerabilities to
@@ -64,6 +65,8 @@ options:
   --include-single-version-vulns
                         Include vulnerabilities that only affect one specific version of a
                         product when querying a lower version
+  --use-created-cpes    If no matching CPE exists in the software database, automatically use a
+                        matching CPE created by search_vulns
   -c CONFIG, --config CONFIG
                         A config file to use (default: config.json)
 ```

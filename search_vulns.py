@@ -13,6 +13,7 @@ from cpe_search.database_wrapper_functions import *
 from cpe_search.cpe_search import (
     search_cpes,
     match_cpe23_to_cpe23_from_dict,
+    cpe_matches_query,
     MATCH_CPE_23_RE
 )
 from cpe_search.cpe_search import _load_config as _load_config_cpe_search
@@ -583,6 +584,7 @@ def parse_args():
     parser.add_argument("--cpe-search-threshold", type=float, default=CPE_SEARCH_THRESHOLD_MATCH, help="Similarity threshold used for retrieving a CPE via the cpe_search tool")
     parser.add_argument("--ignore-general-cpe-vulns", action="store_true", help="Ignore vulnerabilities that only affect a general CPE (i.e. without version)")
     parser.add_argument("--include-single-version-vulns", action="store_true", help="Include vulnerabilities that only affect one specific version of a product when querying a lower version")
+    parser.add_argument("--use-created-cpes", action="store_true", help="If no matching CPE exists in the software database, automatically use a matching CPE created by search_vulns")
     parser.add_argument("-c", "--config", type=str, default=DEFAULT_CONFIG_FILE, help="A config file to use (default: config.json)")
 
     args = parser.parse_args()
@@ -641,6 +643,14 @@ def main():
                 check_str = cpe[8:]
                 if any(char.isdigit() for char in query) and not any(char.isdigit() for char in check_str):
                     found_cpe = False
+
+            # if a good CPE couldn't be found, use a created one if configured
+            if not found_cpe and args.use_created_cpes and cpe_search_results['pot_cpes']:
+                for pot_cpe in cpe_search_results['pot_cpes']:
+                    if cpe_matches_query(pot_cpe[0], query):
+                        cpe = pot_cpe[0]
+                        found_cpe = True
+                        break
 
             if not found_cpe:
                 if args.format.lower() == 'txt':
