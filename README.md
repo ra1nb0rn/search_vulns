@@ -37,9 +37,9 @@ docker run -it search_vulns
 *search_vulns*'s usage information is shown in the following:
 ```
 usage: search_vulns.py [-h] [-u] [--full-update] [-k API_KEY] [-f {json,txt}] [-o OUTPUT]
-                       [-q QUERY] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
+                       [-q QUERY] [-c CONFIG] [-V] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
                        [--ignore-general-cpe-vulns] [--include-single-version-vulns]
-                       [--use-created-cpes] [-c CONFIG]
+                       [--use-created-cpes]
 
 Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)
 
@@ -57,18 +57,19 @@ options:
                         File to write found vulnerabilities to
   -q QUERY, --query QUERY
                         A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string
+  -c CONFIG, --config CONFIG
+                        A config file to use (default: config.json)
+  -V, --version         Print the version of search_vulns
   --cpe-search-threshold CPE_SEARCH_THRESHOLD
                         Similarity threshold used for retrieving a CPE via the cpe_search tool
   --ignore-general-cpe-vulns
                         Ignore vulnerabilities that only affect a general CPE (i.e. without
                         version)
   --include-single-version-vulns
-                        Include vulnerabilities that only affect one specific version of a
-                        product when querying a lower version
+                        Include vulnerabilities that only affect one specific version of a product
+                        when querying a lower version
   --use-created-cpes    If no matching CPE exists in the software database, automatically use a
                         matching CPE created by search_vulns
-  -c CONFIG, --config CONFIG
-                        A config file to use (default: config.json)
 ```
 Note that when querying software with ``-q`` you have to put the software information in quotes if it contains any spaces. Also, you can use ``-q`` multiple times to make multiple queries at once. For one, a query can be a software name / title like 'Apache 2.4.39' or 'Wordpress 5.7.2'. Furthermore, a query can also be a [CPE 2.3](https://csrc.nist.gov/projects/security-content-automation-protocol/specifications/cpe) string.
 

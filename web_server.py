@@ -16,7 +16,8 @@ from search_vulns import (
     _load_config,
     search_vulns as search_vulns_call,
     CPE_SEARCH_THRESHOLD_MATCH,
-    MATCH_CPE_23_RE
+    MATCH_CPE_23_RE,
+    VERSION_FILE
 )
 from cpe_search.cpe_search import search_cpes
 
@@ -224,7 +225,7 @@ def search_vulns():
 
 @app.route("/api/version")
 def version():
-    with open('version.txt') as f:
+    with open(VERSION_FILE) as f:
         search_vulns_version = f.read()
 
     db_modified_ts = os.path.getmtime(config['cpe_search']['DEPRECATED_CPES_FILE'])

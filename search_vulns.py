@@ -18,9 +18,11 @@ from cpe_search.cpe_search import (
 )
 from cpe_search.cpe_search import _load_config as _load_config_cpe_search
 
-DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
-MAN_EQUIVALENT_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'man_equiv_cpes.json'))
-DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'debian_equiv_cpes.json'))
+PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
+DEFAULT_CONFIG_FILE = os.path.join(PROJECT_DIR, 'config.json')
+MAN_EQUIVALENT_CPES_FILE = os.path.join(PROJECT_DIR, os.path.join('resources', 'man_equiv_cpes.json'))
+DEBIAN_EQUIV_CPES_FILE = os.path.join(PROJECT_DIR, os.path.join('resources', 'debian_equiv_cpes.json'))
+VERSION_FILE = os.path.join(PROJECT_DIR, 'version.txt')
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
@@ -581,14 +583,15 @@ def parse_args():
     parser.add_argument("-f", "--format", type=str, default="txt", choices={"txt", "json"}, help="Output format, either 'txt' or 'json' (default: 'txt')")
     parser.add_argument("-o", "--output", type=str, help="File to write found vulnerabilities to")
     parser.add_argument("-q", "--query", dest="queries", metavar="QUERY", action="append", help="A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string")
+    parser.add_argument("-c", "--config", type=str, default=DEFAULT_CONFIG_FILE, help="A config file to use (default: config.json)")
+    parser.add_argument("-V", "--version", action='store_true', help="Print the version of search_vulns")
     parser.add_argument("--cpe-search-threshold", type=float, default=CPE_SEARCH_THRESHOLD_MATCH, help="Similarity threshold used for retrieving a CPE via the cpe_search tool")
     parser.add_argument("--ignore-general-cpe-vulns", action="store_true", help="Ignore vulnerabilities that only affect a general CPE (i.e. without version)")
     parser.add_argument("--include-single-version-vulns", action="store_true", help="Include vulnerabilities that only affect one specific version of a product when querying a lower version")
     parser.add_argument("--use-created-cpes", action="store_true", help="If no matching CPE exists in the software database, automatically use a matching CPE created by search_vulns")
-    parser.add_argument("-c", "--config", type=str, default=DEFAULT_CONFIG_FILE, help="A config file to use (default: config.json)")
 
     args = parser.parse_args()
-    if not args.update and not args.queries and not args.full_update:
+    if not args.update and not args.queries and not args.full_update and not args.version:
         parser.print_help()
     return args
 
@@ -613,6 +616,10 @@ def main():
     elif args.full_update == True:
         from updater import run as run_updater
         run_updater(True, args.api_key, args.config)
+    elif args.version == True:
+        with open(VERSION_FILE) as f:
+            print(f.read())
+        return
 
     if not args.queries:
         return
