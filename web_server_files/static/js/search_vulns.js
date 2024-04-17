@@ -527,7 +527,7 @@ function searchVulns(query, url_query, recaptcha_response) {
                         search_display_html += '</ul></div></div>';
                     }
                     search_display_html += `)</span></h5></div></div>`;
-                    curEOLData = {query: query, 'version_status': vulns.version_status};
+                    curEOLData = {'query': query, 'version_status': vulns.version_status};
                     if (vulns.version_status) {
                         if (vulns.version_status.status == 'eol') {
                             search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is end of life. The latest version is ${htmlEntities(vulns.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(vulns.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
@@ -604,20 +604,31 @@ function searchVulns(query, url_query, recaptcha_response) {
 }
 
 
-function searchVulnsAction() {
+function searchVulnsAction(actionElement) {
     clearTimeout(doneTypingQueryTimer);
-    var query = $('#query').val();
+
+    var query = $('#query').val(), queryEnc;
     if (query === undefined)
         query = '';
-    var queryEnc = encodeURIComponent(query);
-    var url_query = "query=" + queryEnc;
-    var new_url = window.location.pathname + '?query=' + queryEnc;
+
+    if (actionElement.id.startsWith('cpe-suggestion')) {
+        queryEnc = encodeURIComponent($(actionElement).html());
+        isGoodCpe = false;
+    }
+    else {
+        queryEnc = encodeURIComponent(query);
+    }
+
+    url_query = "query=" + queryEnc;
+    new_url = window.location.pathname + '?query=' + queryEnc;
 
     if (!isGoodCpe) {
         url_query += "&is-good-cpe=false";
         new_url += '&is-good-cpe=false';
     }
-    url_query += "&include-single-version-vulns=true";  // false is default in backend
+
+    // false is default in backend and filtering is done in frontend
+    url_query += "&include-single-version-vulns=true";
 
     isGoodCpe = true;  // reset for subsequent query that wasn't initiated via URL
 
@@ -944,7 +955,7 @@ function retrieveCPESuggestions(url_query, recaptcha_response) {
             else if (cpeInfos.length > 0) {
                 var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box">';
                 for (var i = 0; i < cpeInfos.length; i++) {
-                    dropdownContent += `<li><a class="text-nowrap whitespace-nowrap" id="cpe-suggestion-${i}" href="${window.location.pathname}?query=${encodeURIComponent(htmlEntities(cpeInfos[i][0]))}&is-good-cpe=false">${htmlEntities(cpeInfos[i][0])}</a></li>`;
+                    dropdownContent += `<li><a class="text-nowrap whitespace-nowrap" id="cpe-suggestion-${i}" onclick="searchVulnsAction(this)">${htmlEntities(cpeInfos[i][0])}</a></li>`;
                 }
                 dropdownContent += '</ul>';
                 $('#cpeSuggestions').html(dropdownContent);
