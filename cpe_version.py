@@ -40,10 +40,11 @@ class CPEVersion:
         if (parts and not other_parts) or (not parts and other_parts):
             return False
 
-        # check for equality if one version has trailing ".0"
-        same_prefix = True
-        for part_idx in range(min(len(parts), len(other_parts))):
+        # iterate over pairs of parts for both versions
+        min_part_length = min(len(parts), len(other_parts))
+        for part_idx in range(min_part_length):
             part, other_part = parts[part_idx], other_parts[part_idx]
+
             # check if versions are in form 'update123' or 'u123' (e.g. cpe:2.3:a:trendmicro:deep_security_agent:20.0:update1559:)
             if part in ('u', 'update') and other_part in ('u', 'update'):
                 continue
@@ -52,27 +53,27 @@ class CPEVersion:
             if ONLY_ZEROES_STR_RE.match(part) and ONLY_ZEROES_STR_RE.match(other_part):
                 continue
 
-            if part.lower() != other_part.lower():
-                same_prefix = False
+            # right-pad with '0' to make both parts the same length
+            if len(part) < len(other_part) and part[0] in string.digits:
+                part = part.rjust(len(other_part), '0')
+            if len(other_part) < len(part) and other_part[0] in string.digits:
+                other_part = other_part.rjust(len(part), '0')
 
-        if same_prefix:
-            if len(parts) > len(other_parts) and all(not x or x == "0" for x in parts[part_idx+1:]):
-                return True
-            if len(other_parts) > len(parts) and all(not x or x == "0" for x in other_parts[part_idx+1:]):
-                return True
-            if len(parts) == len(other_parts):
-                for i in range(len(parts)):
-                    # check if versions are in form 'update123' or 'u123' (e.g. cpe:2.3:a:trendmicro:deep_security_agent:20.0:update1559:)
-                    if parts[i] in ('u', 'update') and other_parts[i] in ('u', 'update'):
-                        continue
-                    if parts[i] in ('p', 'patch') and other_parts[i] in ('p', 'patch'):
-                        continue
-                    if ONLY_ZEROES_STR_RE.match(parts[i]) and ONLY_ZEROES_STR_RE.match(other_parts[i]):
-                        continue
-                    if parts[i] != other_parts[i]:
-                        return False
-                return True
-        return False
+            # if any parts at any shared index are different --> versions not equal
+            if part != other_part:
+                return False
+
+        # check that either version is not a zero extended variant of the other, e.g. 1.5 and 1.5.0
+        if len(parts) > len(other_parts):
+            for part_idx in range(min_part_length, len(parts)):
+                if any(char not in ('.', '0') for char in parts[part_idx]):
+                    return False
+        if len(other_parts) > len(parts):
+            for part_idx in range(min_part_length, len(other_parts)):
+                if any(char not in ('.', '0') for char in other_parts[part_idx]):
+                    return False
+
+        return True
 
     def __gt__(self, other):
         return not (self <= other)

@@ -30,6 +30,12 @@ class TestSearches(unittest.TestCase):
         self.assertTrue(CPEVersion('1.3-a') < CPEVersion('1.3.0-rc1'))
         self.assertFalse(CPEVersion('1.3.1-4.5') < CPEVersion('1.3.0-4.5.6'))
         self.assertTrue(CPEVersion('20.0') < CPEVersion('20.0.0-3445'))
+        self.assertTrue(CPEVersion('1.2.3+01') == CPEVersion('1.2.3+1'))
+        self.assertTrue(CPEVersion('1.2.3+a.01') == CPEVersion('1.2.3+a.1'))
+        self.assertTrue(CPEVersion('1.2.3+a.000001') == CPEVersion('1.2.3+a.1'))
+        self.assertTrue(CPEVersion('3.1.4-l.o.n.g.e.r.rc.4') < CPEVersion('3.1.4-l.o.n.g.e.r.rc.5'))
+        self.assertTrue(CPEVersion('3.1.2147483647') < CPEVersion('3.1.2147483647-1'))
+        self.assertTrue(CPEVersion('3.1.2147483647-5') > CPEVersion('3.1.2147483647-1'))
 
 
 if __name__ == '__main__':
