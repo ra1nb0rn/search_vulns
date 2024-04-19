@@ -5,7 +5,9 @@ VERSION_PART_SEP_RE = re.compile(r'[^\da-zA-Z]')
 SUBVERSION_PART_SEP_RE = re.compile(r'([a-zA-Z]+|[\d]+)')
 SUBVERSION_PART_SEP_WITH_DOTS_RE = re.compile(r'([a-zA-Z\.]+|[\d\.]+)')
 UPDATE_VERSION_FORMAT_RE = re.compile(r'((update(\d+))|(u(\d+)))')
-MULTIPLE_ZEROES_RE = re.compile(r'0(\.?0)+')
+MULTIPLE_ZEROES_RE = re.compile(r'[^\d]0(\.?0)+([^\da-zA-Z\.]+)')
+PREPEND_SEP_ZERO_RE = re.compile(r'([^\da-zA-Z\.])')
+ONLY_ZEROES_STR_RE = re.compile(r'^0*$')
 
 class CPEVersion:
 
@@ -16,7 +18,9 @@ class CPEVersion:
 
     def get_version_parts(self):
         # deduplicate zero extensions, e.g. 0.0.0.0 --> 0.0
-        version_str = MULTIPLE_ZEROES_RE.sub('0', self.version_str)
+        version_str = self.version_str
+        version_str = PREPEND_SEP_ZERO_RE.sub(r'.0\1', version_str)
+        version_str = MULTIPLE_ZEROES_RE.sub(r'.0\2', version_str)
         split_version_parts = VERSION_PART_SEP_RE.split(version_str)
         version_parts = []
 
@@ -45,6 +49,8 @@ class CPEVersion:
                 continue
             if part in ('p', 'patch') and other_part in ('p', 'patch'):
                 continue
+            if ONLY_ZEROES_STR_RE.match(part) and ONLY_ZEROES_STR_RE.match(other_part):
+                continue
 
             if part.lower() != other_part.lower():
                 same_prefix = False
@@ -61,7 +67,9 @@ class CPEVersion:
                         continue
                     if parts[i] in ('p', 'patch') and other_parts[i] in ('p', 'patch'):
                         continue
-                    elif parts[i] != other_parts[i]:
+                    if ONLY_ZEROES_STR_RE.match(parts[i]) and ONLY_ZEROES_STR_RE.match(other_parts[i]):
+                        continue
+                    if parts[i] != other_parts[i]:
                         return False
                 return True
         return False
@@ -104,6 +112,12 @@ class CPEVersion:
                 continue
             if part in ('p', 'patch') and other_part in ('p', 'patch'):
                 continue
+            if ONLY_ZEROES_STR_RE.match(part) and ONLY_ZEROES_STR_RE.match(other_part):
+                if part_idx != min_part_count-1:
+                    continue
+                if len(parts) < len(other_parts):
+                    return True
+                return False
 
             # right-pad with '0' to make both parts the same length
             if len(part) < len(other_part) and part[0] in string.digits:
