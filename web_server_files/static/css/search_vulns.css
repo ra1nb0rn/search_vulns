@@ -103,7 +103,8 @@ tr.exploited-vuln td {
 
 /* Force hover on menu item (from DaisyUI) */
 .my-menu-item-hover {
-    background-color: var(--fallback-bc,oklch(var(--bc)/0.1));
+    /* use !important to overwrite DaisyUI mouse hover styling */
+    background-color: var(--fallback-bc,oklch(var(--bc)/0.18)) !important;
 }
 
 /* reCAPTCHA v2 box remove white border */
