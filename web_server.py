@@ -369,9 +369,14 @@ def setup_api_db():
         return False
 
     # create tables if DB was just created, ignore if tables exist
-    if db_exists is None:
+    db_conn, db_cursor = None, None
+    try:
         db_conn = get_database_connection(config['DATABASE'], db_name, use_pool=False)
         db_cursor = db_conn.cursor()
+    except Exception as e:
+        if 'many connections' not in str(e):
+            raise e
+    if db_conn:
         try:
             db_cursor.execute('CREATE TABLE api_keys (api_key CHAR(36), status VARCHAR(64), last_used DATETIME(3), PRIMARY KEY (api_key));')
         except Exception as e:
@@ -385,6 +390,8 @@ def setup_api_db():
         db_conn.commit()
         db_cursor.close()
         db_conn.close()
+    else:
+        return True
 
     # clear all entries from "recent_api_requests" table
     db_conn = get_database_connection(config['DATABASE'], db_name, use_pool=False)
