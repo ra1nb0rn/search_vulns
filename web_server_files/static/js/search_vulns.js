@@ -640,6 +640,7 @@ function searchVulnsAction(actionElement) {
     $("#buttonExportResults").addClass("btn-disabled");
     $('#cpeSuggestions').addClass("hidden");
     $('#cpeSuggestions').html();
+    curSelectedCPESuggestion = -1;
     searchIgnoreNextKeyup = true;
 
     $("#search-display").html("");
