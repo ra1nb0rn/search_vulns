@@ -481,7 +481,7 @@ def retrieve_eol_info(cpe, db_cursor):
         eol_releases = db_cursor.fetchall()
 
     latest = ''
-    for release in eol_releases:
+    for i, release in enumerate(eol_releases):
         # set up release information
         eol_ref = 'https://endoflife.date/' + release[0]
         release_start, release_end = CPEVersion(release[1]), CPEVersion(release[2])
@@ -507,7 +507,8 @@ def retrieve_eol_info(cpe, db_cursor):
                     version_status = {'status': 'eol', 'latest': str(latest), 'ref': eol_ref}
                 else:
                     version_status = {'status': 'current', 'latest': str(latest), 'ref': eol_ref}
-            elif release_start <= query_version < release_end:
+            elif ((release_start <= query_version < release_end) or
+                  (i == len(eol_releases) - 1 and query_version <= release_start)):
                 if release_eol and (release_eol == 'true' or now >= release_eol):
                     version_status = {'status': 'eol', 'latest': str(latest), 'ref': eol_ref}
                 else:
@@ -564,7 +565,11 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
                 vulns[cve_id] = vuln
 
     # add outdated software / endoflife.date information
-    eol_info = retrieve_eol_info(cpe, db_cursor)
+    eol_info = {}
+    for equiv_cpe in equivalent_cpes:
+        eol_info = retrieve_eol_info(equiv_cpe, db_cursor)
+        if eol_info:
+            break
 
     if close_cursor_after:
         db_cursor.close()
