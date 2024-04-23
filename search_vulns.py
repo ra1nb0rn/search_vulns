@@ -207,7 +207,14 @@ def _is_version_start_end_matching(cpe_parts, version_start, version_start_incl,
 
     # combine version and subversion if NVD merged both for version_end as well
     cpe_product = cpe_parts[4]
-    cpe_version, cpe_subversion = CPEVersion(cpe_parts[5]), CPEVersion(cpe_parts[6])
+    cpe_version, cpe_subversion = CPEVersion('*'), CPEVersion('*')
+    # check that CPE is not short/incomplete
+    if len(cpe_parts) > 5:
+        cpe_version = CPEVersion(cpe_parts[5])
+    if len(cpe_parts) > 6:
+        cpe_subversion = CPEVersion(cpe_parts[6])
+
+    # try to merge version and subversion if needed
     if version_end:
         version_end_sections = version_end.get_version_sections()
         cpe_version_subsections = cpe_version.get_version_sections()
@@ -442,8 +449,11 @@ def get_equivalent_cpes(cpe, config):
     cpes = [cpe]
     cpe_split = cpe.split(':')
     cpe_prefix = ':'.join(cpe_split[:5]) + ':'
-    cpe_version = cpe_split[5]
-    cpe_subversion = cpe_split[6]
+    cpe_version, cpe_subversion = '*', '*'
+    if len(cpe_split) > 5:
+        cpe_version = cpe_split[5]
+    if len(cpe_split) > 6:
+        cpe_subversion = cpe_split[6]
 
     # if version part consists of more than one version parts, split into two CPE fields
     cpe_version_sections = CPEVersion(cpe_version).get_version_sections()
