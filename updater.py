@@ -15,7 +15,7 @@ import time
 import aiohttp
 from aiolimiter import AsyncLimiter
 from cpe_search.cpe_search import update as update_cpe
-from cpe_search.cpe_search import search_cpes
+from cpe_search.cpe_search import search_cpes, add_cpes_to_db
 from cpe_search.database_wrapper_functions import get_database_connection
 from search_vulns import _load_config
 
@@ -221,6 +221,10 @@ async def update_vuln_db(nvd_api_key=None):
     NVD_UPDATE_SUCCESS = True
     cve_edb_map_thread.join()
     build_eold_data_thread.join()
+
+    # add CPE infos from vulnerability data to CPE DB
+    print('[+] Adding software/CPE information from vulns to CPE-DB')
+    add_vuln_cpes_to_cpe_search()
 
     # build and add table of PoC-in-GitHub
     print('[+] Adding PoC-in-GitHub information')
@@ -648,6 +652,31 @@ def create_endoflife_date_table():
 
     if os.path.isdir(EOLD_GITHUB_DIR):
         shutil.rmtree(EOLD_GITHUB_DIR)
+
+
+def add_vuln_cpes_to_cpe_search():
+    '''Add CPEs only present in NVD vulnerability data to cpe_search DB'''
+
+    # get distinct official NVD CPEs
+    db_conn_cpes = get_database_connection(CONFIG['DATABASE'], CONFIG['cpe_search']['DATABASE_NAME'])
+    db_cursor_cpes = db_conn_cpes.cursor()
+    db_cursor_cpes.execute('SELECT DISTINCT cpe FROM cpe_entries')
+    nvd_official_cpes = db_cursor_cpes.fetchall()
+    nvd_official_cpes = set([cpe[0] for cpe in nvd_official_cpes])
+    db_cursor_cpes.close()
+    db_conn_cpes.close()
+
+    # get distinct CPEs from vulns
+    db_conn_vulndb = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
+    db_cursor_vulndb = db_conn_vulndb.cursor()
+    db_cursor_vulndb.execute('SELECT DISTINCT cpe FROM cve_cpe')
+    vuln_cpes = db_cursor_vulndb.fetchall()
+    vuln_cpes = set([cpe[0] for cpe in vuln_cpes])
+    db_cursor_vulndb.close()
+    db_conn_vulndb.close()
+
+    not_contained_cpes = vuln_cpes - nvd_official_cpes
+    add_cpes_to_db(not_contained_cpes, CONFIG['cpe_search'], check_duplicates=False)
 
 
 def run(full=False, nvd_api_key=None, config_file=''):
