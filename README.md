@@ -31,7 +31,7 @@ git submodule update
 ./search_vulns.py -u
 ```
 
-Alternatively, for a full install, simply run the ``install.sh`` script. First, this script automatically installs the required dependencies. Thereafter it downloads the required software and vulnerability resources (see the [Release artifacts](https://github.com/ra1nb0rn/search_vulns/releases/latest)). These resources can also be built directly by invoking the install script with the according flag: ``install.sh --full``. Note, however, that this may take more time than simply downloading the resources. Of course, you can also look at the installation script and set up everything manually. Finally, you can also use the provided ``Dockerfile`` to build a container:
+Alternatively, for a full install, run the ``install.sh`` script (*note that it is configured to ``--break-system-packages`` for installing Python dependencies*). First, this script automatically installs the required dependencies. Thereafter it downloads the required software and vulnerability resources (see the [Release artifacts](https://github.com/ra1nb0rn/search_vulns/releases/latest)). These resources can also be built directly by invoking the install script with the according flag: ``install.sh --full``. Note, however, that this may take more time than simply downloading the resources. Of course, you can also look at the installation script and set up everything manually. Finally, you can also use the provided ``Dockerfile`` to build a container:
 ```
 docker build -t search_vulns .
 ```
