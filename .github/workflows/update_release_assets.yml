@@ -36,7 +36,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.LATEST_RELEASE_TAG }}
           files: |
-            vulndb.db3
-            cveid_to_edbid.json
-            cpe_search/cpe-search-dictionary.db3
-            cpe_search/deprecated-cpes.json
+            resources/vulndb.db3
+            resources/cveid_to_edbid.json
+            resources/cpe-search-dictionary.db3
+            resources/deprecated-cpes.json
