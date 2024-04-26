@@ -1,6 +1,22 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.5.1 - 2024-04-26
+### Added
+- A flag to use the best matching *created* CPE automatically in CLI.
+- A flag to print search_vulns version.
+- endoflife.date data is now also reported for deprecated / equivalent CPEs.
+- Add CPEs only contained in the NVD's vuln data to the CPE-DB.
+- Add references to blog posts and a public instance.
+
+### Fixed
+- Install of dependencies in automated install script.
+- Some bug fixes and improvements in web frontend.
+- Improvements to version comparison for more complex version numbers.
+- Setting up the API tables if the database already existed.
+- Fix pipeline to rebuild release assets regularly.
+
+
 ## v0.5.0 - 2024-04-13
 ### Added
 - Added a completely new web frontend, which is not just more beautiful but also comes with
