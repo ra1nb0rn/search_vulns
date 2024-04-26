@@ -26,6 +26,10 @@ jobs:
         run: python3 ./tests/test_cve_attr_completeness.py
       - name: Test Exploit Completeness
         run: python3 ./tests/test_exploit_completeness.py
+      - name: Test Version Comparison Correctness
+        run: python3 ./tests/test_version_comparison.py
+      - name: Test endoflife.date Correctness
+        run: python3 ./tests/test_eol_date.py
       - name: Get latest release tag
         run: |
           LATEST_TAG=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/ra1nb0rn/search_vulns/releases/latest | jq -r '.tag_name')
