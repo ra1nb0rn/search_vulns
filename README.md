@@ -13,6 +13,13 @@ Using the *search_vulns* tool, this local information can be queried, either by 
 
 *search_vulns* can either be used as a CLI tool or via a web server. It is recommended to use the CLI tool for automated workflows that might be resource-constrained. Otherwise, using the web server is recommended, because it offers more features and flexibility. This includes the ability to achieve more complete results. Also, the presentation of results is clearer and results can be exported for further use.
 
+
+## Quick Links
+* [The Surprising Complexity of Finding Known Vulnerabilities](https://herolab.usd.de/the-surprising-complexity-of-finding-known-vulnerabilities/): A blog post detailing the challenges and motivations behind search_vulns.
+* [https://search-vulns.usd.de](https://search-vulns.usd.de): To be published soon, a public instance hosted by [usd AG](https://github.com/usdAG).
+* To be published: A second blog post detailing how search_vulns works in depth, compares with other tools and solves the challenges discussed in the first blog post.
+
+
 ## Installation
 You can perform a quick install by running the following commands:
 ```shell
