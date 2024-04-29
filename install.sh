@@ -34,8 +34,15 @@ install_linux_packages() {
         exit 1
     fi
 
-    pip3 install -r requirements.txt --break-system-packages
-    pip3 install mariadb --break-system-packages
+    pip3 install -r requirements.txt
+    if [ $? != 0 ]; then
+        pip3 install -r requirements.txt --break-system-packages
+    fi
+
+    pip3 install mariadb
+    if [ $? != 0 ]; then
+        pip3 install mariadb --break-system-packages
+    fi
 }
 
 setup_create_db() {
@@ -113,7 +120,10 @@ setup_cpe_search() {
         git submodule --quiet update
     fi
 
-    pip3 install -r requirements.txt --break-system-packages
+    pip3 install -r requirements.txt
+    if [ $? != 0 ]; then
+        pip3 install -r requirements.txt --break-system-packages
+    fi
 
     cd ..
 }
