@@ -300,7 +300,7 @@ function createVulnsMarkDownTable() {
                 table_row1 += 'Description|';
                 table_row2 += ':---|';
             }
-            else if (column == "epxl" && has_exploits) {
+            else if (column == "expl" && has_exploits) {
                 table_row1 += 'Exploits|';
                 table_row2 += ':---|';
             }
