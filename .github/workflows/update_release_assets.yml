@@ -8,12 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout search_vulns code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Python and Pip
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           cache: 'pip'
-          python-version: '3.8'
+          python-version: '3.10'
       - name: Upgrade Pip
         run: python3 -m pip install --upgrade pip
       - name: Install tool and build DB
@@ -35,7 +35,7 @@ jobs:
           LATEST_TAG=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/ra1nb0rn/search_vulns/releases/latest | jq -r '.tag_name')
           echo "LATEST_RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
       - name: Update resource files of latest release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.LATEST_RELEASE_TAG }}

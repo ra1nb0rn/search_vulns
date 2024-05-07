@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout search_vulns code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Check if code for building resources was changed
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
@@ -21,10 +21,10 @@ jobs:
               - 'updater.py'
 
       - name: Set up Python and Pip
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           cache: 'pip'
-          python-version: '3.8'
+          python-version: '3.10'
 
       - name: Upgrade Pip
         run: python3 -m pip install --upgrade pip
