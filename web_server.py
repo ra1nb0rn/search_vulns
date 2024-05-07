@@ -252,9 +252,9 @@ def index():
     return render_template("index.html", **recaptcha_settings)
 
 
-@app.route("/usage")
-def usage():
-    return render_template("usage.html")
+@app.route("/about")
+def about():
+    return render_template("about.html")
 
 
 @app.route("/api/setup")
