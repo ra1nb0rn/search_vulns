@@ -28,6 +28,15 @@ function escapeMarkdownSimple(text) {
     });
 }
 
+function escapeCSV(text) {
+    text = text.replaceAll('"', '""');
+    if (['=', '+', '-', '@'].some(c => text.startsWith(c)))
+        text = "'" + text;
+    if (text.includes(',') || text.includes('"'))
+        text = `"${text}"`;
+    return text;
+}
+
 function reduceToEDBUrls(allUrls) {
     var edb_urls = [];
     for (var i = 0; i < allUrls.length; i++) {
@@ -436,20 +445,20 @@ function createVulnsCSV() {
             continue;
 
         if (selectedColumns.length < 1 || selectedColumns.includes('cve'))
-            vulns_csv += `${vulns[i]["id"]},`
+            vulns_csv += `${escapeCSV(vulns[i]["id"])},`
         if (selectedColumns.length < 1 || selectedColumns.includes('cvss'))
-            vulns_csv += `${vulns[i]["cvss"]} (v${vulns[i]["cvss_ver"]}),`;
+            vulns_csv += `${escapeCSV(vulns[i]["cvss"] + ' (v' + vulns[i]["cvss_ver"] + ')')},`;
         if (selectedColumns.length < 1 || selectedColumns.includes('descr'))
-            vulns_csv += `"${vulns[i]["description"].replaceAll('"', '""')}",`;
+            vulns_csv += `${escapeCSV(vulns[i]["description"])},`;
 
         if (vulns_csv.length > 0 && (!has_exploits || (selectedColumns.length > 0 && !selectedColumns.includes('expl'))))
             vulns_csv = vulns_csv.slice(0, -1);
 
         if (has_exploits && vulns[i].exploits !== undefined && vulns[i].exploits.length > 0 && (selectedColumns.length < 1 || selectedColumns.includes('expl'))) {
             if (onlyShowEDBExploits)
-                vulns_csv += `"${reduceToEDBUrls(vulns[i].exploits).join(", ")}"`;
+                vulns_csv += `${escapeCSV(reduceToEDBUrls(vulns[i].exploits).join(", "))}`;
             else
-                vulns_csv += `"${vulns[i].exploits.join(", ")}"`;
+                vulns_csv += `${escapeCSV(vulns[i].exploits.join(", "))}`;
         }
         vulns_csv += '\n'
     }
