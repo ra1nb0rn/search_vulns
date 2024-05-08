@@ -26,6 +26,8 @@ STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "stat
 TEMPLATE_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "templates"))
 CONFIG_FILE = os.path.join(PROJECT_DIR, 'config.json')
 CHANGELOG_FILE = os.path.join(PROJECT_DIR, 'CHANGELOG.md')
+LICENSE_INFO_FILE = os.path.join(os.path.join(PROJECT_DIR, 'resources'), 'license_infos.md')
+README_FILE = os.path.join(PROJECT_DIR, 'README.md')
 CPE_SUGGESTIONS_COUNT = 10
 MAX_QUERY_LENGTH = 256
 VULN_RESULTS_CACHE, CPE_SUGGESTIONS_CACHE = {}, {}
@@ -253,9 +255,34 @@ def index():
     return render_template("index.html", **recaptcha_settings)
 
 
+def style_converted_html(markdown_html, center_captions=False):
+    ctr_str = 'text-center ' if center_captions else ''
+    markdown_html = markdown_html.replace('<h1>', f'<h1 class="{ctr_str}text-2xl my-3 font-bold">')
+    markdown_html = markdown_html.replace('<h2>', f'<h2 class="{ctr_str}text-xl mt-3 mb-1 font-semibold">')
+    markdown_html = markdown_html.replace('<h3>', f'<h3 class="{ctr_str}text-lg my-1 font-medium">')
+    markdown_html = markdown_html.replace('<ul>', '<ul class="list-disc text-left ml-6 mb-3 mt-1">')
+    markdown_html = markdown_html.replace('<code>', '<code class="bg-base-300 p-1 rounded-lg">')
+    markdown_html = markdown_html.replace('<p>', '<p class="mt-2">')
+    markdown_html = markdown_html.replace('<a ', '<a class="link" ')
+    return markdown_html
+
+
 @app.route("/about")
 def about():
-    return render_template("about.html")
+    markdown_content = ''
+    with open(README_FILE) as f:
+        markdown_content = f.read()
+
+    markdown_content = markdown_content[markdown_content.find('## About'):]
+    markdown_content = markdown_content[:markdown_content.find('\n##')]
+    about_html = style_converted_html(markdown.markdown(markdown_content), True)
+
+    markdown_content = ''
+    with open(LICENSE_INFO_FILE) as f:
+        markdown_content = f.read()
+    license_html = style_converted_html(markdown.markdown(markdown_content), True)
+
+    return render_template("about.html", about_html=about_html, license_html=license_html)
 
 
 @app.route("/api/setup")
@@ -329,12 +356,8 @@ def news():
     with open(CHANGELOG_FILE) as f:
         markdown_content = f.read()
 
-    changelog_html = markdown.markdown(markdown_content)
-    changelog_html = changelog_html.replace('<h1>', '<h1 class="text-2xl my-3 font-bold text-center">')
-    changelog_html = changelog_html.replace('<h2>', '<h2 class="text-xl mt-3 mb-1 font-semibold">')
-    changelog_html = changelog_html.replace('<h3>', '<h3 class="text-lg my-1 font-medium">')
-    changelog_html = changelog_html.replace('<ul>', '<ul class="list-disc text-left ml-6 mb-3">')
-
+    changelog_html = style_converted_html(markdown.markdown(markdown_content), False)
+    changelog_html = changelog_html.replace('<h1 class="', '<h1 class="text-center ')
     return render_template("news.html", news_html=changelog_html)
 
 

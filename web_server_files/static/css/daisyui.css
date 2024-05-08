@@ -2834,6 +2834,10 @@ html {
   min-width: 100%;
 }
 
+.max-w-4xl {
+  max-width: 56rem;
+}
+
 .grow {
   flex-grow: 1;
 }
@@ -3161,6 +3165,10 @@ html {
 
   .sm\:max-w-5xl {
     max-width: 64rem;
+  }
+
+  .sm\:max-w-4xl {
+    max-width: 56rem;
   }
 }
 
