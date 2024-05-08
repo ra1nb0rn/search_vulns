@@ -17,8 +17,14 @@ var curSelectedCPESuggestion = -1, suggestedQueriesJustOpened = false;
 
 
 function htmlEntities(text) {
-    return text.replace(/[\u00A0-\u9999<>\&"']/g, function (i) {
-        return '&#' + i.charCodeAt(0) + ';';
+    return text.replace(/[\u00A0-\u9999<>\&"']/g, function (c) {
+        return '&#' + c.charCodeAt(0) + ';';
+    });
+}
+
+function escapeMarkdownSimple(text) {
+    return text.replace(/[\\|*_\[\]`]/g, function (c) {
+        return '\\' + c;
     });
 }
 
@@ -335,7 +341,18 @@ function createVulnsMarkDownTable() {
         if (selectedColumns.length < 1 || selectedColumns.includes("descr")) {
             var description = htmlEntities(vulns[i]["description"].trim());
             description = description.replaceAll('\n', '<br>');
-            description = description.replaceAll('|', '&#124;');
+
+            // try to keep markdown for nicer display sometimes
+            if (description.includes("**") || description.split("`").length - 1 > 1) {
+                description = description.replaceAll('|', '\\|');
+            }
+            // otherwise escape most impactful Markdown characters.
+            // not every Markdown character is escaped, because this
+            // creates issues with some parsers.
+            else {
+                description = escapeMarkdownSimple(description);
+            }
+
             vulns_md += `${description}|`;
         }
 
