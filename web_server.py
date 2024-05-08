@@ -24,7 +24,8 @@ from cpe_search.cpe_search import search_cpes
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))
 TEMPLATE_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "templates"))
-CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
+CONFIG_FILE = os.path.join(PROJECT_DIR, 'config.json')
+CHANGELOG_FILE = os.path.join(PROJECT_DIR, 'CHANGELOG.md')
 CPE_SUGGESTIONS_COUNT = 10
 MAX_QUERY_LENGTH = 256
 VULN_RESULTS_CACHE, CPE_SUGGESTIONS_CACHE = {}, {}
@@ -325,7 +326,7 @@ def check_api_key_status():
 @app.route("/news")
 def news():
     markdown_content = ''
-    with open('CHANGELOG.md') as f:
+    with open(CHANGELOG_FILE) as f:
         markdown_content = f.read()
 
     changelog_html = markdown.markdown(markdown_content)
