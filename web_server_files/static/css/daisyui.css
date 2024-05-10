@@ -2773,6 +2773,10 @@ html {
   max-height: 24rem;
 }
 
+.min-h-screen {
+  min-height: 100vh;
+}
+
 .w-104 {
   width: 26rem;
 }
@@ -3166,10 +3170,6 @@ html {
   .sm\:max-w-5xl {
     max-width: 64rem;
   }
-
-  .sm\:max-w-4xl {
-    max-width: 56rem;
-  }
 }
 
 @media (min-width: 768px) {
@@ -3187,6 +3187,10 @@ html {
 
   .md\:hidden {
     display: none;
+  }
+
+  .md\:max-w-8xl {
+    max-width: 88rem;
   }
 }
 
@@ -3207,13 +3211,35 @@ html {
     min-width: 9rem;
   }
 
-  .lg\:max-w-6xl {
-    max-width: 72rem;
+  .lg\:max-w-7xl {
+    max-width: 80rem;
+  }
+
+  .lg\:max-w-6 {
+    max-width: 1.5rem;
+  }
+
+  .lg\:max-w-6\.5xl {
+    max-width: 76rem;
   }
 }
 
 @media (min-width: 1280px) {
+  .xl\:ml-1 {
+    margin-left: 0.25rem;
+  }
+
   .xl\:mr-6 {
     margin-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .\32xl\:ml-2 {
+    margin-left: 0.5rem;
+  }
+
+  .\32xl\:max-w-8xl {
+    max-width: 88rem;
   }
 }
