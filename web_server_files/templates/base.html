@@ -75,12 +75,11 @@
     {% block site_content %}
     {% endblock %}
 
-    {% if show_recaptcha is defined and show_recaptcha == true %}
+    {% if show_captcha is defined and show_captcha == true %}
     <button id="toTopButton" onclick="backToTop()" title="Go To Top"
         class="hidden btn btn-circle btn-accent fixed z-50 bottom-20 right-2.5 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
         <i class="fa-solid fa-arrow-up"></i>
     </button>
-    <div class="hidden g-recaptcha" id="grecaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
     {% else %}
     <button id="toTopButton" onclick="backToTop()" title="Go To Top"
         class="hidden btn btn-circle btn-accent fixed z-50 bottom-5 right-5 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
