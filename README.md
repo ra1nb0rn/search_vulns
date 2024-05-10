@@ -37,11 +37,11 @@ docker build -t search_vulns .
 ```
 and then start it:
 ```
-docker run -it search_vulns
+docker run -it search_vulns bash
 ```
 or with an exposed port for the web server:
 ```
-docker run -p 127.0.0.1:5000:5000 -it search_vulns
+docker run -p 127.0.0.1:5000:5000 -it search_vulns bash
 ```
 Note that here you have to update the host and port accordingly in the ``app.run`` call in [``web_server.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/web_server.py).
 
