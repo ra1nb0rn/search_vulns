@@ -1,246 +1,161 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#ffffff">
-    <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" sizes="180x180">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome-6.5.1.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/daisyui.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/flowbite-custom.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/search_vulns.css') }}">
-    <title>SearchVulns</title>
-</head>
-
-<body class="hidden flex flex-col min-h-screen">
-
-    <!-- BEGIN HEADER -->
-    <div class="navbar bg-base-100">
-        <div class="navbar-start">
-            <div class="dropdown">
-                <div tabindex="0" role="button" class="btn btn-ghost md:hidden">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6h16M4 12h8m-8 6h16" />
-                    </svg>
-                </div>
-                <ul tabindex="0"
-                    class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-                    <li><a href="/">Home</a></li>
-                    <li><a href="/about">About</a></li>
-                    <li><a href="/api/setup">API</a></li>
-                    <li><a href="/news">News</a></li>
-                </ul>
+{% block site_content %}
+<!-- BEGIN SearchVulns -->
+<div class="md:max-w-8xl lg:max-w-6.5xl 2xl:max-w-8xl mx-auto text-center mt-4 w-full">
+    <div class="flex flex-row rounded-box items-center w-full mx-auto p-3 bg-base-300">
+        <div class="dropdown dropdown-open sm:mr-1 md:mr-2 w-full" id="queryInputConstruct"
+            onfocusout="closeCPESuggestions(event)">
+            <label class="input input-bordered flex w-full items-center gap-5 sm:mr-1 md:mr-2">
+                <i class="fa-solid fa-database"></i>
+                <input type="text" class="w-full" autofocus placeholder="Enter Software" name="query" id="query" />
+                <kbd class="kbd kbd-sm text-xl">⏎</kbd>
+            </label>
+            <div tabindex="0"
+                class="dropdown-content hidden z-[10] w-fit min-w-full shadow-2xl bg-base-300 rounded-box mt-2"
+                id="cpeSuggestions">
             </div>
-            <a class="btn btn-ghost text-xl" href="/"><i class="fa-solid fa-bug my-auto"></i>
-                SearchVulns</a>
         </div>
-        <div class="navbar-center hidden md:flex">
-            <ul class="menu menu-horizontal px-1">
-                <li><a href="/">Home</a></li>
-                <li><a href="/about">About</a></li>
-                <li><a href="/api/setup">API</a></li>
-                <li><a href="/news">News</a></li>
+        <button type="submit"
+            class="btn btn-primary btn-outline sm:mr-1 md:mr-4 lg:mr-5 xl:mr-6 xl:ml-1 2xl:ml-2 text-base"
+            name="buttonSearchVulns" id="buttonSearchVulns" onclick="searchVulnsAction(this)">
+            <i class="fa-solid fa-magnifying-glass"></i> Search Vulns
+        </button>
+        <div class="dropdown dropdown mr-1">
+            <div tabindex="0" role="button" class="btn btn-neutral rounded-btn text-base"><i
+                    class="fa-solid fa-gear"></i></div>
+            <div tabindex="0" class="dropdown-content z-[1] p-2 shadow-2xl bg-base-200 rounded-box w-64 mt-2">
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-4">
+                        <span class="label-text">Ignore general vulns &nbsp;<div class="tooltip"
+                                data-tip="Some vulnerabilities in the used data set do not contain information about the affected version. These are often False Positives and showing them can be disabled here.">
+                                <i class="fas fa-info-circle text-content"></i>
+                            </div></span>
+                        <input id="generalVulnsConfig" type="checkbox" class="checkbox"
+                            onclick="changeSearchConfig(this)" />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-4">
+                        <span class="label-text">Only EDB exploits &nbsp;<div class="tooltip"
+                                data-tip="Only show references to exploits from the official Exploit-DB. Exploit code from the EDB is usually advanced and readily usable.">
+                                <i class="fas fa-info-circle text-content"></i>
+                            </div></span>
+                        <input id="onlyEdbExploitsConfig" type="checkbox" class="checkbox"
+                            onclick="changeSearchConfig(this)" />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-4">
+                        <span class="label-text">Show single version vulns &nbsp;<div class="tooltip"
+                                data-tip="Some vulnerabilities only seem to affect a specific version of a product. This could be an error in the data set and returning vulnerabilities for lower versions can be enabled here.">
+                                <i class="fas fa-info-circle text-content"></i>
+                            </div></span>
+                        <input id="showSingleVersionVulnsConfig" type="checkbox" class="checkbox"
+                            onclick="changeSearchConfig(this)" />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-4">
+                        <span class="label-text">Display table filtering &nbsp;<div class="tooltip tooltip-bottom"
+                                data-tip="Choose whether the filtering of CVEs and table columns should be displayed or only affect the export.">
+                                <i class="fas fa-info-circle text-content"></i>
+                            </div></span>
+                        <input id="showTableFilteringConfig" type="checkbox" class="checkbox"
+                            onclick="changeSearchConfig(this)" />
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="dropdown mr-1">
+            <button tabindex="0" role="button"
+                class="btn btn-disabled btn-neutral rounded-btn text-base p-0 sm:min-w-24 lg:min-w-28"
+                id="buttonFilterCVEs">
+                <i class="fa-solid fa-filter"></i>Filter <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div tabindex="0"
+                class="dropdown-content left-1/2 transform -translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box min-w-36 mt-2 overflow-y-auto max-h-96"
+                id="filterCVEsDropdown">
+            </div>
+        </div>
+        <div class="dropdown dropdown mr-1">
+            <div tabindex="0" role="button"
+                class="btn btn-disabled btn-neutral rounded-btn text-base p-0 sm:min-w-32 lg:min-w-36"
+                id="buttonManageColumns">
+                <i class="fa-solid fa-table-columns"></i>Columns <i class="fa-solid fa-chevron-down"></i>
+            </div>
+            <div tabindex="0"
+                class="dropdown-content left-1/2 transform -translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box w-auto min-w-40 mt-2">
+                <div class="items-center flex-row mb-2">
+                    <button class="btn btn-sm btn-neutral w-14 sm:mr-1 md:mr-2" id="showColumnAll"
+                        onclick="changeColumnConfig(this)">All</button>
+                    <button class="btn btn-sm btn-neutral w-16" id="showColumnNone"
+                        onclick="changeColumnConfig(this)">None</button>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-4">
+                        <span class="label-text">CVE-ID
+                        </span>
+                        <input id="showColumnCVEID" type="checkbox" class="checkbox"
+                            onclick="changeColumnConfig(this)" />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-4">
+                        <span class="label-text">CVSS-Score
+                        </span>
+                        <input id="showColumnCVSS" type="checkbox" class="checkbox"
+                            onclick="changeColumnConfig(this)" />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-4">
+                        <span class="label-text">Description
+                        </span>
+                        <input id="showColumnDescription" type="checkbox" class="checkbox"
+                            onclick="changeColumnConfig(this)" />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-4">
+                        <span class="label-text">Exploits
+                        </span>
+                        <input id="showColumnExploits" type="checkbox" class="checkbox"
+                            onclick="changeColumnConfig(this)" />
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="dropdown dropdown-end">
+            <div tabindex="0" role="button"
+                class="btn btn-disabled btn-neutral rounded-btn text-base p-0 sm:min-w-28 lg:min-w-32"
+                id="buttonExportResults">
+                <i class="fa-solid fa-arrow-up-from-bracket"></i></i>Export <i class="fa-solid fa-chevron-down"></i>
+            </div>
+            <ul tabindex="0" class="menu dropdown-content z-[1] p-1 mt-2 shadow bg-base-200 rounded-box w-40">
+                <li onclick="copyToClipboardMarkdownTable()"><a>Markdown <span class="text-right text-lg"
+                            id="exportMarkdownIcon"><i class="fa-solid fa-clipboard"></i></span></a></li>
+                <li onclick="copyToClipboardCSV()"><a>CSV <span class="text-right text-lg" id="exportCSVIcon"><i
+                                class="fa-solid fa-clipboard"></i></a></span></li>
             </ul>
         </div>
-        <div class="navbar-end">
-            <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost rounded-btn">Theme <i
-                        class="fa-solid fa-chevron-down"></i></div>
-                <ul tabindex="0" id="theme-selector"
-                    class="menu dropdown-content z-[1] p-2 shadow bg-base-200 rounded-box w-40">
-                    <li id="theme-option-light" onclick="changeTheme(this)"><a>Light</a></li>
-                    <li id="theme-option-autumn" onclick="changeTheme(this)"><a>Autumn</a></li>
-                    <li id="theme-option-fantasy" onclick="changeTheme(this)"><a>Fantasy</a></li>
-                    <li id="theme-option-dark" onclick="changeTheme(this)"><a>Dark</a></li>
-                    <li id="theme-option-dracula" onclick="changeTheme(this)"><a>Dracula</a></li>
-                    <li id="theme-option-night" onclick="changeTheme(this)"><a>Night</a></li>
-                    <li id="theme-option-dim" onclick="changeTheme(this)"><a>Dim</a></li>
-                    <li id="theme-option-sunset" onclick="changeTheme(this)"><a>Sunset</a></li>
-                </ul>
-            </div>
-            <a class="btn btn-ghost" href="https://github.com/ra1nb0rn/search_vulns">
-                <i class="fa-brands fa-github text-xl"></i>
-            </a>
-        </div>
     </div>
-
-    <!-- BEGIN SearchVulns -->
-    <div class="md:max-w-8xl lg:max-w-6.5xl 2xl:max-w-8xl mx-auto text-center mt-4 w-full">
-        <div class="flex flex-row rounded-box items-center w-full mx-auto p-3 bg-base-300">
-            <div class="dropdown dropdown-open sm:mr-1 md:mr-2 w-full" id="queryInputConstruct"
-                onfocusout="closeCPESuggestions(event)">
-                <label class="input input-bordered flex w-full items-center gap-5 sm:mr-1 md:mr-2">
-                    <i class="fa-solid fa-database"></i>
-                    <input type="text" class="w-full" autofocus placeholder="Enter Software" name="query" id="query" />
-                    <kbd class="kbd kbd-sm text-xl">⏎</kbd>
-                </label>
-                <div tabindex="0"
-                    class="dropdown-content hidden z-[10] w-fit min-w-full shadow-2xl bg-base-300 rounded-box mt-2"
-                    id="cpeSuggestions">
-                </div>
-            </div>
-            <button type="submit"
-                class="btn btn-primary btn-outline sm:mr-1 md:mr-4 lg:mr-5 xl:mr-6 xl:ml-1 2xl:ml-2 text-base"
-                name="buttonSearchVulns" id="buttonSearchVulns" onclick="searchVulnsAction(this)">
-                <i class="fa-solid fa-magnifying-glass"></i> Search Vulns
-            </button>
-            <div class="dropdown dropdown mr-1">
-                <div tabindex="0" role="button" class="btn btn-neutral rounded-btn text-base"><i
-                        class="fa-solid fa-gear"></i></div>
-                <div tabindex="0" class="dropdown-content z-[1] p-2 shadow-2xl bg-base-200 rounded-box w-64 mt-2">
-                    <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
-                            <span class="label-text">Ignore general vulns &nbsp;<div class="tooltip"
-                                    data-tip="Some vulnerabilities in the used data set do not contain information about the affected version. These are often False Positives and showing them can be disabled here.">
-                                    <i class="fas fa-info-circle text-content"></i>
-                                </div></span>
-                            <input id="generalVulnsConfig" type="checkbox" class="checkbox"
-                                onclick="changeSearchConfig(this)" />
-                        </label>
-                    </div>
-                    <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
-                            <span class="label-text">Only EDB exploits &nbsp;<div class="tooltip"
-                                    data-tip="Only show references to exploits from the official Exploit-DB. Exploit code from the EDB is usually advanced and readily usable.">
-                                    <i class="fas fa-info-circle text-content"></i>
-                                </div></span>
-                            <input id="onlyEdbExploitsConfig" type="checkbox" class="checkbox"
-                                onclick="changeSearchConfig(this)" />
-                        </label>
-                    </div>
-                    <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
-                            <span class="label-text">Show single version vulns &nbsp;<div class="tooltip"
-                                    data-tip="Some vulnerabilities only seem to affect a specific version of a product. This could be an error in the data set and returning vulnerabilities for lower versions can be enabled here.">
-                                    <i class="fas fa-info-circle text-content"></i>
-                                </div></span>
-                            <input id="showSingleVersionVulnsConfig" type="checkbox" class="checkbox"
-                                onclick="changeSearchConfig(this)" />
-                        </label>
-                    </div>
-                    <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
-                            <span class="label-text">Display table filtering &nbsp;<div class="tooltip tooltip-bottom"
-                                    data-tip="Choose whether the filtering of CVEs and table columns should be displayed or only affect the export.">
-                                    <i class="fas fa-info-circle text-content"></i>
-                                </div></span>
-                            <input id="showTableFilteringConfig" type="checkbox" class="checkbox"
-                                onclick="changeSearchConfig(this)" />
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <div class="dropdown mr-1">
-                <button tabindex="0" role="button"
-                    class="btn btn-disabled btn-neutral rounded-btn text-base p-0 sm:min-w-24 lg:min-w-28"
-                    id="buttonFilterCVEs">
-                    <i class="fa-solid fa-filter"></i>Filter <i class="fa-solid fa-chevron-down"></i>
-                </button>
-                <div tabindex="0"
-                    class="dropdown-content left-1/2 transform -translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box min-w-36 mt-2 overflow-y-auto max-h-96"
-                    id="filterCVEsDropdown">
-                </div>
-            </div>
-            <div class="dropdown dropdown mr-1">
-                <div tabindex="0" role="button"
-                    class="btn btn-disabled btn-neutral rounded-btn text-base p-0 sm:min-w-32 lg:min-w-36"
-                    id="buttonManageColumns">
-                    <i class="fa-solid fa-table-columns"></i>Columns <i class="fa-solid fa-chevron-down"></i>
-                </div>
-                <div tabindex="0"
-                    class="dropdown-content left-1/2 transform -translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box w-auto min-w-40 mt-2">
-                    <div class="items-center flex-row mb-2">
-                        <button class="btn btn-sm btn-neutral w-14 sm:mr-1 md:mr-2" id="showColumnAll"
-                            onclick="changeColumnConfig(this)">All</button>
-                        <button class="btn btn-sm btn-neutral w-16" id="showColumnNone"
-                            onclick="changeColumnConfig(this)">None</button>
-                    </div>
-                    <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
-                            <span class="label-text">CVE-ID
-                            </span>
-                            <input id="showColumnCVEID" type="checkbox" class="checkbox"
-                                onclick="changeColumnConfig(this)" />
-                        </label>
-                    </div>
-                    <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
-                            <span class="label-text">CVSS-Score
-                            </span>
-                            <input id="showColumnCVSS" type="checkbox" class="checkbox"
-                                onclick="changeColumnConfig(this)" />
-                        </label>
-                    </div>
-                    <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
-                            <span class="label-text">Description
-                            </span>
-                            <input id="showColumnDescription" type="checkbox" class="checkbox"
-                                onclick="changeColumnConfig(this)" />
-                        </label>
-                    </div>
-                    <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
-                            <span class="label-text">Exploits
-                            </span>
-                            <input id="showColumnExploits" type="checkbox" class="checkbox"
-                                onclick="changeColumnConfig(this)" />
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button"
-                    class="btn btn-disabled btn-neutral rounded-btn text-base p-0 sm:min-w-28 lg:min-w-32"
-                    id="buttonExportResults">
-                    <i class="fa-solid fa-arrow-up-from-bracket"></i></i>Export <i class="fa-solid fa-chevron-down"></i>
-                </div>
-                <ul tabindex="0" class="menu dropdown-content z-[1] p-1 mt-2 shadow bg-base-200 rounded-box w-40">
-                    <li onclick="copyToClipboardMarkdownTable()"><a>Markdown <span class="text-right text-lg"
-                                id="exportMarkdownIcon"><i class="fa-solid fa-clipboard"></i></span></a></li>
-                    <li onclick="copyToClipboardCSV()"><a>CSV <span class="text-right text-lg" id="exportCSVIcon"><i
-                                    class="fa-solid fa-clipboard"></i></a></span></li>
-                </ul>
-            </div>
-        </div>
-        <div class="w-full mx-auto mt-5" id="search-display">
-        </div>
-        <div class="flex flex-row items-center w-fit mx-auto mt-2" id="vulns">
-        </div>
-        <div class="flex flex-col w-full border-opacity-50 mt-4 mb-4" id="related-queries-display">
-        </div>
+    <div class="w-full mx-auto mt-5" id="search-display">
     </div>
-
-    {% if show_recaptcha == true %}
-    <button id="toTopButton" onclick="backToTop()" title="Go To Top"
-        class="hidden btn btn-circle btn-accent fixed z-50 bottom-20 right-2.5 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
-        <i class="fa-solid fa-arrow-up"></i>
-    </button>
-    <div class="hidden g-recaptcha" id="grecaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
-    {% else %}
-    <button id="toTopButton" onclick="backToTop()" title="Go To Top"
-        class="hidden btn btn-circle btn-accent fixed z-50 bottom-5 right-5 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
-        <i class="fa-solid fa-arrow-up"></i>
-    </button>
-    {% endif %}
-
-    <!-- Include classes only used by frontend JS for compiler
-    <div class="hidden text-error text-warning badge border-none text-success btn-xs text-warning loading loading-spinner bg-warning text-right tooltip relative z-10 w-80 p-2 p-1 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300 table table-sm table-rounded btn-disabled mr-1 mr-2 shadow-base-300 btn-success btn-outline ml-1 ml-2 sm:ml-1 sm:ml-2 divider divider-info text-lg text-info text-left grid place-items-center list-disc text-nowrap whitespace-nowrap p-1.5 active text-base-content w-104 font-light font-medium font-bold pl-6 text-wrap tooltip-top z-10 z-20 table-auto translate-x-2.5 text-base-content mb-3 align-middle ">
+    <div class="flex flex-row items-center w-fit mx-auto mt-2" id="vulns">
     </div>
-    -->
+    <div class="flex flex-col w-full border-opacity-50 mt-4 mb-4" id="related-queries-display">
+    </div>
+</div>
+{% if show_captcha == true %}
+<div class="hidden g-recaptcha" id="grecaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+{% endif %}
+{% endblock %}
 
-    <script src="{{ url_for('static', filename='js/jquery-3.7.1.min.js') }}"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/fontawesome-6.5.1.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
-    {% if show_recaptcha == true %}
-    <script src="https://www.google.com/recaptcha/api.js?render=explicit&onload=onRecaptchaLoaded"></script>
-    {% endif %}
-    <script src="{{ url_for('static', filename='js/search_vulns.js') }}"></script>
-</body>
-
-</html>
+{% block custom_js %}
+{% if show_captcha == true %}
+<script>recaptchaSize = "invisible";</script>
+<script src="https://www.google.com/recaptcha/api.js?render=explicit&onload=onRecaptchaLoaded"></script>
+{% endif %}
+<script src="{{ url_for('static', filename='js/search_vulns.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" sizes="180x180">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome-6.5.1.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/daisyui.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flowbite-custom.css') }}">
+    {% block custom_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/search_vulns.css') }}">
+    {% endblock %}
+    <title>SearchVulns</title>
+</head>
+
+<body class="hidden flex flex-col min-h-screen">
+
+    <!-- BEGIN HEADER -->
+    <div class="navbar bg-base-100">
+        <div class="navbar-start">
+            <div class="dropdown">
+                <div tabindex="0" role="button" class="btn btn-ghost md:hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h8m-8 6h16" />
+                    </svg>
+                </div>
+                <ul tabindex="0"
+                    class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/api/setup">API</a></li>
+                    <li><a href="/news">News</a></li>
+                </ul>
+            </div>
+            <a class="btn btn-ghost text-xl" href="/"><i class="fa-solid fa-bug my-auto"></i>
+                SearchVulns</a>
+        </div>
+        <div class="navbar-center hidden md:flex">
+            <ul class="menu menu-horizontal px-1">
+                <li><a href="/">Home</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/api/setup">API</a></li>
+                <li><a href="/news">News</a></li>
+            </ul>
+        </div>
+        <div class="navbar-end">
+            <div class="dropdown dropdown-end">
+                <div tabindex="0" role="button" class="btn btn-ghost rounded-btn">Theme <i
+                        class="fa-solid fa-chevron-down"></i></div>
+                <ul tabindex="0" id="theme-selector"
+                    class="menu dropdown-content z-[1] p-2 shadow bg-base-200 rounded-box w-40">
+                    <li id="theme-option-light" onclick="changeTheme(this)"><a>Light</a></li>
+                    <li id="theme-option-autumn" onclick="changeTheme(this)"><a>Autumn</a></li>
+                    <li id="theme-option-fantasy" onclick="changeTheme(this)"><a>Fantasy</a></li>
+                    <li id="theme-option-dark" onclick="changeTheme(this)"><a>Dark</a></li>
+                    <li id="theme-option-dracula" onclick="changeTheme(this)"><a>Dracula</a></li>
+                    <li id="theme-option-night" onclick="changeTheme(this)"><a>Night</a></li>
+                    <li id="theme-option-dim" onclick="changeTheme(this)"><a>Dim</a></li>
+                    <li id="theme-option-sunset" onclick="changeTheme(this)"><a>Sunset</a></li>
+                </ul>
+            </div>
+            <a class="btn btn-ghost" href="https://github.com/ra1nb0rn/search_vulns">
+                <i class="fa-brands fa-github text-xl"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- BEGIN SearchVulns -->
+    {% block site_content %}
+    {% endblock %}
+
+    {% if show_recaptcha is defined and show_recaptcha == true %}
+    <button id="toTopButton" onclick="backToTop()" title="Go To Top"
+        class="hidden btn btn-circle btn-accent fixed z-50 bottom-20 right-2.5 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
+        <i class="fa-solid fa-arrow-up"></i>
+    </button>
+    <div class="hidden g-recaptcha" id="grecaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+    {% else %}
+    <button id="toTopButton" onclick="backToTop()" title="Go To Top"
+        class="hidden btn btn-circle btn-accent fixed z-50 bottom-5 right-5 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
+        <i class="fa-solid fa-arrow-up"></i>
+    </button>
+    {% endif %}
+
+    <!-- Include classes only used by frontend JS for compiler
+    <div class="hidden text-error text-warning badge border-none text-success btn-xs text-warning loading loading-spinner bg-warning text-right tooltip relative z-10 w-80 p-2 p-1 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300 table table-sm table-rounded btn-disabled mr-1 mr-2 shadow-base-300 btn-success btn-outline ml-1 ml-2 sm:ml-1 sm:ml-2 divider divider-info text-lg text-info text-left grid place-items-center list-disc text-nowrap whitespace-nowrap p-1.5 active text-base-content w-104 font-light font-medium font-bold pl-6 text-wrap tooltip-top z-10 z-20 table-auto translate-x-2.5 text-base-content mb-3 align-middle text-2xl text-xl text-base font-semibold my-3 my-2 my-1 ml-6 mt-3 btn btn-sm btn-circle m-1 mr-3 alert alert-success mb-2 mx-3">
+    </div>
+    -->
+
+    <script src="{{ url_for('static', filename='js/jquery-3.7.1.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/fontawesome-6.5.1.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/search_vulns_theme.js') }}"></script>
+    {% block custom_js %}
+    {% endblock %}
+    <script>
+        // implement back to top button
+        function backToTop() {
+            window.scroll({ top: 0, behavior: "smooth" });
+        }
+        var toTopButton = $("#toTopButton");
+        window.onscroll = function () {
+            if (document.body.scrollTop > 750 || document.documentElement.scrollTop > 750)
+                toTopButton.removeClass("hidden");
+            else
+                toTopButton.addClass("hidden");
+        };
+    </script>
+</body>
+
+</html>

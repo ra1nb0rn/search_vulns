@@ -11,8 +11,6 @@ var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
 var exportIcon = `<i class="fa-solid fa-clipboard"></i>`, exportIconSuccess = `<i class="fa-solid fa-clipboard-check text-success"></i>`;
 var curSortColIdx = 1, curSortColAsc = false, searchIgnoreNextKeyup = false;
 var doneTypingQueryTimer, queryInput = $('#query'), doneTypingQueryInterval = 600;  //time in ms
-var default_theme = 'dim';
-var grecaptchaWidget, recaptchaLoaded = false;
 var curSelectedCPESuggestion = -1, suggestedQueriesJustOpened = false;
 
 
@@ -629,7 +627,6 @@ function searchVulns(query, url_query, recaptcha_response) {
     });
 }
 
-
 function searchVulnsAction(actionElement) {
     clearTimeout(doneTypingQueryTimer);
 
@@ -740,58 +737,6 @@ function copyToClipboardCVSS(cvssClipboardButton) {
     $(cvssClipboardButton).find('span').find('span').addClass('text-success');
     $(cvssClipboardButton).find('span').find('span').html('<i class="fa-solid fa-clipboard-check"></i>');
     document.activeElement.blur();
-}
-
-function changeTheme(themeElement) {
-    var theme, previousTheme = document.documentElement.getAttribute('data-theme');
-    if (themeElement != null)
-        theme = themeElement.id.split('-').slice(-1)[0];
-    else {
-        theme = default_theme;
-        themeElement = $('#theme-option-' + default_theme);
-    }
-    document.documentElement.setAttribute("data-theme", theme);
-    $('#theme-selector').find('li a').removeClass('active');
-    $('#theme-selector').find('li a span').remove();
-    $(themeElement).find('a').addClass('active');
-    $(themeElement).find('a').append('<span class="text-right"><i class="fa-solid fa-check"></i></span>');
-    localStorage.setItem("theme", theme);
-
-    // change reCAPTCHA theme by replacing the HTML element with a new one if theme type changes (light/dark)
-    var themeType = 'dark', previousThemeType = 'dark';
-    if (['light', 'autumn', 'fantasy'].includes(theme))
-        themeType = 'light';
-    if (['light', 'autumn', 'fantasy'].includes(previousTheme))
-        previousThemeType = 'light';
-
-    if (recaptchaLoaded && ($('#grecaptcha').hasClass("hidden") || themeType != previousThemeType)) {
-        $('#grecaptcha').addClass('hidden');
-        var themeType = 'dark';
-        if (['light', 'autumn', 'fantasy'].includes(theme))
-            themeType = 'light';
-
-        var oldClasses = $('#grecaptcha')[0].className;
-        if (grecaptchaWidget !== undefined) {
-            grecaptcha.reset(grecaptchaWidget);
-        }
-
-        var sitekey = $('#grecaptcha').attr('data-sitekey');
-        var newRecaptchaContainer = document.createElement('div');
-        newRecaptchaContainer.className = oldClasses;
-        newRecaptchaContainer.setAttribute('data-sitekey', sitekey);
-        $('#grecaptcha').replaceWith(newRecaptchaContainer);
-        newRecaptchaContainer.id = 'grecaptcha';
-
-        grecaptchaWidget = grecaptcha.render('grecaptcha', {
-            'sitekey' : sitekey,
-            'theme' : themeType,
-            'size': 'invisible'
-        });
-        // fix some flashing in dark mode, since white background is rendered first
-        setTimeout(function () {
-            $('#grecaptcha').removeClass('hidden');
-        }, 250);
-    }
 }
 
 function changeSearchConfig(configElement) {
@@ -957,10 +902,6 @@ function fixDropdownClicking() {
     });
 }
 
-function backToTop() {
-    window.scroll({ top: 0, behavior: "smooth" });
-}
-
 function retrieveCPESuggestions(url_query, recaptcha_response) {
     var headers = {}
     if (recaptcha_response !== undefined)
@@ -1051,14 +992,6 @@ function closeCPESuggestions(event) {
     }
 }
 
-function onRecaptchaLoaded() {
-    recaptchaLoaded = true;
-    if (localStorage.getItem('theme') !== null)
-        changeTheme($('#theme-option-' + localStorage.getItem('theme'))[0]);
-    else
-        changeTheme();
-}
-
 
 /* init */
 
@@ -1079,14 +1012,6 @@ $("#query").keypress(function (event) {
     }
 });
 
-// set theme
-document.addEventListener('DOMContentLoaded', function() {
-    if (localStorage.getItem('theme') !== null)
-        changeTheme($('#theme-option-' + localStorage.getItem('theme'))[0]);
-    else
-        changeTheme();
-    document.body.classList.remove('hidden');
-});
 
 // check for API key
 if (localStorage.getItem('apiKey') !== null)
@@ -1100,15 +1025,6 @@ setupConfigFromLocalstorage();
 
 // check for existing query in URL and insert its parameters
 initQuery();
-
-// register scroll events for back to top button to display or not
-var toTopButton = $("#toTopButton");
-window.onscroll = function() {
-    if (document.body.scrollTop > 750 || document.documentElement.scrollTop > 750)
-        toTopButton.removeClass("hidden");
-    else
-        toTopButton.addClass("hidden");
-};
 
 // register timers and functions for query input field
 // on keyup, start the countdown to register finished typing

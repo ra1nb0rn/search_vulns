@@ -2745,6 +2745,10 @@ html {
   margin-top: 1.25rem;
 }
 
+.block {
+  display: block;
+}
+
 .flex {
   display: flex;
 }
@@ -3209,10 +3213,6 @@ html {
 
   .lg\:min-w-36 {
     min-width: 9rem;
-  }
-
-  .lg\:max-w-7xl {
-    max-width: 80rem;
   }
 
   .lg\:max-w-6 {

@@ -246,12 +246,12 @@ def version():
 @app.route("/index")
 @app.route("/home")
 def index():
-    show_recaptcha = config['RECAPTCHA_AND_API']['ENABLED']
+    show_captcha = config['RECAPTCHA_AND_API']['ENABLED']
     if request.cookies.get('isAPIKeyConfigured', '').lower() == 'true':
-        show_recaptcha = False
+        show_captcha = False
 
     recaptcha_settings = {'recaptcha_site_key': config['RECAPTCHA_AND_API']['SITE_KEY_V3'],
-                          'show_recaptcha': show_recaptcha}
+                          'show_captcha': show_captcha}
     return render_template("index.html", **recaptcha_settings)
 
 
@@ -288,7 +288,7 @@ def about():
 @app.route("/api/setup")
 def api_setup():
     recaptcha_settings = {'recaptcha_site_key': config['RECAPTCHA_AND_API']['SITE_KEY_V2'],
-                          'recaptcha_enabled': config['RECAPTCHA_AND_API']['ENABLED']}
+                          'show_captcha': config['RECAPTCHA_AND_API']['ENABLED']}
     return render_template("api-setup.html", **recaptcha_settings)
 
 
