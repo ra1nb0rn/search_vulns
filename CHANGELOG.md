@@ -1,6 +1,24 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.5.2 - 2024-05-13
+### Added
+- Added equivalent CPE for GoAnywhere MFT.
+- Added more lincense information of used data and software.
+
+### Changed
+- Updated GitHub actions to use Node.js 20.
+- Renamed "Usage" to "About" in web frontend.
+- Refactored Jinja templates for web frontend.
+- Download of EDB information now solely uses its GitLab repo.
+- Increased vuln table width in web frontend for larger screen sizes.
+
+### Fixed
+- Updated and fixed test cases.
+- Fixed install of Python packages.
+- Small bug fixes and improvements.
+
+
 ## v0.5.1 - 2024-04-26
 ### Added
 - A flag to use the best matching *created* CPE automatically in CLI.
