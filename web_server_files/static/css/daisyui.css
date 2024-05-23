@@ -2773,6 +2773,10 @@ html {
   height: 1.25rem;
 }
 
+.max-h-90 {
+  max-height: 22.5rem;
+}
+
 .max-h-96 {
   max-height: 24rem;
 }
@@ -2919,6 +2923,10 @@ html {
 
 .overflow-y-auto {
   overflow-y: auto;
+}
+
+.overflow-x-hidden {
+  overflow-x: hidden;
 }
 
 .whitespace-nowrap {

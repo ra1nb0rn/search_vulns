@@ -923,7 +923,7 @@ function retrieveCPESuggestions(url_query, recaptcha_response) {
             else if (cpeInfos.length > 0) {
                 var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box">';
                 for (var i = 0; i < cpeInfos.length; i++) {
-                    dropdownContent += `<li><a class="text-nowrap whitespace-nowrap" id="cpe-suggestion-${i}" onclick="searchVulnsAction(this)">${htmlEntities(cpeInfos[i][0])}</a></li>`;
+                    dropdownContent += `<li tabindex="0"><a class="text-nowrap whitespace-nowrap" id="cpe-suggestion-${i}" onclick="searchVulnsAction(this)">${htmlEntities(cpeInfos[i][0])}</a></li>`;
                 }
                 dropdownContent += '</ul>';
                 $('#cpeSuggestions').html(dropdownContent);
@@ -992,6 +992,18 @@ function closeCPESuggestions(event) {
     }
 }
 
+function ensureSuggestionVisible(suggestionElement) {
+    const dropdownMenu = $('#cpeSuggestions')[0];
+    const suggestionElementRect = suggestionElement.getBoundingClientRect();
+    const dropdownRect = dropdownMenu.getBoundingClientRect();
+
+    if (suggestionElementRect.top < dropdownRect.top) {
+        dropdownMenu.scrollTop -= (dropdownRect.top - suggestionElementRect.top);
+    } else if (suggestionElementRect.bottom > dropdownRect.bottom) {
+        dropdownMenu.scrollTop += (suggestionElementRect.bottom - dropdownRect.bottom);
+    }
+}
+
 
 /* init */
 
@@ -1044,8 +1056,11 @@ queryInput.on('keyup', function (event) {
             curSelectedCPESuggestion = Math.max(-1, curSelectedCPESuggestion);
             curSelectedCPESuggestion = Math.min(curSelectedCPESuggestion, $("#cpeSuggestions").find('ul').children('li').length - 1);
 
-            if (curSelectedCPESuggestion > -1)
-                $('#cpe-suggestion-' + curSelectedCPESuggestion).addClass('my-menu-item-hover');
+            if (curSelectedCPESuggestion > -1) {
+                const suggestionElement = $('#cpe-suggestion-' + curSelectedCPESuggestion);
+                suggestionElement.addClass('my-menu-item-hover');
+                ensureSuggestionVisible(suggestionElement[0]);
+            }
 
             event.preventDefault();  // prevent jumping of cursor to start or end
         }

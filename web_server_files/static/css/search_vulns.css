@@ -157,3 +157,21 @@ tr.exploited-vuln td {
     /* Instead use this non-standard one: */
     word-break: break-word;
 }
+
+/* Vertical scrollbar styles for WebKit browsers (Chrome, Safari) */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 0.45rem !important; /* Width for the vertical scrollbar */
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+    border-radius: 0.2rem !important;
+    background: transparent; /* Transparent background to simulate margin */
+    margin-top: 0.55rem; /* Adjust to desired top margin */
+    margin-bottom: 0.55rem; /* Adjust to desired bottom margin */
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    border-radius: 0.5rem !important;
+    background-color: oklch(var(--bc)) !important;
+    box-shadow: inset 0 0 0 0.55rem; /* Simulate the margin with shadow */
+}
