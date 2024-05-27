@@ -1,6 +1,15 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.5.3 - 2024-05-24
+### Changed
+- CPE suggestions dropdown is now limited in height and is scrollable.
+- Arrow keys can now be held down to browse list of CPE suggestions faster.
+
+### Fixed
+- Updated exploit test case.
+
+
 ## v0.5.2 - 2024-05-13
 ### Added
 - Added equivalent CPE for GoAnywhere MFT.
