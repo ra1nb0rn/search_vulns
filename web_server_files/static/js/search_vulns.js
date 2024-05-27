@@ -11,6 +11,7 @@ var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
 var exportIcon = `<i class="fa-solid fa-clipboard"></i>`, exportIconSuccess = `<i class="fa-solid fa-clipboard-check text-success"></i>`;
 var curSortColIdx = 1, curSortColAsc = false, searchIgnoreNextKeyup = false;
 var doneTypingQueryTimer, queryInput = $('#query'), doneTypingQueryInterval = 600;  //time in ms
+let arrowKeyUpDownInterval = null, arrowKeyUpDownIntervalTime = 100, arrowKeyUpDownHoldDetectionTimer = null, arrowKeyUpDownHoldDetectionTime = 150;
 var curSelectedCPESuggestion = -1, suggestedQueriesJustOpened = false;
 
 
@@ -1024,6 +1025,27 @@ $("#query").keypress(function (event) {
     }
 });
 
+function moveCPESuggestionUpDown(event) {
+    // move currently selected CPE suggestion up or down depending on event
+    if (curSelectedCPESuggestion > -1)
+        $('#cpe-suggestion-' + curSelectedCPESuggestion).removeClass('my-menu-item-hover');
+
+    if (event.keyCode == 38)
+        curSelectedCPESuggestion--;
+    else if (event.keyCode == 40)
+        curSelectedCPESuggestion++;
+
+    // enforce lower and upper bounds
+    curSelectedCPESuggestion = Math.max(-1, curSelectedCPESuggestion);
+    curSelectedCPESuggestion = Math.min(curSelectedCPESuggestion, $("#cpeSuggestions").find('ul').children('li').length - 1);
+
+    if (curSelectedCPESuggestion > -1) {
+        const suggestionElement = $('#cpe-suggestion-' + curSelectedCPESuggestion);
+        suggestionElement.addClass('my-menu-item-hover');
+        ensureSuggestionVisible(suggestionElement[0]);
+    }
+}
+
 
 // check for API key
 if (localStorage.getItem('apiKey') !== null)
@@ -1044,24 +1066,14 @@ queryInput.on('keyup', function (event) {
     if (event.keyCode !== undefined) {
         // arrows (up: 38 ; down: 40)
         if ([38, 40].includes(event.keyCode) && !$('#cpeSuggestions').hasClass('hidden') && $("#cpeSuggestions").find('ul') != null) {
-            if (curSelectedCPESuggestion > -1)
-                $('#cpe-suggestion-' + curSelectedCPESuggestion).removeClass('my-menu-item-hover');
-
-            if (event.keyCode == 38)
-                curSelectedCPESuggestion--;
-            else if (event.keyCode == 40)
-                curSelectedCPESuggestion++;
-
-            // enforce lower and upper bounds
-            curSelectedCPESuggestion = Math.max(-1, curSelectedCPESuggestion);
-            curSelectedCPESuggestion = Math.min(curSelectedCPESuggestion, $("#cpeSuggestions").find('ul').children('li').length - 1);
-
-            if (curSelectedCPESuggestion > -1) {
-                const suggestionElement = $('#cpe-suggestion-' + curSelectedCPESuggestion);
-                suggestionElement.addClass('my-menu-item-hover');
-                ensureSuggestionVisible(suggestionElement[0]);
+            if (arrowKeyUpDownInterval !== null) {
+                clearInterval(arrowKeyUpDownInterval);
+                arrowKeyUpDownInterval = null;
             }
-
+            if (arrowKeyUpDownHoldDetectionTimer !== null) {
+                clearTimeout(arrowKeyUpDownHoldDetectionTimer);
+                arrowKeyUpDownHoldDetectionTimer = null;
+            }
             event.preventDefault();  // prevent jumping of cursor to start or end
         }
         // any key except CTRL, OPTION, CMD/SUPER/Windows
@@ -1079,6 +1091,19 @@ queryInput.on('keydown', function (event) {
     if (event.keyCode !== undefined) {
         if ([38, 40].includes(event.keyCode) && !$('#cpeSuggestions').hasClass('hidden') && $("#cpeSuggestions").find('ul') != null) {
             event.preventDefault();  // prevent jumping of cursor to start or end
+
+            // register key press only if no interval is running or about to run
+            if (arrowKeyUpDownInterval === null && arrowKeyUpDownHoldDetectionTimer == null) {
+                // immediately trigger once
+                moveCPESuggestionUpDown(event);
+
+                // set a timer to detect held down key and initiate a repeated interval
+                arrowKeyUpDownHoldDetectionTimer = setTimeout(() => {
+                    arrowKeyUpDownInterval = setInterval(() => {
+                        moveCPESuggestionUpDown(event);
+                    }, arrowKeyUpDownIntervalTime);
+                }, arrowKeyUpDownHoldDetectionTime);
+            }
         }
         // any key except CTRL, OPTION, CMD/SUPER/Windows
         else if(![13, 17, 18, 37, 39, 91, 229].includes(event.keyCode)) {
