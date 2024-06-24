@@ -1,6 +1,11 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.5.4 - 2024-06-24
+### Fixed
+- Updated several test cases.
+
+
 ## v0.5.3 - 2024-05-24
 ### Changed
 - CPE suggestions dropdown is now limited in height and is scrollable.
