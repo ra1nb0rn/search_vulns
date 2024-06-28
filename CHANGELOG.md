@@ -1,6 +1,14 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.5.5 - 2024-06-28
+### Changed
+- Exclude endoflife.date tests from workflow that updates the release assets.
+
+### Fixed
+- Update WordPress test case for endoflife.date.
+
+
 ## v0.5.4 - 2024-06-24
 ### Fixed
 - Updated several test cases.
