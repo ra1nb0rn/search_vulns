@@ -106,7 +106,7 @@ create_vuln_and_software_db() {
 
     if [ $? != 0 ]; then
         echo -e "${RED}Could not create vulnerability database"
-        return 1
+        exit 1
     fi
 }
 

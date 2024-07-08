@@ -1,6 +1,12 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.5.6 - 2024-07-08
+### Fixed
+- Update test case.
+- Fix install script to terminate with error code if DB build fails.
+
+
 ## v0.5.5 - 2024-06-28
 ### Changed
 - Exclude endoflife.date tests from workflow that updates the release assets.
