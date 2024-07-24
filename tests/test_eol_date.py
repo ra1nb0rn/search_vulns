@@ -14,14 +14,14 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:wordpress:wordpress:*:*:*:*:*:*:*:*'
         result = search_vulns.search_vulns(query=query, add_other_exploit_refs=False, is_good_cpe=True)
-        expected_result = {'status': 'N/A', 'latest': '6.5.5', 'ref': 'https://endoflife.date/wordpress'}
+        expected_result = {'status': 'N/A', 'latest': '6.6', 'ref': 'https://endoflife.date/wordpress'}
         self.assertEqual(result[query]['version_status'], expected_result)
 
     def test_search_wp_572(self):
         self.maxDiff = None
         query = 'cpe:2.3:a:wordpress:wordpress:5.7.2:*:*:*:*:*:*:*'
         result = search_vulns.search_vulns(query=query, add_other_exploit_refs=False, is_good_cpe=True)
-        expected_result = {'status': 'eol', 'latest': '6.5.5', 'ref': 'https://endoflife.date/wordpress'}
+        expected_result = {'status': 'eol', 'latest': '6.6', 'ref': 'https://endoflife.date/wordpress'}
         self.assertEqual(result[query]['version_status'], expected_result)
 
     def test_search_jquery_general(self):
