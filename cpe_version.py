@@ -116,7 +116,7 @@ class CPEVersion:
             if ONLY_ZEROES_STR_RE.match(part) and ONLY_ZEROES_STR_RE.match(other_part):
                 if part_idx != min_part_count-1:
                     continue
-                if len(parts) < len(other_parts):
+                if len(parts) < len(other_parts) and self != other:
                     return True
                 return False
 
