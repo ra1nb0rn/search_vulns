@@ -85,6 +85,9 @@ class CPEVersion:
         parts, other_parts = self.get_version_parts(), other.get_version_parts()
         min_part_count = min(len(parts), len(other_parts))
 
+        if self == other:
+            return False
+
         for part_idx in range(min_part_count):
             part, other_part = parts[part_idx], other_parts[part_idx]
 
@@ -116,7 +119,7 @@ class CPEVersion:
             if ONLY_ZEROES_STR_RE.match(part) and ONLY_ZEROES_STR_RE.match(other_part):
                 if part_idx != min_part_count-1:
                     continue
-                if len(parts) < len(other_parts) and self != other:
+                if len(parts) < len(other_parts):
                     return True
                 return False
 
