@@ -68,5 +68,6 @@
     "cpe:2.3:a:pivotal:vmware_harbor_registry:": ["cpe:2.3:a:vmware:harbor_container_registry:"],
     "cpe:2.3:a:docker:docker:": ["cpe:2.3:a:docker:engine:"],
     "cpe:2.3:a:fortra:goanywhere_managed_file_transfer:": ["cpe:2.3:a:helpsystems:goanywhere_managed_file_transfer:"],
-    "cpe:2.3:a:ghostscript:ghostscript:": ["cpe:2.3:a:artifex:ghostscript:"]
+    "cpe:2.3:a:ghostscript:ghostscript:": ["cpe:2.3:a:artifex:ghostscript:"],
+    "cpe:2.3:a:owncloud:owncloud:": ["cpe:2.3:a:owncloud:graph_api:"]
 }
