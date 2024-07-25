@@ -1,6 +1,20 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.5.7 - 2024-07-25
+### Added
+- Added equivalent CPE for Ghostscript.
+- Added equivalent CPE for OwnCloud.
+- Added links to public web instance and blog posts to GitHub README.
+
+### Changed
+- search_vulns logo in web app now uses snake case.
+
+### Fixed
+- Updated test cases.
+- Fixed comparison of zero-extended versions, e.g. 21.0 !< 21.0.0
+
+
 ## v0.5.6 - 2024-07-08
 ### Fixed
 - Update test case.
