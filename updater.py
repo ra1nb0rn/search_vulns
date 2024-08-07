@@ -441,7 +441,7 @@ def parse_eold_product_releases(release_info_raw):
     # parse manually instead of using a third-party YAML parser
     releases = []
 
-    for release_raw in release_info_raw.split('-   releaseCycle'):
+    for release_raw in re.split(r'- *releaseCycle', release_info_raw):
         release_raw = release_raw.strip()
         release_raw = release_raw.strip()
         if not release_raw:
@@ -459,7 +459,7 @@ def parse_eold_product_releases(release_info_raw):
                 line = line[:line.find('#')]
             if not added_back_cycle_key:
                 line = '-   releaseCycle' + line
-                added_back_cycle_key
+                added_back_cycle_key = True
 
             if line.startswith('-'):
                 line = line[1:]
@@ -575,8 +575,8 @@ def create_endoflife_date_table():
             # iterate over releases in reversed order, s.t. oldest release always has unique ID 0
             for i, release in enumerate(reversed(eold_entry['releases'])):
                 version_start = release['releaseCycle']
-                version_latest = release.get('releaseCyclelatest', '')  # e.g. slackware
-                eol_info = release.get('releaseCycleeol', 'false')
+                version_latest = release.get('latest', '')  # e.g. slackware
+                eol_info = release.get('eol', 'false')
                 db_data = (cpe, i, eold_entry['eold-id'], eold_entry['eold-title'],
                             version_start, version_latest, eol_info)
                 db_cursor.execute('INSERT INTO eol_date_data VALUES (?, ?, ?, ?, ?, ?, ?)', db_data)
