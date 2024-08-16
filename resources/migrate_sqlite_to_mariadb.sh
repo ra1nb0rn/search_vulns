@@ -8,6 +8,8 @@ add_vulndb_data() {
     mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "LOAD DATA LOCAL INFILE '$ABS_PATH/cve_poc_in_github_map.csv' INTO TABLE cve_poc_in_github_map FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n';"
     mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "LOAD DATA LOCAL INFILE '$ABS_PATH/nvd_exploits_refs.csv' INTO TABLE nvd_exploits_refs FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n';"
     mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "LOAD DATA LOCAL INFILE '$ABS_PATH/eol_date_data.csv' INTO TABLE eol_date_data FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n';"
+    mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "LOAD DATA LOCAL INFILE '$ABS_PATH/ghsa.csv' INTO TABLE ghsa FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n';"
+    mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "LOAD DATA LOCAL INFILE '$ABS_PATH/ghsa_cpe.csv' INTO TABLE ghsa_cpe FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n';"
     mariadb -u $USER --password=$PASSWORD -h $HOST -P $PORT -D "$DATABASE_NAME" -e "SET GLOBAL local_infile=0;"
 }
 

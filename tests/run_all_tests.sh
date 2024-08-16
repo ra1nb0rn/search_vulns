@@ -41,5 +41,9 @@ echo '[+] Running test_eol_date.py'
 python3 "${SCRIPT_DIR}/test_eol_date.py"
 EXIT_7=$?
 
+echo '[+] Running test_ghsa_completeness.py'
+python3 "${SCRIPT_DIR}/test_ghsa_completeness.py"
+EXIT_8=$?
+
 # https://stackoverflow.com/a/16358989
-! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_7 ))
+! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_7 || $EXIT_8 ))

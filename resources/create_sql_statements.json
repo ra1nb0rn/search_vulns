@@ -1,8 +1,8 @@
 {
     "TABLES": {
         "CVE": {
-            "sqlite": "DROP TABLE IF EXISTS cve; CREATE TABLE cve (cve_id VARCHAR(25), description TEXT, edb_ids TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3), base_score CHAR(3), vector VARCHAR(255), severity VARCHAR(15), cisa_known_exploited BOOL, PRIMARY KEY(cve_id))",
-            "mariadb": "CREATE OR REPLACE TABLE cve (cve_id VARCHAR(25) CHARACTER SET ascii, description TEXT, edb_ids TEXT CHARACTER SET ascii, published DATETIME, last_modified DATETIME, cvss_version CHAR(3) CHARACTER SET ascii, base_score CHAR(4) CHARACTER SET ascii, vector VARCHAR(255) CHARACTER SET ascii, severity VARCHAR(15) CHARACTER SET ascii, cisa_known_exploited BOOL, PRIMARY KEY(cve_id));"
+            "sqlite": "DROP TABLE IF EXISTS cve; CREATE TABLE cve (cve_id VARCHAR(25), description TEXT, edb_ids TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3), base_score CHAR(3), vector VARCHAR(200), severity VARCHAR(15), cisa_known_exploited BOOL, PRIMARY KEY(cve_id))",
+            "mariadb": "CREATE OR REPLACE TABLE cve (cve_id VARCHAR(25) CHARACTER SET ascii, description TEXT, edb_ids TEXT CHARACTER SET ascii, published DATETIME, last_modified DATETIME, cvss_version CHAR(3) CHARACTER SET ascii, base_score CHAR(4) CHARACTER SET ascii, vector VARCHAR(200) CHARACTER SET ascii, severity VARCHAR(15) CHARACTER SET ascii, cisa_known_exploited BOOL, PRIMARY KEY(cve_id));"
         },
         "CVE_CPE": {
             "sqlite": "DROP TABLE IF EXISTS cve_cpe; CREATE TABLE cve_cpe (cve_id VARCHAR(25), cpe VARCHAR(255), cpe_version_start VARCHAR(255), is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(255), is_cpe_version_end_including BOOL, PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including))",
@@ -23,6 +23,14 @@
         "EOL_DATE": {
             "sqlite": "DROP TABLE IF EXISTS eol_date_data; CREATE TABLE eol_date_data (cpe_prefix VARCHAR(255), release_id INTEGER, eold_id VARCHAR(255), eold_title VARCHAR(255), version_start VARCHAR(100), version_latest VARCHAR(100), eol_info VARCHAR(25), PRIMARY KEY (cpe_prefix, release_id));",
             "mariadb": "CREATE OR REPLACE TABLE eol_date_data (cpe_prefix VARCHAR(255), release_id INTEGER, eold_id VARCHAR(255), eold_title VARCHAR(255), version_start VARCHAR(100), version_latest VARCHAR(100), eol_info VARCHAR(25), PRIMARY KEY (cpe_prefix, release_id));"
+        },
+        "GHSA": {
+            "sqlite": "DROP TABLE IF EXISTS ghsa; CREATE TABLE ghsa (ghsa_id VARCHAR(20), aliases VARCHAR(100), description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3), base_score CHAR(3), vector VARCHAR(200), severity VARCHAR(15), PRIMARY KEY(ghsa_id));",
+            "mariadb": "CREATE OR REPLACE TABLE ghsa (ghsa_id VARCHAR(20) CHARACTER SET ascii, aliases VARCHAR(100)  CHARACTER SET ascii, description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3) CHARACTER SET ascii, base_score CHAR(4) CHARACTER SET ascii, vector VARCHAR(200) CHARACTER SET ascii, severity VARCHAR(15) CHARACTER SET ascii, PRIMARY KEY(ghsa_id));"
+        },
+        "GHSA_CPE": {
+            "sqlite": "DROP TABLE IF EXISTS ghsa_cpe; CREATE TABLE ghsa_cpe(ghsa_id VARCHAR(20), cpe VARCHAR(255), cpe_version_start VARCHAR(255), is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(255), is_cpe_version_end_including BOOL, PRIMARY KEY(ghsa_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including));",
+            "mariadb": "CREATE OR REPLACE TABLE ghsa_cpe (ghsa_id VARCHAR(20) CHARACTER SET ascii, cpe VARCHAR(255) CHARACTER SET utf8, cpe_version_start VARCHAR(255)  CHARACTER SET utf8, is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(255)  CHARACTER SET utf8, is_cpe_version_end_including BOOL, PRIMARY KEY(ghsa_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including), INDEX(cpe) USING BTREE);"
         }
     },
     "VIEWS" : {

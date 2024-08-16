@@ -144,59 +144,130 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
 
     detailed_vulns = {}
     for vuln_info in vulns:
-        vuln, match_reason = vuln_info
-        cve_id = vuln
-        if cve_id in detailed_vulns:
+        vuln_id, match_reason, source = vuln_info
+        if vuln_id in detailed_vulns:
             continue
 
-        query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score, vector, cisa_known_exploited FROM cve WHERE cve_id = ?'
-        db_cursor.execute(query, (cve_id,))
-        edb_ids, descr, publ, last_mod, cvss_ver, score, vector, cisa_known_exploited = db_cursor.fetchone()
-        detailed_vulns[cve_id] = {"id": cve_id, "description": descr, "published": str(publ), "modified": str(last_mod),
-                                  "href": "https://nvd.nist.gov/vuln/detail/%s" % cve_id, "cvss_ver": str(float(cvss_ver)),
-                                  "cvss": str(float(score)), "cvss_vec": vector, "vuln_match_reason": match_reason,
-                                  "cisa_known_exploited": bool(cisa_known_exploited)}
+        if source == 'nvd':
+            query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score, vector, cisa_known_exploited FROM cve WHERE cve_id = ?'
+            db_cursor.execute(query, (vuln_id,))
+            edb_ids, descr, publ, last_mod, cvss_ver, score, vector, cisa_known_exploited = db_cursor.fetchone()
+            detailed_vulns[vuln_id] = {"id": vuln_id, "description": descr, "published": str(publ), "modified": str(last_mod),
+                                    "href": "https://nvd.nist.gov/vuln/detail/%s" % vuln_id, "cvss_ver": str(float(cvss_ver)),
+                                    "cvss": str(float(score)), "cvss_vec": vector, "vuln_match_reason": match_reason,
+                                    "cisa_known_exploited": bool(cisa_known_exploited), "aliases": [], "sources": [source]}
 
-        edb_ids = edb_ids.strip()
-        if edb_ids:
-            detailed_vulns[cve_id]["exploits"] = []
-            for edb_id in edb_ids.split(","):
-                detailed_vulns[cve_id]["exploits"].append("https://www.exploit-db.com/exploits/%s" % edb_id)
+            edb_ids = edb_ids.strip()
+            if edb_ids:
+                detailed_vulns[vuln_id]["exploits"] = []
+                for edb_id in edb_ids.split(","):
+                    detailed_vulns[vuln_id]["exploits"].append("https://www.exploit-db.com/exploits/%s" % edb_id)
 
-        # add other exploit references
-        if add_other_exploit_refs:
-            # from NVD
-            query = 'SELECT exploit_ref FROM nvd_exploits_refs_view WHERE cve_id = ?'
-            nvd_exploit_refs = ''
-            db_cursor.execute(query, (cve_id,))
-            if db_cursor:
-                nvd_exploit_refs = db_cursor.fetchall()
-            if nvd_exploit_refs:
-                if "exploits" not in detailed_vulns[cve_id]:
-                    detailed_vulns[cve_id]["exploits"] = []
-                for nvd_exploit_ref in nvd_exploit_refs:
-                    if (nvd_exploit_ref[0] not in detailed_vulns[cve_id]["exploits"] and
-                            nvd_exploit_ref[0] + '/' not in detailed_vulns[cve_id]["exploits"] and
-                            nvd_exploit_ref[0][:-1] not in detailed_vulns[cve_id]["exploits"]):
-                        detailed_vulns[cve_id]["exploits"].append(nvd_exploit_ref[0])
+            # add other exploit references
+            if add_other_exploit_refs:
+                # from NVD
+                query = 'SELECT exploit_ref FROM nvd_exploits_refs_view WHERE cve_id = ?'
+                nvd_exploit_refs = ''
+                db_cursor.execute(query, (vuln_id,))
+                if db_cursor:
+                    nvd_exploit_refs = db_cursor.fetchall()
+                if nvd_exploit_refs:
+                    if "exploits" not in detailed_vulns[vuln_id]:
+                        detailed_vulns[vuln_id]["exploits"] = []
+                    for nvd_exploit_ref in nvd_exploit_refs:
+                        if (nvd_exploit_ref[0] not in detailed_vulns[vuln_id]["exploits"] and
+                                nvd_exploit_ref[0] + '/' not in detailed_vulns[vuln_id]["exploits"] and
+                                nvd_exploit_ref[0][:-1] not in detailed_vulns[vuln_id]["exploits"]):
+                            detailed_vulns[vuln_id]["exploits"].append(nvd_exploit_ref[0])
 
-            # from PoC-in-Github
-            query = 'SELECT reference FROM cve_poc_in_github_map WHERE cve_id = ?'
-            poc_in_github_refs = ''
-            db_cursor.execute(query, (cve_id,))
-            if db_cursor:
-                poc_in_github_refs = db_cursor.fetchall()
-            if poc_in_github_refs:
-                if "exploits" not in detailed_vulns[cve_id]:
-                    detailed_vulns[cve_id]["exploits"] = []
-                for poc_in_github_ref in poc_in_github_refs:
-                    if (poc_in_github_ref[0] not in detailed_vulns[cve_id]["exploits"] and
-                            poc_in_github_ref[0] + '/' not in detailed_vulns[cve_id]["exploits"] and
-                            poc_in_github_ref[0][:-1] not in detailed_vulns[cve_id]["exploits"] and
-                            poc_in_github_ref[0] + '.git' not in detailed_vulns[cve_id]["exploits"]):
-                        detailed_vulns[cve_id]["exploits"].append(poc_in_github_ref[0])
+                # from PoC-in-Github
+                query = 'SELECT reference FROM cve_poc_in_github_map WHERE cve_id = ?'
+                poc_in_github_refs = ''
+                db_cursor.execute(query, (vuln_id,))
+                if db_cursor:
+                    poc_in_github_refs = db_cursor.fetchall()
+                if poc_in_github_refs:
+                    if "exploits" not in detailed_vulns[vuln_id]:
+                        detailed_vulns[vuln_id]["exploits"] = []
+                    for poc_in_github_ref in poc_in_github_refs:
+                        if (poc_in_github_ref[0] not in detailed_vulns[vuln_id]["exploits"] and
+                                poc_in_github_ref[0] + '/' not in detailed_vulns[vuln_id]["exploits"] and
+                                poc_in_github_ref[0][:-1] not in detailed_vulns[vuln_id]["exploits"] and
+                                poc_in_github_ref[0] + '.git' not in detailed_vulns[vuln_id]["exploits"]):
+                            detailed_vulns[vuln_id]["exploits"].append(poc_in_github_ref[0])
+        elif source == 'ghsa':
+            query = 'SELECT aliases, description, published, last_modified, cvss_version, base_score, vector FROM ghsa WHERE ghsa_id = ?'
+            db_cursor.execute(query, (vuln_id,))
+            aliases, descr, publ, last_mod, cvss_ver, score, vector = db_cursor.fetchone()
+            if aliases:
+                aliases = aliases.split(',')
+            else:
+                aliases = []
+            detailed_vulns[vuln_id] = {"id": vuln_id, "description": descr, "published": str(publ), "modified": str(last_mod),
+                                       "href": "https://github.com/advisories/%s" % vuln_id, "cvss_ver": str(float(cvss_ver)),
+                                       "cvss": str(float(score)), "cvss_vec": vector, "vuln_match_reason": match_reason,
+                                       "aliases": aliases, "sources": [source]}
 
     return detailed_vulns
+
+
+def deduplicate_vulns(vulns):
+    """Deduplicate vulnerabilities from different sources and combine aliases"""
+
+    deduped_vulns = {}
+    # import json
+    # print(json.dumps(vulns))
+    for source in ('nvd', 'ghsa'):  # order of ID preference
+        for vuln_id, vuln in vulns.items():
+            # since sources are updated dynamically, the same vuln could be iterated
+            # over multiple times, so skip it if it's been processed already
+            if vuln_id in deduped_vulns:
+                continue
+
+            done_with_vuln = False
+            if source in vuln['sources']:  # do not go over vulns again because source is added to vuln
+                for alias in vuln.get('aliases', []) + [vuln_id]:
+                    for other_vuln_id, other_vuln in deduped_vulns.items():
+                        if alias == other_vuln_id or alias in other_vuln.get('aliases', []):
+                            # manage aliases
+                            for alias_2 in vuln.get('aliases', []):
+                                if alias_2 != other_vuln_id and alias_2 not in other_vuln['aliases']:
+                                    other_vuln['aliases'].append(alias_2)
+                            if vuln_id not in other_vuln['aliases']:
+                                other_vuln['aliases'].append(vuln_id)
+                            if source not in other_vuln['sources']:
+                                other_vuln['sources'].append(source)
+
+                            # store better match reason if a more "trusted" source has more precise information
+                            if other_vuln['vuln_match_reason'] in ('general_cpe', 'single_higher_version_cpe'):
+                                if source in ('ghsa',) and vuln['vuln_match_reason'] == 'version_in_range':
+                                    other_vuln['vuln_match_reason'] = 'version_in_range'
+
+                                    # copy over the more trusted source's vuln details
+                                    for key in ('id', 'published', 'modified', 'description',
+                                                'href', 'cvss_ver', 'cvss', 'cvss_vec'):
+                                        other_vuln[key] = vuln[key]
+
+                                    # switch IDs and aliases
+                                    if vuln['id'] in other_vuln['aliases']:
+                                        other_vuln['aliases'].remove(vuln['id'])
+                                    other_vuln['aliases'] = list(set([other_vuln_id] + other_vuln['aliases']))
+
+                                    # switch key in final vuln dictionary
+                                    deduped_vulns[vuln['id']] = other_vuln
+                                    del deduped_vulns[other_vuln_id]
+
+                            done_with_vuln = True
+                            break
+                    if done_with_vuln:
+                        break
+                if done_with_vuln:
+                    continue
+
+                if vuln_id not in deduped_vulns:
+                    deduped_vulns[vuln_id] = vuln
+
+    return deduped_vulns
 
 
 def _is_version_start_end_matching(cpe_parts, version_start, version_start_incl, version_end, version_end_incl):
@@ -275,64 +346,69 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
     cpe_version = CPEVersion(cpe_parts[5])
     vulns = []
 
-    general_cpe_prefix_query = ':'.join(cpe.split(':')[:5]) + ':'
-    if 'mariadb' in str(type(db_cursor)):  # backslashes have to be escaped for MariaDB
-        general_cpe_prefix_query = general_cpe_prefix_query.replace('\\', '\\\\')
+    for source in ('nvd', 'ghsa'):
+        general_cpe_prefix_query = ':'.join(cpe.split(':')[:5]) + ':'
+        if 'mariadb' in str(type(db_cursor)):  # backslashes have to be escaped for MariaDB
+            general_cpe_prefix_query = general_cpe_prefix_query.replace('\\', '\\\\')
 
-    query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
-             'is_cpe_version_end_including FROM cve_cpe WHERE cpe LIKE ?')
-    db_cursor.execute(query, (general_cpe_prefix_query + '%%', ))
-    general_cpe_nvd_data = set()
-    if db_cursor:
-        general_cpe_nvd_data =  set(db_cursor.fetchall())
-    general_cpe_nvd_data_structered = {}
+        if source == 'nvd':
+            query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
+                     'is_cpe_version_end_including FROM cve_cpe WHERE cpe LIKE ?')
+        elif source == 'ghsa':
+            query = ('SELECT ghsa_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
+                     'is_cpe_version_end_including FROM ghsa_cpe WHERE cpe LIKE ?')
+        db_cursor.execute(query, (general_cpe_prefix_query + '%%', ))
+        general_cpe_vuln_data = set()
+        if db_cursor:
+            general_cpe_vuln_data =  set(db_cursor.fetchall())
+        general_cpe_vuln_data_structered = {}
 
-    for cve_cpe_entry in general_cpe_nvd_data:
-        if cve_cpe_entry[0] not in general_cpe_nvd_data_structered:
-            general_cpe_nvd_data_structered[cve_cpe_entry[0]] = []
-        general_cpe_nvd_data_structered[cve_cpe_entry[0]].append(cve_cpe_entry)
+        for vuln_cpe_entry in general_cpe_vuln_data:
+            if vuln_cpe_entry[0] not in general_cpe_vuln_data_structered:
+                general_cpe_vuln_data_structered[vuln_cpe_entry[0]] = []
+            general_cpe_vuln_data_structered[vuln_cpe_entry[0]].append(vuln_cpe_entry)
 
-    for cve_id, cve_cpe_data in general_cpe_nvd_data_structered.items():
-        cve_cpes = [cve_cpe_entry[1] for cve_cpe_entry in cve_cpe_data]
-        for cve_cpe_entry in cve_cpe_data:
-            vuln_cpe = cve_cpe_entry[1]
-            version_start, version_start_incl = cve_cpe_entry[2:4]
-            version_end, version_end_incl = cve_cpe_entry[4:]
+        for vuln_id, vuln_cpe_data in general_cpe_vuln_data_structered.items():
+            vuln_cpe_entries = [vuln_cpe_entry[1] for vuln_cpe_entry in vuln_cpe_data]
+            for vuln_cpe_entry in vuln_cpe_data:
+                vuln_cpe = vuln_cpe_entry[1]
+                version_start, version_start_incl = vuln_cpe_entry[2:4]
+                version_end, version_end_incl = vuln_cpe_entry[4:]
 
-            is_cpe_vuln, bad_nvd_entry = False, False
-            match_reason = ''
-            is_cpe_vuln = is_cpe_included_from_field(cpe, vuln_cpe, 5)
+                is_cpe_vuln, bad_nvd_entry = False, False
+                match_reason = ''
+                is_cpe_vuln = is_cpe_included_from_field(cpe, vuln_cpe, 5)
 
-            if cpe_version and (version_start or version_end):
-                # additionally check if version matches range
-                is_cpe_vuln = _is_version_start_end_matching(cpe_parts, version_start, version_start_incl, version_end, version_end_incl)
-                match_reason = 'version_in_range'
-            elif is_cpe_vuln:
-                # check if the NVD's affected products entry for the CPE is considered faulty
-                bad_nvd_entry = is_more_specific_cpe_contained(vuln_cpe, cve_cpes)
+                if cpe_version and (version_start or version_end):
+                    # additionally check if version matches range
+                    is_cpe_vuln = _is_version_start_end_matching(cpe_parts, version_start, version_start_incl, version_end, version_end_incl)
+                    match_reason = 'version_in_range'
+                elif is_cpe_vuln:
+                    # check if the NVD's affected products entry for the CPE is considered faulty
+                    bad_nvd_entry = is_more_specific_cpe_contained(vuln_cpe, vuln_cpe_entries)
 
-                # check for general CPE vuln match
-                if not CPEVersion(vuln_cpe.split(':')[5]):
-                    if not cpe_version:
-                        match_reason = 'general_cpe_but_ok'
-                    else:
-                        match_reason = 'general_cpe'
-                        if ignore_general_cpe_vulns:
+                    # check for general CPE vuln match
+                    if not CPEVersion(vuln_cpe.split(':')[5]):
+                        if not cpe_version:
+                            match_reason = 'general_cpe_but_ok'
+                        else:
+                            match_reason = 'general_cpe'
+                            if ignore_general_cpe_vulns:
+                                is_cpe_vuln = False
+                elif include_single_version_vulns:
+                    if len(vuln_cpe_entries) == 1 and has_cpe_lower_versions(cpe, vuln_cpe):
+                        is_cpe_vuln = True
+                        match_reason = 'single_higher_version_cpe'
+
+                # final check that everything after the version field matches in the vuln's CPE
+                if is_cpe_vuln:
+                    if cpe.count(':') > 5 and vuln_cpe.count(':') > 5:
+                        if not is_cpe_included_after_version(cpe, vuln_cpe):
                             is_cpe_vuln = False
-            elif include_single_version_vulns:
-                if len(cve_cpes) == 1 and has_cpe_lower_versions(cpe, vuln_cpe):
-                    is_cpe_vuln = True
-                    match_reason = 'single_higher_version_cpe'
 
-            # final check that everything after the version field matches in the vuln's CPE
-            if is_cpe_vuln:
-                if cpe.count(':') > 5 and vuln_cpe.count(':') > 5:
-                    if not is_cpe_included_after_version(cpe, vuln_cpe):
-                        is_cpe_vuln = False
-
-            if is_cpe_vuln and not bad_nvd_entry:
-                vulns.append((cve_id, match_reason))
-                break
+                if is_cpe_vuln and not bad_nvd_entry:
+                    vulns.append((vuln_id, match_reason, source))
+                    break
 
     # retrieve more information about the found vulns, e.g. CVSS scores and possible exploits
     return get_vuln_details(db_cursor, vulns, add_other_exploit_refs)
@@ -350,12 +426,12 @@ def print_vulns(vulns, to_string=False):
         if not to_string:
             print_str = GREEN + vuln_node["id"] + SANE
             print_str += " (" + MAGENTA + 'CVSSv' + vuln_node['cvss_ver'] + '/' + str(vuln_node["cvss"]) + SANE + ")"
-            if vuln_node['cisa_known_exploited']:
+            if vuln_node.get('cisa_known_exploited', False):
                 print_str += " (" + RED + "Actively exploited" + SANE + ")"
         else:
             print_str = vuln_node["id"]
             print_str += " ("'CVSSv' + vuln_node['cvss_ver'] + '/' + str(vuln_node["cvss"]) + ")"
-            if vuln_node['cisa_known_exploited']:
+            if vuln_node.get('cisa_known_exploited', False):
                 print_str += " (Actively exploited)"
         print_str += ': '+description+'\n'
 
@@ -574,6 +650,20 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
             if cve_id not in vulns:
                 vulns[cve_id] = vuln
 
+    # deduplicate vulns (reason: different data sources, equivalent CPEs and more)
+    vulns = deduplicate_vulns(vulns)
+
+    # complete alias collection, e.g. if according to another data
+    # source the software is not vulnerable
+    for vuln_id, vuln in vulns.items():
+        if vuln_id.startswith('CVE-') and not any('GHSA-' in alias for alias in vuln['aliases']):
+            db_cursor.execute('SELECT ghsa_id FROM ghsa WHERE aliases = ? OR aliases LIKE ?',
+                              (vuln_id, '%%' + vuln_id + ',%%'))
+            for alias in db_cursor.fetchall():
+                alias = alias[0]
+                if alias not in vuln['aliases']:
+                    vuln['aliases'].append(alias)
+
     # add outdated software / endoflife.date information
     eol_info = {}
     for equiv_cpe in equivalent_cpes:
@@ -699,14 +789,11 @@ def main():
                 print()
                 printit('[+] %s (%s)' % (query, '/'.join(equivalent_cpes)), color=BRIGHT_BLUE)
 
-        eol_info = {}
-        for cur_cpe in equivalent_cpes:
-            cur_vulns = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns, args.include_single_version_vulns, config)
-            for cve_id, vuln in cur_vulns[cur_cpe]['vulns'].items():
-                if cve_id not in vulns[query]:
-                    vulns[query][cve_id] = vuln
-            if cur_vulns[cur_cpe]['version_status']:
-                eol_info = cur_vulns[cur_cpe]['version_status']
+        vulns[query] = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, False, args.ignore_general_cpe_vulns, args.include_single_version_vulns, config)
+        if vulns[query]:
+            vulns[query] = list(vulns[query].values())[0]
+        eol_info = vulns[query]['version_status']
+        vulns[query] = vulns[query]['vulns']
 
         # print found vulnerabilities
         if args.format.lower() == 'txt':

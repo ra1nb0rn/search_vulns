@@ -57,8 +57,18 @@
                 </div>
                 <div class="form-control">
                     <label class="label cursor-pointer gap-4">
+                        <span class="label-text">Show GHSA vulns &nbsp;<span class="text-warning">beta <i class="fa-solid fa-flask"></i></i></i></span> &nbsp;<div class="tooltip"
+                                data-tip="Show results of the GitHub Security Avisory Database. This may show non-CVE vulnerabilities and highlight discrepancies between the GHSA and the NVD.">
+                                <i class="fas fa-info-circle text-content"></i>
+                            </div></span>
+                        <input id="showGHSAVulnsConfig" type="checkbox" class="checkbox"
+                            onclick="changeSearchConfig(this)" />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-4">
                         <span class="label-text">Display table filtering &nbsp;<div class="tooltip tooltip-bottom"
-                                data-tip="Choose whether the filtering of CVEs and table columns should be displayed or only affect the export.">
+                                data-tip="Choose whether the filtering of vulnerabilities and table columns should be displayed or only affect the export.">
                                 <i class="fas fa-info-circle text-content"></i>
                             </div></span>
                         <input id="showTableFilteringConfig" type="checkbox" class="checkbox"
@@ -70,12 +80,12 @@
         <div class="dropdown mr-1">
             <button tabindex="0" role="button"
                 class="btn btn-disabled btn-neutral rounded-btn text-base p-0 sm:min-w-24 lg:min-w-28"
-                id="buttonFilterCVEs">
+                id="buttonFilterVulns">
                 <i class="fa-solid fa-filter"></i>Filter <i class="fa-solid fa-chevron-down"></i>
             </button>
             <div tabindex="0"
                 class="dropdown-content left-1/2 transform -translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box min-w-36 mt-2 overflow-y-auto max-h-96"
-                id="filterCVEsDropdown">
+                id="filterVulnsDropdown">
             </div>
         </div>
         <div class="dropdown dropdown mr-1">
@@ -94,9 +104,9 @@
                 </div>
                 <div class="form-control">
                     <label class="label cursor-pointer gap-4">
-                        <span class="label-text">CVE-ID
+                        <span class="label-text">Vuln ID
                         </span>
-                        <input id="showColumnCVEID" type="checkbox" class="checkbox"
+                        <input id="showColumnVulnId" type="checkbox" class="checkbox"
                             onclick="changeColumnConfig(this)" />
                     </label>
                 </div>

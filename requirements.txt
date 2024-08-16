@@ -6,3 +6,4 @@ aiohttp
 aiolimiter
 ujson
 markdown
+cvss

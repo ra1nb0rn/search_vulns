@@ -1,10 +1,10 @@
 
-var curVulnData = {}, curEOLData = {}, onlyShowCVEs = null;
+var curVulnData = {}, curEOLData = {}, onlyShowTheseVulns = null;
 var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
-var ignoreGeneralCpeVulns = false, onlyShowEDBExploits = false;
+var ignoreGeneralCpeVulns = false, onlyShowEDBExploits = false, showGHSAVulns = false;
 var showSingleVersionVulns = false, isGoodCpe = true, showTableFiltering = false;
 var noVulnsFoundHtml = '<div class="w-full text-center"><h5 class="text-success">No known vulnerabilities could be found.</h5></div>';
-var filterCVEDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="filterCVEsAll" onclick="changeFilterCVEs(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="filterCVEsNone" onclick="changeFilterCVEs(this)">None</button></div>`;
+var filterVulnDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="filterVulnsAll" onclick="changeFilterVulns(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="filterVulnsNone" onclick="changeFilterVulns(this)">None</button></div>`;
 var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
 var iconSortDesc = '<i class="fa-solid fa-sort-down"></i>';
 var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
@@ -47,7 +47,7 @@ function reduceToEDBUrls(allUrls) {
 
 function getCurrentVulnsSorted() {
     var vulns = Object.values(curVulnData);
-    if (curSortColIdx == 0) {  // CVE-ID
+    if (curSortColIdx == 0) {  // Vuln ID
         if (curSortColAsc) {
             return vulns.sort(function (vuln1, vuln2) {
                 return vuln1.id.localeCompare(vuln2.id);
@@ -103,14 +103,25 @@ function getCurrentVulnsSorted() {
 }
 
 function createVulnTableRowHtml(idx, vuln) {
-    var vuln_row_html = '', vuln_style_class = '', vuln_flag_html = '';
+    var vuln_row_html = '', vuln_style_class = '', vuln_flag_html = '', vuln_id_html = '';
     var exploits, cvss, cvss_badge_css, exploit_url_show;
+    var vuln_id_ref_map = getVulnReferences(vuln);
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
+    var isVulnUnconfirmed = false;
 
     if (selectedColumns.length < 1)
         return '';
 
-    if (vuln.vuln_match_reason == "general_cpe" || vuln.vuln_match_reason == "single_higher_version_cpe")
+    for (const vuln_id in vuln_id_ref_map) {
+        if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
+            continue
+        vuln_id_html += `<a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a><br>`;
+        if (showGHSAVulns && vuln_id.startsWith('GHSA-') && vuln.id.startsWith('CVE-') && !vuln.sources.includes('ghsa'))
+            isVulnUnconfirmed = true;
+    }
+    vuln_id_html = vuln_id_html.slice(0, -4);  // strip trailing "<br>"
+
+    if (vuln.vuln_match_reason == "general_cpe" || vuln.vuln_match_reason == "single_higher_version_cpe" || isVulnUnconfirmed)
         vuln_style_class = "uncertain-vuln";
     if (vuln.cisa_known_exploited)
         vuln_style_class += " exploited-vuln";  // overwrites color of uncertain vuln
@@ -118,18 +129,31 @@ function createVulnTableRowHtml(idx, vuln) {
     vuln_row_html += `<tr class="${vuln_style_class} border-none">`;
 
     if (selectedColumns.includes('cve')) {
-        vuln_row_html += `<td class="text-nowrap whitespace-nowrap pr-2 relative"><a href="${htmlEntities(vuln["href"])}" target="_blank" style="color: inherit;">${vuln["id"]}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a>`;
+        vuln_row_html += `<td class="text-nowrap whitespace-nowrap pr-2 relative">` + vuln_id_html;
 
         if (vuln.vuln_match_reason == "general_cpe")
             vuln_flag_html += `<br><center><span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects the queried software in general and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
-        else if (vuln.vuln_match_reason == "single_higher_version_cpe")
-            vuln_flag_html += `<br><center><span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects only a single higher version of the product and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+        if (vuln.vuln_match_reason == "single_higher_version_cpe") {
+            if (!vuln_flag_html)
+                vuln_flag_html += `<br><center><span class="vuln-flag-icon" `;
+            else
+                vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
+            vuln_flag_html += `data-tooltip-target="tooltip-single-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-single-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects only a single higher version of the product and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+        }
+        if (isVulnUnconfirmed) {
+            if (!vuln_flag_html)
+                vuln_flag_html += `<br><center><span class="vuln-flag-icon" `;
+            else
+                vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
+            vuln_flag_html += `data-tooltip-target="tooltip-unconfirmed-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-unconfirmed-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">The GHSA also tracks this vulnerability, but does not list the queried software as affected.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+        }
 
         if (vuln.cisa_known_exploited) {
-            if (vuln_flag_html)
-                vuln_flag_html += `<span class="ml-2 vuln-flag-icon" data-tooltip-target="tooltip-exploit-${idx}" data-tooltip-placement="bottom"><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${vuln["id"]}&field_date_added_wrapper=all&sort_by=field_date_added&items_per_page=20" target="_blank"><i class="fa-solid fa-skull text-exploited"></i></a></span><div id="tooltip-exploit-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability has been exploited in the wild according to CISA.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+            if (!vuln_flag_html)
+                vuln_flag_html += `<br><center><span class="vuln-flag-icon" `;
             else
-                vuln_flag_html += `<br><center><span class="ml-2 vuln-flag-icon" data-tooltip-target="tooltip-exploit-${idx}" data-tooltip-placement="bottom"><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${vuln["id"]}&field_date_added_wrapper=all&sort_by=field_date_added&items_per_page=20" target="_blank"><i class="fa-solid fa-skull text-exploited"></i></a></span><div id="tooltip-exploit-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability has been exploited in the wild according to CISA.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+                vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
+            vuln_flag_html += `data-tooltip-target="tooltip-exploit-${idx}" data-tooltip-placement="bottom"><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${vuln["id"]}&field_date_added_wrapper=all&sort_by=field_date_added&items_per_page=20" target="_blank"><i class="fa-solid fa-skull text-exploited"></i></a></span><div id="tooltip-exploit-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability has been exploited in the wild according to CISA.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
         }
 
         if (vuln_flag_html)
@@ -140,7 +164,7 @@ function createVulnTableRowHtml(idx, vuln) {
 
     if (selectedColumns.includes('cvss')) {
         var cvss_vector = vuln.cvss_vec;
-        if (!cvss_vector.startsWith('CVSS'))
+        if (cvss_vector && !cvss_vector.startsWith('CVSS'))
             cvss_vector = "CVSS:2.0/" + cvss_vector;
 
         cvss = parseFloat(vuln.cvss);
@@ -150,9 +174,13 @@ function createVulnTableRowHtml(idx, vuln) {
             cvss_badge_css = "badge-high";
         else if (cvss < 7.0 && cvss >= 4.0)
             cvss_badge_css = "badge-medium";
-        else if (cvss < 4.0 && cvss >= 0.1)
+        else if (cvss < 4.0 && cvss >= 0)
             cvss_badge_css = "badge-low";
-        vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="z-10 badge p-1.5 border-none badge-cvss ${cvss_badge_css} text-center ${vuln_style_class}" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
+
+        if (cvss_vector && cvss_badge_css)
+            vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="z-10 badge p-1.5 border-none badge-cvss ${cvss_badge_css} text-center ${vuln_style_class}" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
+        else
+            vuln_row_html += `<td class="text-nowrap whitespace-nowrap text-center"><div class="dropdown dropdown-hover"><div class="z-10 badge p-1.5 border-none badge-cvss badge-na text-center ${vuln_style_class}" tabindex="0">N / A</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>Not Available (N/A)</b></span></div></div></div></td>`;
     }
 
     if (selectedColumns.includes('descr')) {
@@ -181,20 +209,20 @@ function createVulnTableRowHtml(idx, vuln) {
 }
 
 function renderSearchResults(reloadFilterDropdown) {
-    var sortIconCVEID = iconUnsorted, sortFunctionCVEID = "reorderVulns(0, false)";
+    var sortIconVulnId = iconUnsorted, sortFunctionVulnId = "reorderVulns(0, false)";
     var sortIconCVSS = iconUnsorted, sortFunctionCVSS = "reorderVulns(1, false)";
     var sortIconExploits = iconUnsorted, sortFunctionExploits = "reorderVulns(3, false)";
 
     // retrieve and sort vulns
     var vulns = getCurrentVulnsSorted();
-    if (curSortColIdx == 0) {  // CVE-ID
+    if (curSortColIdx == 0) {  // Vuln ID
         if (curSortColAsc) {
-            sortIconCVEID = iconSortAsc;
-            sortFunctionCVEID = "reorderVulns(0, false)";
+            sortIconVulnId = iconSortAsc;
+            sortFunctionVulnId = "reorderVulns(0, false)";
         }
         else {
-            sortIconCVEID = iconSortDesc;
-            sortFunctionCVEID = "reorderVulns(0, true)";
+            sortIconVulnId = iconSortDesc;
+            sortFunctionVulnId = "reorderVulns(0, true)";
         }
     }
     else if (curSortColIdx == 1) {  // CVSS
@@ -228,7 +256,7 @@ function renderSearchResults(reloadFilterDropdown) {
     vulns_html += '<thead>';
     vulns_html += '<tr>'
     if (selectedColumns.includes('cve')) {
-        vulns_html += `<th class="bg-base-300" onclick="${sortFunctionCVEID}" style="white-space: nowrap;">CVE-ID&nbsp;&nbsp;${sortIconCVEID}</th>`;
+        vulns_html += `<th class="bg-base-300" onclick="${sortFunctionVulnId}" style="white-space: nowrap;">Vuln ID&nbsp;&nbsp;${sortIconVulnId}</th>`;
     }
     if (selectedColumns.includes('cvss')) {
         vulns_html += `<th class="bg-base-300" onclick="${sortFunctionCVSS}" style="white-space: nowrap;">CVSS&nbsp;&nbsp;${sortIconCVSS}</th>`;
@@ -242,30 +270,32 @@ function renderSearchResults(reloadFilterDropdown) {
     vulns_html += "</tr></thead>";
     vulns_html += "<tbody>";
 
-    var filter_vulns_html = filterCVEDropdownButtonHtml, has_vulns = false;
+    var filter_vulns_html = filterVulnDropdownButtonHtml, has_vulns = false;
     for (var i = 0; i < vulns.length; i++) {
         // create row in table
         if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
             continue;
-        else if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+         if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+            continue;
+        if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
 
         has_vulns = true;
         var checked_html = "";
-        if (!showTableFiltering || onlyShowCVEs == null || onlyShowCVEs.includes(vulns[i].id)) {
+        if (!showTableFiltering || onlyShowTheseVulns == null || onlyShowTheseVulns.includes(vulns[i].id)) {
             vulns_html += createVulnTableRowHtml(i, vulns[i]);
             checked_html = 'checked="checked"';
         }
 
-        // add CVE to filter
-        filter_vulns_html += `<div class="form-control filter-cves"><label class="label cursor-pointer py-1 gap-4"><span class="label-text text-nowrap whitespace-nowrap">${vulns[i]["id"]}</span><input type="checkbox" class="checkbox" onclick="changeFilterCVEs()" ${checked_html} /></label></div>`;
+        // add Vuln ID to filter
+        filter_vulns_html += `<div class="form-control filter-vulns"><label class="label cursor-pointer py-1 gap-4"><span class="label-text text-nowrap whitespace-nowrap">${vulns[i]["id"]}</span><input type="checkbox" class="checkbox" onclick="changeFilterVulns()" ${checked_html} /></label></div>`;
     }
     vulns_html += "</tbody></table>";
     if (has_vulns)
         $("#vulns").html(vulns_html);
 
     if (reloadFilterDropdown)
-        $('#filterCVEsDropdown').html(filter_vulns_html);  // set CVE filter HTML
+        $('#filterVulnsDropdown').html(filter_vulns_html);  // set Vuln filter HTML
     $('#exportMarkdownIcon').html(exportIcon);
     $('#exportCSVIcon').html(exportIcon);
 
@@ -276,9 +306,9 @@ function renderSearchResults(reloadFilterDropdown) {
 }
 
 function createVulnsMarkDownTable() {
-    var selectedVulns = onlyShowCVEs;
+    var selectedVulns = onlyShowTheseVulns;
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
-    var vulns = getCurrentVulnsSorted();
+    var vulns = getCurrentVulnsSorted(), vuln_id_ref_map;
     var vulns_md = "";
     var has_exploits = false, cur_vuln_has_exploits = false;
     var exploit_url_show;
@@ -289,6 +319,8 @@ function createVulnsMarkDownTable() {
         if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
             continue;
         if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+            continue;
+        if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
@@ -303,7 +335,7 @@ function createVulnsMarkDownTable() {
         var table_row1 = "|", table_row2 = "|";
         selectedColumns.forEach(column => {
             if (column == 'cve') {
-                table_row1 += 'CVE|';
+                table_row1 += 'Vuln ID|';
                 table_row2 += ':---:|';
             }
             else if (column == 'cvss') {
@@ -323,11 +355,11 @@ function createVulnsMarkDownTable() {
     }
     else {
         if (has_exploits) {
-            vulns_md = '|CVE|CVSS|Description|Exploits|\n';
+            vulns_md = '|Vuln ID|CVSS|Description|Exploits|\n';
             vulns_md += '|:---:|:---:|:---|:---|\n';
         }
         else {
-            vulns_md = '|CVE|CVSS|Description|\n';
+            vulns_md = '|Vuln ID|CVSS|Description|\n';
             vulns_md += '|:---:|:---:|:---|\n';
         }
     }
@@ -339,11 +371,21 @@ function createVulnsMarkDownTable() {
             continue;
         if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
             continue;
+        if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
+            continue;
 
         cur_vuln_has_exploits = false;
         vulns_md += '|';
-        if (selectedColumns.length < 1 || selectedColumns.includes("cve"))
-            vulns_md += `[${vulns[i]["id"]}](${htmlEntities(vulns[i]["href"])})|`
+        if (selectedColumns.length < 1 || selectedColumns.includes("cve")) {
+            vuln_id_ref_map = getVulnReferences(vulns[i]);
+            for (const vuln_id in vuln_id_ref_map) {
+                if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
+                    continue
+                vulns_md += `[${vuln_id}](${htmlEntities(vuln_id_ref_map[vuln_id])})<br>`;
+            }
+            vulns_md = vulns_md.slice(0, -4);  // strip trailing "<br>"
+            vulns_md += "|";
+        }
         if (selectedColumns.length < 1 || selectedColumns.includes("cvss"))
             vulns_md += `${vulns[i]["cvss"]}&nbsp;(v${vulns[i]["cvss_ver"]})|`;
         if (selectedColumns.length < 1 || selectedColumns.includes("descr")) {
@@ -393,10 +435,10 @@ function createVulnsMarkDownTable() {
 }
 
 function createVulnsCSV() {
-    var selectedVulns = onlyShowCVEs;
+    var selectedVulns = onlyShowTheseVulns;
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
-    var vulns = getCurrentVulnsSorted();
-    var vulns_csv = "";
+    var vulns = getCurrentVulnsSorted(), vuln_ids;
+    var vulns_csv = "", vuln_ids = "";
     var has_exploits = false;
 
     for (var i = 0; i < vulns.length; i++) {
@@ -405,6 +447,8 @@ function createVulnsCSV() {
         if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
             continue;
         if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+            continue;
+        if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
@@ -418,7 +462,7 @@ function createVulnsCSV() {
     if (selectedColumns.length > 0) {
         selectedColumns.forEach(column => {
             if (column == "cve")
-                vulns_csv += 'CVE,';
+                vulns_csv += 'Vuln ID,';
             else if (column == "cvss")
                 vulns_csv += 'CVSS,';
             else if (column == "descr")
@@ -430,9 +474,9 @@ function createVulnsCSV() {
     }
     else {
         if (has_exploits)
-            vulns_csv = 'CVE,CVSS,Description,Exploits\n';
+            vulns_csv = 'Vuln ID,CVSS,Description,Exploits\n';
         else
-            vulns_csv = 'CVE,CVSS,Description\n';
+            vulns_csv = 'Vuln ID,CVSS,Description\n';
     }
 
     for (var i = 0; i < vulns.length; i++) {
@@ -442,13 +486,25 @@ function createVulnsCSV() {
             continue;
         if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
             continue;
+        if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
+            continue;
 
-        if (selectedColumns.length < 1 || selectedColumns.includes('cve'))
-            vulns_csv += `${escapeCSV(vulns[i]["id"])},`
+        if (selectedColumns.length < 1 || selectedColumns.includes('cve')) {
+            vuln_id_ref_map = getVulnReferences(vulns[i]);
+            vuln_ids = [];
+            for (const vuln_id in vuln_id_ref_map) {
+                if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
+                    continue
+                vuln_ids.push(vuln_id);
+            }
+            if (vuln_ids)
+                vulns_csv += `${escapeCSV(vuln_ids.join(', '))}`
+            vulns_csv += ','
+        }
         if (selectedColumns.length < 1 || selectedColumns.includes('cvss'))
             vulns_csv += `${escapeCSV(vulns[i]["cvss"] + ' (v' + vulns[i]["cvss_ver"] + ')')},`;
         if (selectedColumns.length < 1 || selectedColumns.includes('descr'))
-            vulns_csv += `${escapeCSV(vulns[i]["description"])},`;
+            vulns_csv += `${escapeCSV(vulns[i]["description"].trim())},`;
 
         if (vulns_csv.length > 0 && (!has_exploits || (selectedColumns.length > 0 && !selectedColumns.includes('expl'))))
             vulns_csv = vulns_csv.slice(0, -1);
@@ -591,14 +647,14 @@ function searchVulns(query, url_query, recaptcha_response) {
             }
 
             $("#search-display").html(search_display_html);
-            onlyShowCVEs = null;
+            onlyShowTheseVulns = null;
             var hasVulns = renderSearchResults(true);
             if (!hasVulns && !queryError)
                 $('#vulns').html(noVulnsFoundHtml);
                 
             $("#related-queries-display").html(related_queries_html);
             $("#buttonSearchVulns").removeClass("btn-disabled");
-            $("#buttonFilterCVEs").removeClass("btn-disabled");
+            $("#buttonFilterVulns").removeClass("btn-disabled");
             $("#buttonManageColumns").removeClass("btn-disabled");
             $("#buttonExportResults").removeClass("btn-disabled");
             $("#buttonSearchVulns").html('<i class="fa-solid fa-magnifying-glass"></i> Search Vulns');
@@ -619,7 +675,7 @@ function searchVulns(query, url_query, recaptcha_response) {
             $("#vulns").html(`<h5 class="text-error w-full text-center">${errorMsg}</h5>`);
 
             $("#buttonSearchVulns").removeClass("btn-disabled");
-            $("#buttonFilterCVEs").removeClass("btn-disabled");
+            $("#buttonFilterVulns").removeClass("btn-disabled");
             $("#buttonManageColumns").removeClass("btn-disabled");
             $("#buttonExportResults").removeClass("btn-disabled");
             $("#buttonSearchVulns").html('<i class="fa-solid fa-magnifying-glass"></i> Search Vulns');
@@ -659,7 +715,7 @@ function searchVulnsAction(actionElement) {
     history.pushState({}, null, new_url);  // update URL
     $("#buttonSearchVulns").html('<span class="loading loading-spinner"></span> Searching');
     $("#buttonSearchVulns").addClass("btn-disabled");
-    $("#buttonFilterCVEs").addClass("btn-disabled");
+    $("#buttonFilterVulns").addClass("btn-disabled");
     $("#buttonManageColumns").addClass("btn-disabled");
     $("#buttonExportResults").addClass("btn-disabled");
     $('#cpeSuggestions').addClass("hidden");
@@ -759,6 +815,10 @@ function changeSearchConfig(configElement) {
         showSingleVersionVulns = settingEnabled;
         localStorage.setItem("showSingleVersionVulns", settingEnabledStr);
     }
+    else if (configElement.id == "showGHSAVulnsConfig") {
+        showGHSAVulns = settingEnabled;
+        localStorage.setItem("showGHSAVulns", settingEnabledStr);
+    }
     else if (configElement.id == "showTableFilteringConfig") {
         showTableFiltering = settingEnabled;
         localStorage.setItem("showTableFiltering", settingEnabledStr);
@@ -780,13 +840,13 @@ function changeColumnConfig(columnElement) {
         allCheckType = false
 
     if (allCheckType != null) {
-        columnCheckboxIDs = ['showColumnCVEID', 'showColumnCVSS', 'showColumnDescription', 'showColumnExploits'];
+        columnCheckboxIDs = ['showColumnVulnId', 'showColumnCVSS', 'showColumnDescription', 'showColumnExploits'];
         columnCheckboxIDs.forEach(function(columnCheckboxID) {
             $('#' + columnCheckboxID)[0].checked = allCheckType;
         });
     }
 
-    if ($('#showColumnCVEID')[0].checked)
+    if ($('#showColumnVulnId')[0].checked)
         vulnTableColumns.push('cve');
     if ($('#showColumnCVSS')[0].checked)
         vulnTableColumns.push('cvss');
@@ -801,28 +861,28 @@ function changeColumnConfig(columnElement) {
         renderSearchResults();
 }
 
-function changeFilterCVEs(filterCVEsButton) {
-    onlyShowCVEs = [];
+function changeFilterVulns(filterVulnsButton) {
+    onlyShowTheseVulns = [];
     var allOrNone = '';
 
-    if (filterCVEsButton != null) {
-        if(filterCVEsButton.id == 'filterCVEsNone')
+    if (filterVulnsButton != null) {
+        if(filterVulnsButton.id == 'filterVulnsNone')
             allOrNone = 'none';
         else {
-            onlyShowCVEs = null;
+            onlyShowTheseVulns = null;
             allOrNone = 'all';
         }
     }
 
-    $('.filter-cves').each(function(i, filterCVEDiv) {
-        filterCVEDiv = $(filterCVEDiv);
+    $('.filter-vulns').each(function(i, filterVulnsDiv) {
+        filterVulnsDiv = $(filterVulnsDiv);
         if (allOrNone == 'none')
-            filterCVEDiv.find('.checkbox')[0].checked = false;
+            filterVulnsDiv.find('.checkbox')[0].checked = false;
         else if (allOrNone == 'all')
-            filterCVEDiv.find('.checkbox')[0].checked = true;
+            filterVulnsDiv.find('.checkbox')[0].checked = true;
 
-        if (onlyShowCVEs != null && filterCVEDiv.find('.checkbox')[0].checked)
-            onlyShowCVEs.push(filterCVEDiv.find('.label-text').text().trim());
+        if (onlyShowTheseVulns != null && filterVulnsDiv.find('.checkbox')[0].checked)
+            onlyShowTheseVulns.push(filterVulnsDiv.find('.label-text').text().trim());
     });
 
     if (!$.isEmptyObject(curVulnData) && showTableFiltering)
@@ -838,6 +898,9 @@ function setupConfigFromLocalstorage() {
     }
     if (localStorage.getItem('showSingleVersionVulns') === null) {
         localStorage.setItem('showSingleVersionVulns', 'false');
+    }
+    if (localStorage.getItem('showGHSAVulns') === null) {
+        localStorage.setItem('showGHSAVulns', 'true');
     }
     if (localStorage.getItem('showTableFiltering') === null) {
         localStorage.setItem('showTableFiltering', 'true');
@@ -855,6 +918,10 @@ function setupConfigFromLocalstorage() {
         showSingleVersionVulns = true;
         document.getElementById("showSingleVersionVulnsConfig").checked = true;
     }
+    if (localStorage.getItem('showGHSAVulns') == 'true') {
+        showGHSAVulns = true;
+        document.getElementById("showGHSAVulnsConfig").checked = true;
+    }
     if (localStorage.getItem('showTableFiltering') == 'true') {
         showTableFiltering = true;
         document.getElementById("showTableFilteringConfig").checked = true;
@@ -866,7 +933,7 @@ function setupConfigFromLocalstorage() {
     var vulnTableColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
 
     if (vulnTableColumns.includes('cve'))
-        document.getElementById("showColumnCVEID").checked = true;
+        document.getElementById("showColumnVulnId").checked = true;
     if (vulnTableColumns.includes('cvss'))
         document.getElementById("showColumnCVSS").checked = true;
     if (vulnTableColumns.includes('descr'))
@@ -1003,6 +1070,18 @@ function ensureSuggestionVisible(suggestionElement) {
     } else if (suggestionElementRect.bottom > dropdownRect.bottom) {
         dropdownMenu.scrollTop += (suggestionElementRect.bottom - dropdownRect.bottom);
     }
+}
+
+function getVulnReferences(vuln) {
+    var references = {};
+    references[vuln.id] = vuln.href;
+    for (var i = 0; i < vuln.aliases.length; i++) {
+        if (vuln.aliases[i].startsWith('CVE-'))
+            references[vuln.aliases[i]] = 'https://nvd.nist.gov/vuln/detail/' + vuln.aliases[i];
+        else if (vuln.aliases[i].startsWith('GHSA-'))
+            references[vuln.aliases[i]] = 'https://github.com/advisories/' + vuln.aliases[i];
+    }
+    return references;
 }
 
 

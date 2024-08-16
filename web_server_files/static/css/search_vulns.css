@@ -10,6 +10,8 @@
     --cvss-badge-bg-color-medium-uncertain: rgb(253, 205, 114, 0.75);
     --cvss-badge-bg-color-low: rgb(255, 255, 162);
     --cvss-badge-bg-color-low-uncertain: rgb(255, 255, 162, 0.75);
+    --cvss-badge-bg-color-na: rgb(150, 150, 150);
+    --cvss-badge-bg-color-na-uncertain: rgb(150, 150, 150, 0.75);
     --color-expl: 0.5374 0.21482051691771167 14.844751311489949;
 }
 
@@ -65,6 +67,12 @@ tr.exploited-vuln td {
 }
 .badge-low.uncertain-vuln {
     background-color: var(--cvss-badge-bg-color-low-uncertain);
+}
+.badge-na {
+    background-color: var(--cvss-badge-bg-color-na);
+}
+.badge-na.uncertain-vuln {
+    background-color: var(--cvss-badge-bg-color-na-uncertain);
 }
 
 

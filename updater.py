@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import asyncio
+from collections import Counter
 import csv
 import json
+import math
 import os
 import re
 import requests
@@ -15,6 +17,7 @@ import time
 
 import aiohttp
 from aiolimiter import AsyncLimiter
+from cvss import CVSS2, CVSS3, CVSS4
 from cpe_search.cpe_search import update as update_cpe
 from cpe_search.cpe_search import search_cpes, add_cpes_to_db
 from cpe_search.database_wrapper_functions import get_database_connection
@@ -25,20 +28,24 @@ try:  # use ujson if available
 except ModuleNotFoundError:
     import json
 
-NVD_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "nvd_data_feeds")
+
+NVD_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "nvd_data_feeds"))
 VULNDB_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/vulndb.db3"
 CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary.db3"
 CPE_DEPRECATIONS_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/deprecated-cpes.json"
 CVE_EDB_MAP_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cveid_to_edbid.json"
 POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
-POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PoC-in-GitHub")
+POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "PoC-in-GitHub"))
 EOLD_GITHUB_REPO = "https://github.com/endoflife-date/endoflife.date"
-EOLD_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "endoflife.date")
-EOLD_HARDCODED_MATCHES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'eold_hardcoded_matches.json'))
+EOLD_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "endoflife.date"))
+EOLD_HARDCODED_MATCHES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "eold_hardcoded_matches.json"))
+GHSA_GITHUB_REPO = "https://github.com/github/advisory-database"
+GHSA_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "ghsa-database"))
+GHSA_HARDCODED_MATCHES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "ghsa_hardcoded_matches.json"))
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-MARIADB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'mariadb_dump.sql')
+MARIADB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'mariadb_dump.sql'))
 CREATE_SQL_STATEMENTS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'create_sql_statements.json'))
 QUIET = False
 DEBUG = False
@@ -214,6 +221,10 @@ async def update_vuln_db(nvd_api_key=None):
     NVD_UPDATE_SUCCESS = True
     build_eold_data_thread.join()
 
+    # start GHSA integration in background thread
+    build_ghsa_data_thread = threading.Thread(target=add_ghsa_data_to_db)
+    build_ghsa_data_thread.start()
+
     # add CPE infos from vulnerability data to CPE DB
     print('[+] Adding software/CPE information from vulns to CPE-DB')
     add_vuln_cpes_to_cpe_search()
@@ -235,6 +246,10 @@ async def update_vuln_db(nvd_api_key=None):
         communicate_warning('Building PoCs in GitHub table failed')
         rollback()
         return 'Building PoCs in GitHub table failed'
+
+    # print this in the end, because it might take the most time / runs in background
+    print('[+] Adding vuln data from GitHub Security Advisories Vuln Data')
+    build_ghsa_data_thread.join()
 
     # remove backup file on success
     if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
@@ -588,6 +603,337 @@ def create_endoflife_date_table():
         shutil.rmtree(EOLD_GITHUB_DIR)
 
 
+def compute_cosine_similarity(text_1: str, text_2: str, text_vector_regex=r"[a-zA-Z0-9\.]+"):
+    """
+    Compute the cosine similarity of two text strings.
+    :param text_1: the first text
+    :param text_2: the second text
+    :return: the cosine similarity of the two text strings
+    """
+
+    def text_to_vector(text: str):
+        """
+        Get the vector representation of a text. It stores the word frequency
+        of every word contained in the given text.
+        :return: a Counter object that stores the word frequencies in a dict
+                 with the respective word as key
+        """
+        word = re.compile(text_vector_regex)
+        words = word.findall(text)
+        return Counter(words)
+
+    text_vector_1, text_vector_2 = text_to_vector(text_1), text_to_vector(text_2)
+
+    intersecting_words = set(text_vector_1.keys()) & set(text_vector_2.keys())
+    inner_product = sum([text_vector_1[w] * text_vector_2[w] for w in intersecting_words])
+
+    abs_1 = math.sqrt(sum([cnt**2 for cnt in text_vector_1.values()]))
+    abs_2 = math.sqrt(sum([cnt**2 for cnt in text_vector_2.values()]))
+    normalization_factor = abs_1 * abs_2
+
+    if not normalization_factor:  # avoid divison by 0
+        return 0.0
+    return float(inner_product)/float(normalization_factor)
+
+
+def add_ghsa_data_to_db():
+    """Add GitHub Security Advisory DB data to vuln DB"""
+
+    if os.path.isdir(GHSA_GITHUB_DIR):
+        shutil.rmtree(GHSA_GITHUB_DIR)
+
+    # download GitHub reviewed advisories from GHSA repo
+    return_code = subprocess.call(
+        "git clone -n --depth=1 --filter=tree:0 %s '%s' && " % (GHSA_GITHUB_REPO, GHSA_GITHUB_DIR) +
+        "cd %s && " % GHSA_GITHUB_DIR +
+        "git sparse-checkout set --no-cone advisories/github-reviewed/ && " +
+        "git checkout",
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    if return_code != 0:
+        raise (Exception("Could not download latest resources of the GHSA"))
+
+    # set up DB connection and tables
+    vulndb_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
+    vulndb_cursor = vulndb_conn.cursor()
+    create_ghsa_table_stmt = CREATE_SQL_STATEMENTS['TABLES']['GHSA'][CONFIG['DATABASE']['TYPE']]
+    create_ghsa_cpe_table_stmt = CREATE_SQL_STATEMENTS['TABLES']['GHSA_CPE'][CONFIG['DATABASE']['TYPE']]
+    for stmt in create_ghsa_table_stmt.split(';'):
+        if stmt:
+            vulndb_cursor.execute(stmt+';')
+    for stmt in create_ghsa_cpe_table_stmt.split(';'):
+        if stmt:
+            vulndb_cursor.execute(stmt+';')
+    if CONFIG['DATABASE']['TYPE'] == 'sqlite':
+        import sqlite3
+        sql_integrity_error = sqlite3.IntegrityError
+    elif CONFIG['DATABASE']['TYPE'] == 'mariadb':
+        import mariadb
+        sql_integrity_error = mariadb.IntegrityError
+
+    # variables to manage data across steps
+    sim_score_thres_good_cpe = 0.35
+    pname_cpe_map = {}
+    ghsa_no_cpe_yet = []
+    ghsa_affects_map = {}
+    description_meta_info_re = re.compile(r'^([\*\:]*[A-Z ]+[\*\:]+)')
+    cpe_creation_github_ref_re = re.compile(r"^(https://)?github.com/([\w.\-]+)\/([\w.\-]+)/?[^/]*$")
+    cpe_creation_slash_re = re.compile(r"^([\w.\-]+)\/([\w.\-]+)/?[^/]*$")
+    cpe_creation_single_word_re = re.compile(r"^\w+$")
+    difficult_package_prefixes = ['github.com/go', 'github.com/microsoft/go', 'microsoft/microsoft']
+    ghsa_hardcoded_matches = {}
+
+    with open(GHSA_HARDCODED_MATCHES_FILE) as f:
+        ghsa_hardcoded_matches = json.loads(f.read())
+
+    # only traverse reviewed advisories, since only those have information about affected software
+    for dirpath, _, files in os.walk(os.path.join(GHSA_GITHUB_DIR, 'advisories/github-reviewed')):
+        for file in files:
+            with open(os.path.join(dirpath, file)) as af:
+                advisory = json.load(af)
+
+            if advisory.get('withdrawn', ''):  # skip withdrawn entries
+                continue
+
+            # extract affects statements and map them to the same structure as the cve_cpe table
+            ghsa_id = advisory['id']
+            ghsa_affects_map[ghsa_id] = []
+            advisory_affected_pnames = set()
+            for pkg in advisory['affected']:
+                pname = pkg['package']['name'].lower()
+                ecosystem = pkg['package']['ecosystem'].lower()
+                single_version_affected = False
+                affected_ranges = []
+                advisory_affected_pnames.add(pname)
+
+                # extract affected version ranges
+                for pkg_range in pkg.get('ranges', []):  # usually just one entry
+                    introduced, fixed, is_version_end_incl = '', '', False
+                    for event in pkg_range.get('events'):
+                        if 'introduced' in event and not introduced:
+                            introduced = event['introduced']
+                        if 'fixed' in event and not fixed:
+                            fixed = event['fixed']
+                        if 'last_affected' in event and not fixed:
+                            fixed = event['last_affected']
+                            is_version_end_incl = True
+                    affected_ranges.append((pname, ecosystem, introduced, fixed, is_version_end_incl))
+                for version in pkg.get('versions', []):  # usually just one entry or omitted
+                    if version == introduced:  # just a single version is affected
+                        single_version_affected = True
+                    ghsa_affects_map[ghsa_id].append((pname, ecosystem, version))
+                if not single_version_affected:  # only add range(s) if more than one version is affected
+                    for affected_range in affected_ranges:
+                        ghsa_affects_map[ghsa_id].append(affected_range)
+
+            # get list of all CVE aliasses, retrieve all their affected CPEs
+            # and try to match every product name to one of these CPEs
+            all_cves = []
+            for alias in advisory['aliases']:
+                if alias.startswith('CVE-'):
+                    all_cves.append(alias)
+
+            all_cve_cpes = set()
+            for cve_id in all_cves:
+                vulndb_cursor.execute('SELECT cpe FROM cve_cpe WHERE cve_id = ?', (cve_id, ))
+                cve_cpes = vulndb_cursor.fetchall()
+                if cve_cpes:  # MariaDB returns None and SQLite an empty list
+                    for cpe in cve_cpes:
+                        cpe_split = cpe[0].split(':')
+                        cpe_version_wildcarded = ':'.join(cpe_split[:5]) + ':*:*:' + ':'.join(cpe_split[7:])
+                        all_cve_cpes.add(cpe_version_wildcarded)
+
+            for pname in advisory_affected_pnames:
+                if pname in pname_cpe_map:
+                    continue
+
+                if pname in ghsa_hardcoded_matches:
+                    pname_cpe_map[pname] = (ghsa_hardcoded_matches[pname], 1)
+                elif len(advisory_affected_pnames) == 1 and len(all_cve_cpes) == 1:
+                    pname_cpe_map[pname] = (next(iter(all_cve_cpes)), 1)
+                else:
+                    # try to retrieve a CPE for the product name by comparing it with the NVD's affected CPEs
+                    most_similar = None
+                    for cpe in all_cve_cpes:
+                        sim = compute_cosine_similarity(cpe[10:], pname, r"[a-zA-Z0-9]+")
+                        if not most_similar or sim > most_similar[1]:
+                            most_similar = (cpe, sim)
+
+                    if most_similar and most_similar[1] > sim_score_thres_good_cpe:
+                        if pname not in pname_cpe_map or most_similar[1] > pname_cpe_map[pname][1]:
+                            pname_cpe_map[pname] = most_similar
+                    else:
+                        ghsa_no_cpe_yet.append((pname, ghsa_id))
+
+            # retrieve CVSS version, vector, score and GHSA severity
+            if advisory['severity']:
+                cvss_vector = advisory['severity'][0]['score']
+                cvss_version = cvss_vector[cvss_vector.find(':')+1:cvss_vector.find('/')]
+                cvss_score = 0.0
+                if cvss_version[0] == '2':
+                    cvss_score = CVSS2(cvss_vector).scores()[0]
+                if cvss_version[0] == '3':
+                    cvss_score = CVSS3(cvss_vector).scores()[0]
+                if cvss_version[0] == '4':
+                    cvss_score = CVSS4(cvss_vector).scores()[0]
+            else:
+                cvss_score, cvss_vector, cvss_version = '0.0', '', '0.0'
+            severity = advisory['database_specific'].get('severity', 'N/A')
+
+            # retrieve description and dates
+            # take care to keep meta information from vuln details / summary
+            description, other_description = advisory.get('details', ''), ''
+            if description and len(description) > 600:  # use summary instead of long text
+                other_description = description
+                description = advisory.get('summary', '')
+            else:
+                other_description = advisory.get('summary', '')
+            meta_info_match = description_meta_info_re.match(other_description)
+            if meta_info_match:
+                if not description.startswith(meta_info_match.group(0)):
+                    description = meta_info_match.group(0) + ' ' + description
+
+            published = advisory['published'].replace('T', ' ').replace('Z', '')
+            last_modified = advisory['modified'].replace('T', ' ').replace('Z', '')
+
+            # put new GHSA entry into DB
+            vulndb_cursor.execute('INSERT INTO ghsa VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);',
+                                  (ghsa_id, ','.join(advisory['aliases']), description, published,
+                                  last_modified, cvss_version, cvss_score, cvss_vector, severity))
+    vulndb_conn.commit()
+
+    # if a CPE couldn't be found by comparing a product name with the NVD's
+    # CPEs for the same vulnerbility, use cpe_search to attempt finding a CPE.
+    for (pname, ghsa_id) in ghsa_no_cpe_yet:
+        product_cpe = pname_cpe_map.get(pname, None)
+        if not product_cpe:
+            # skip assigning CPEs to cerrtain packages for now, because it's too
+            # difficult, e.g., GHSA-78hx-gp6g-7mj6 or https://github.com/advisories/GHSA-7mc6-x925-7qvx
+            if any(pname.startswith(prefix) for prefix in difficult_package_prefixes):
+                pname_cpe_map[pname] = (pname, None)
+                continue
+
+            cpe_search_results = search_cpes(pname)
+            cpe_search_cpes = cpe_search_results.get('cpes', [])
+            if not cpe_search_cpes:
+                cpe_search_cpes = cpe_search_results.get('pot_cpes', [])
+            if cpe_search_cpes:
+                cpe_parts = cpe_search_cpes[0][0].split(':')
+                product_cpe = ':'.join(cpe_parts[:5] + ['*'] * 8)
+                pname_cpe_map[pname] = (product_cpe, 0)
+            else:
+                pname_cpe_map[pname] = (pname, None)
+
+    # Add affects statements of every GHSA vulnerability to DB and create CPEs if necessary
+    newly_created_cpes = set()
+    for ghsa_id, affects in ghsa_affects_map.items():
+        cpe_affected_version_map = {}
+        cpe_number_version_ranges_map = {}
+
+        for product in affects:
+            if not product:
+                continue
+
+            pname = product[0]
+            if any(pname.startswith(prefix) for prefix in difficult_package_prefixes):
+                continue  # again, skip difficult packages for now
+
+            cpe_entry = pname_cpe_map.get(pname, (pname, ''))
+            cpe = pname  # fall back to pname if no CPE could be found (without much use for now)
+            if cpe_entry[1] is not None:
+                cpe = cpe_entry[0]
+
+            # create custom CPE if vendor and product name are somewhat clear
+            # to achieve this, try to match the GHSA product name to a vendor:product structure
+            if not cpe.startswith('cpe:2.3:'):
+                cpe_vendor, cpe_product = '', ''
+                cpe_creation_match = cpe_creation_github_ref_re.match(cpe)
+                if cpe_creation_match:
+                    cpe_vendor, cpe_product = cpe_creation_match.group(2), cpe_creation_match.group(3)
+                if not cpe_vendor:
+                    cpe_creation_match = cpe_creation_slash_re.match(cpe)
+                    if cpe_creation_match:
+                        cpe_vendor, cpe_product = cpe_creation_match.group(1), cpe_creation_match.group(2)
+                if not cpe_vendor:
+                    cpe_creation_match = cpe_creation_single_word_re.match(cpe)
+                    if cpe_creation_match:
+                        cpe_vendor, cpe_product = cpe_creation_match.group(0), cpe_creation_match.group(0)
+
+                if cpe_vendor:
+                    cpe = 'cpe:2.3:a:%s:%s:*:*:*:*:*:*:*:*' % (cpe_vendor, cpe_product)
+                    cpe_entry = (cpe, 0)
+                    newly_created_cpes.add(cpe)
+                    pname_cpe_map[pname] = cpe_entry
+
+            # collect plain information about affects statements and how many different version ranges are listed
+            product_ver_str = json.dumps(product[2:])
+            if cpe not in cpe_affected_version_map:
+                cpe_affected_version_map[cpe] = {}
+            if product_ver_str not in cpe_affected_version_map[cpe]:
+                cpe_affected_version_map[cpe][product_ver_str] = 0
+            cpe_affected_version_map[cpe][product_ver_str] += 1
+
+            pname = product[1] + ':' + pname  # prefix with ecosystem to create unique identifier
+            if cpe not in cpe_number_version_ranges_map:
+                cpe_number_version_ranges_map[cpe] = {}
+            if pname not in cpe_number_version_ranges_map[cpe]:
+                cpe_number_version_ranges_map[cpe][pname] = 0
+            cpe_number_version_ranges_map[cpe][pname] += 1
+
+        # convert plain version range information to CPE affects statements and put into vuln DB
+        # also try to solve problem: different GHSA product names are matched to same CPE, where the
+        # match is bad sometimes. To not pollute the vuln data too much, do not put outliers into DB,
+        # when every other affects statement of the vulnerability speaks against it.
+        for cpe, version_ranges in cpe_number_version_ranges_map.items():
+            number_version_ranges = max(list(version_ranges.values()))
+            cpe_affected_version_map[cpe] = [ver_range_count for ver_range_count in cpe_affected_version_map[cpe].items()]
+            cpe_affected_version_map[cpe] = sorted(cpe_affected_version_map[cpe], key=lambda ver_range: ver_range[1], reverse=True)
+            for ver_range in cpe_affected_version_map[cpe][:number_version_ranges]:
+                ver_range = json.loads(ver_range[0])
+
+                # try to detect and fix defective version ranges by comparing with other affected products
+                if number_version_ranges == 1 and ver_range[0] == "0" and not ver_range[1]:
+                    if all(len(cpe_affected_version_map[other_cpe]) == 1 for other_cpe in cpe_affected_version_map):
+                        for other_cpe in cpe_affected_version_map:
+                            if len(cpe_affected_version_map[other_cpe]) == 1:
+                                ver_range = json.loads(cpe_affected_version_map[other_cpe][0][0])
+                                break
+
+                cpe_split = cpe.split(':')
+                if cpe.startswith('cpe:2.3:'):  # skip products without CPE
+                    if len(ver_range) == 1:
+                        cpe = ':'.join(cpe_split[:5]) + ':' + ver_range[0] + ':' + ':'.join(cpe_split[6:])
+                        try:
+                            vulndb_cursor.execute('INSERT INTO ghsa_cpe VALUES(?, ?, ?, ?, ?, ?)', (ghsa_id,
+                                                cpe, '', False, '', False))
+                        except sql_integrity_error:
+                            # probably UniqueConstraint, which can happen if a different
+                            # product name is matched to the same CPE
+                            pass
+                    elif len(ver_range) == 3:
+                        cpe_split[5] = '*'
+                        cpe = ':'.join(cpe_split)
+                        try:
+                            vulndb_cursor.execute('INSERT INTO ghsa_cpe VALUES(?, ?, ?, ?, ?, ?)', (ghsa_id,
+                                                cpe, ver_range[0], True, ver_range[1], ver_range[2]))
+                        except sql_integrity_error:
+                            # probably UniqueConstraint, which can happen if a different
+                            # product name is matched to the same CPE
+                            pass
+
+    vulndb_conn.commit()
+    vulndb_cursor.close()
+    vulndb_conn.close()
+
+    # add newly_created_cpes to CPE dict
+    add_cpes_to_db(newly_created_cpes, CONFIG['cpe_search'], check_duplicates=False)
+
+    if os.path.isdir(GHSA_GITHUB_DIR):
+        shutil.rmtree(GHSA_GITHUB_DIR)
+
+
 def add_vuln_cpes_to_cpe_search():
     '''Add CPEs only present in NVD vulnerability data to cpe_search DB'''
 
@@ -643,16 +989,6 @@ def run(full=False, nvd_api_key=None, config_file=''):
             nvd_api_key = os.getenv('NVD_API_KEY')
             if (not nvd_api_key) and CONFIG:
                 nvd_api_key = CONFIG.get('NVD_API_KEY', None)
-
-        # always try get to get an old CVEID<->EDBID mapping to speed up update
-        if not os.path.isfile(CONFIG['CVE_EDB_MAP_FILE']):
-            try:
-                with open(os.devnull, 'w') as f:
-                    subprocess.call("wget -q %s -O %s" % (shlex.quote(CVE_EDB_MAP_ARTIFACT_URL),
-                                     shlex.quote(CONFIG['CVE_EDB_MAP_FILE'])), shell=True, stdout=f,
-                                     stderr=subprocess.STDOUT)
-            except:
-                pass
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
