@@ -8,3 +8,6 @@ db_creation_src/mariadb-connector-cpp/
 vulndb.db3
 cveid_to_edbid.json
 web_server_files/node_modules/
+search_vulns_api.db3
+cpe-search-dictionary.db3
+deprecated-cpes.json

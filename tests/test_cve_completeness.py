@@ -101,6 +101,33 @@ class TestSearches(unittest.TestCase):
         expected_cves = ['CVE-2001-0027','CVE-2015-3306', 'CVE-2019-18217', 'CVE-2019-19270', 'CVE-2019-19271', 'CVE-2019-19272', 'CVE-2020-9272', 'CVE-2021-46854', 'CVE-2023-51713', 'CVE-2023-48795']
         self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
+    def test_search_trendmicro_dsa_20_0_u1558(self):
+        self.maxDiff = None
+        query = 'cpe:2.3:a:trendmicro:deep_security_agent:20.0:u1559:*:*:*:*:*:*'
+        result, _ = search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
+        expected_cves = ['CVE-2023-52337', 'CVE-2022-23120', 'CVE-2022-23119', 'CVE-2023-52338', 'CVE-2022-40707', 'CVE-2022-40709', 'CVE-2022-40710', 'CVE-2022-40708']
+        self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
+
+    def test_search_vmware_esxi_802(self):
+        self.maxDiff = None
+        query = 'cpe:2.3:o:vmware:esxi:8.0.2:*:*:*:*:*:*:*'
+        result, _ = search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
+        expected_cves = []
+        self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
+
+    def test_search_openstack_glance(self):
+        self.maxDiff = None
+        query = 'cpe:2.3:a:openstack:glance:*:*:*:*:*:*:*:*'
+        result, _ = search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=False)
+        expected_cves = ['CVE-2022-47951', 'CVE-2013-1840', 'CVE-2015-8234', 'CVE-2015-3289', 'CVE-2015-5163', 'CVE-2015-5162', 'CVE-2013-4428', 'CVE-2016-8611', 'CVE-2017-7200', 'CVE-2022-4134', 'CVE-2015-5251', 'CVE-2014-0162', 'CVE-2014-5356', 'CVE-2016-0757', 'CVE-2015-5286', 'CVE-2014-9623', 'CVE-2015-1195', 'CVE-2014-1948', 'CVE-2012-5482', 'CVE-2013-0212', 'CVE-2013-4354', 'CVE-2015-1881', 'CVE-2014-9493', 'CVE-2014-9684', 'CVE-2012-4573']
+        self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
+
+    def test_search_simplednsplus(self):
+        self.maxDiff = None
+        query = 'simpledns simple dns plus'
+        result, _ = search_vulns(query=query, add_other_exploit_refs=True)
+        expected_cves = ['CVE-2008-3208']
+        self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
 if __name__ == '__main__':
     unittest.main()

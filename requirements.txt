@@ -5,3 +5,4 @@ gevent
 aiohttp
 aiolimiter
 ujson
+markdown

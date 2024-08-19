@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import json
 import os
 import re
@@ -10,9 +11,7 @@ import itertools
 
 from cpe_version import CPEVersion
 from cpe_search.database_wrapper_functions import *
-from cpe_search.cpe_search import (
-    MATCH_CPE_23_RE
-)
+from cpe_search.cpe_search import MATCH_CPE_23_RE
 from cpe_search.database_wrapper_functions import get_database_connection
 from search_vulns_modules.config import _load_config, DEFAULT_CONFIG_FILE
 
@@ -21,9 +20,18 @@ CPE_SEARCH_THRESHOLD_MATCH = 0.72
 MATCH_DISTRO_CPE_OTHER_FIELD = re.compile(r'([<>]?=?)(ubuntu|debian|rhel)_?([\d\.]{1,5}|inf|upstream|sid)?')
 MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat|rhel)(?:[^\d]|$)')
 MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|rhel|debian)_?([\d\.]+|upstream|sid)?$')
+UNIX_CPES = ['cpe:2.3:o:linux:linux_kernel:-:*:*:*:*:*:*:*', 'cpe:2.3:o:opengroup:unix:-:*:*:*:*:*:*:*', 'cpe:2.3:o:unix:unix:*:*:*:*:*:*:*:*']
+
 MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'([\w\.\:\-\_\~]*\s){2,}')
 VERSION_MATCH_CPE_CREATION_RE = re.compile(r'\b((\d[\da-zA-Z\.]{0,6})([\+\-\.\_\~ ][\da-zA-Z\.]+){0,4})[^\w\n]*$')
-DEBIAN_EQUIV_CPES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../debian_equiv_cpes.json')
+NUMERIC_VERSION_RE = re.compile(r'[\d\.]+')
+NON_ALPHANUMERIC_SPLIT_RE = re.compile(r'[^a-zA-Z]')
+
+PROJECT_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
+DEFAULT_CONFIG_FILE = os.path.join(PROJECT_DIR, 'config.json')
+MAN_EQUIVALENT_CPES_FILE = os.path.join(PROJECT_DIR, os.path.join('resources', 'man_equiv_cpes.json'))
+DEBIAN_EQUIV_CPES_FILE = os.path.join(PROJECT_DIR, os.path.join('resources', 'debian_equiv_cpes.json'))
+VERSION_FILE = os.path.join(PROJECT_DIR, 'version.txt')
 
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
@@ -86,6 +94,7 @@ def is_useful_cpe(cpe, version_end, distribution):
 
 def is_cpe_included_from_field(cpe1, cpe2, field=6):
     '''Return True if cpe1 is included in cpe2 starting from the provided field'''
+
     cpe1_remainder_fields = get_cpe_parts(cpe1)[field:]
     cpe2_remainder_fields = get_cpe_parts(cpe2)[field:]
 
@@ -198,7 +207,7 @@ def load_equivalent_cpes(config):
         equivalent_cpes_dicts_list.append(deprecated_cpes)
 
         # then manually add further information
-        with open(config['MAN_EQUIVALENT_CPES_FILE']) as f:
+        with open(MAN_EQUIVALENT_CPES_FILE) as f:
             manual_equivalent_cpes = json.loads(f.read())
         equivalent_cpes_dicts_list.append(manual_equivalent_cpes)
 
@@ -236,8 +245,12 @@ def get_equivalent_cpes(cpe, config):
     cpes = [cpe]
     cpe_split = get_cpe_parts(cpe)
     cpe_prefix = ':'.join(cpe_split[:5]) + ':'
-    cpe_version = cpe_split[5]
-    cpe_subversion = cpe_split[6]
+    cpe_version, cpe_subversion = '*', '*'
+    if len(cpe_split) > 5:
+        cpe_version = cpe_split[5]
+    if len(cpe_split) > 6:
+        cpe_subversion = cpe_split[6]
+
 
     # if version part consists of more than one version parts, split into two CPE fields
     cpe_version_sections = CPEVersion(cpe_version).get_version_sections()
@@ -253,11 +266,12 @@ def get_equivalent_cpes(cpe, config):
         cpes.append(':'.join(cpe_split))
 
     equiv_cpes = cpes.copy()
-    for cpe in cpes:
+    for cur_cpe in cpes:
+        cur_cpe_split = get_cpe_parts(cur_cpe)
         for equivalent_cpe in EQUIVALENT_CPES.get(cpe_prefix, []):
             equivalent_cpe_prefix = ':'.join(get_cpe_parts(equivalent_cpe)[:5]) + ':'
             if equivalent_cpe != cpe_prefix:
-                equiv_cpes.append(equivalent_cpe_prefix + ':'.join(cpe_split[5:]))
+                equiv_cpes.append(equivalent_cpe_prefix + ':'.join(cur_cpe_split[5:]))
 
     return equiv_cpes
 
@@ -268,10 +282,53 @@ def is_cpe_included_after_version(cpe1, cpe2):
     return is_cpe_included_from_field(cpe1, cpe2)
 
 
-def get_cpe_version(cpe_version, cpe_subversion, version_end):
+def get_cpe_version(cpe_version, cpe_parts, version_end):
     # combine version and subversion if NVD merged both for version_end as well
-    if version_end and len(version_end.get_version_sections()) > len(cpe_version.get_version_sections()):
-        cpe_version = (cpe_version + cpe_subversion)
+    version_end_sections = version_end.get_version_sections()
+    cpe_version_subsections = cpe_version.get_version_sections()
+    cpe_subversion = CPEVersion('*')
+    if len(cpe_parts) > 6:
+        cpe_subversion = CPEVersion(cpe_parts[6])
+    cpe_product = cpe_parts[4]
+
+    if len(version_end_sections) > len(cpe_version_subsections):
+        # if queried CPE has a subversion / patch-level, merge this with the base version
+        if cpe_subversion:
+            cpe_version = (cpe_version + cpe_subversion)
+            cpe_version_sections = cpe_version.get_version_sections()
+            if len(cpe_version_sections) != len(version_end_sections):
+                # try to adjust cpe_version, such that it ideally has the same number of sections as version_end
+                final_cpe_version_sections = []
+                i, j = 0, 0
+                while i < len(cpe_version_sections) and j < len(version_end_sections):
+                    # if same version type (numeric or alphanumeric), use version field, otherwise leave it out
+                    cpe_version_section_numeric_match = NUMERIC_VERSION_RE.match(cpe_version_sections[i])
+                    version_end_section_numeric_match = NUMERIC_VERSION_RE.match(version_end_sections[j])
+
+                    if cpe_version_section_numeric_match and version_end_section_numeric_match:
+                        final_cpe_version_sections.append(cpe_version_sections[i])
+                        j += 1
+                    elif not cpe_version_section_numeric_match and not version_end_section_numeric_match:
+                        final_cpe_version_sections.append(cpe_version_sections[i])
+                        j += 1
+                    i += 1
+                cpe_version = CPEVersion(' '.join(final_cpe_version_sections))
+        else:
+            # check if the version_end string starts with the product name
+            # (e.g. 'esxi70u1c-17325551' from https://nvd.nist.gov/vuln/detail/CVE-2020-3999)
+            product_parts = [word.strip() for word in NON_ALPHANUMERIC_SPLIT_RE.split(cpe_product)]
+            cpe_version_sections = cpe_version.get_version_sections()
+            for part in product_parts:
+                # ... if it does, prefix cpe_version with the CPE product name
+                if str(version_end).startswith(part):
+                    if '.' not in str(version_end):
+                        cpe_version = CPEVersion(str(cpe_version).replace('.', ''))
+                    cpe_version = CPEVersion(part) + cpe_version
+                    break
+
+    # fallback if subversion merging did not work
+    if not cpe_version:
+        cpe_version = CPEVersion(cpe_parts[5])
     return cpe_version
 
 
@@ -310,39 +367,33 @@ def are_versions_considered_equal(cpe_version, version_start, version_start_incl
             return (cpe_version < version_end) and not version_end_considered_equal
 
 
-def is_version_start_end_matching(cpe_version, cpe_subversion, version_start, version_start_incl, version_end, version_end_incl, is_distro = False):
+def is_version_start_end_matching(cpe_parts, version_start, version_start_incl, version_end, version_end_incl, is_distro = False):
     """Return boolean whether the provided CPE version lies within the provided range modifiers"""
 
     version_start = CPEVersion(version_start)
     version_end = CPEVersion(version_end)
-    is_matching = False
 
-    cpe_version = get_cpe_version(cpe_version, cpe_subversion, version_end)
+    cpe_version = CPEVersion(cpe_parts[5])
+    cpe_version = CPEVersion('*')
+    # check that CPE is not short/incomplete
+    if len(cpe_parts) > 5:
+        cpe_version = CPEVersion(cpe_parts[5])
+
+    if version_end:
+        cpe_version = get_cpe_version(cpe_version, cpe_parts, version_end)
+    else:
+        # set a max version if end is not given explicitly
+        version_end = CPEVersion('~' * 256)
 
     if is_distro:
-        is_matching = are_versions_considered_equal(cpe_version, version_start, version_start_incl, version_end, version_end_incl)
+        return are_versions_considered_equal(cpe_version, version_start, version_start_incl, version_end, version_end_incl)
     else:
-        if version_start and version_end:
-            if version_start_incl == True and version_end_incl == True:
-                is_matching = version_start <= cpe_version <= version_end
-            elif version_start_incl == True and version_end_incl == False:
-                is_matching = version_start <= cpe_version < version_end
-            elif version_start_incl == False and version_end_incl == True:
-                is_matching = version_start < cpe_version <= version_end
-            else:
-                is_matching = version_start < cpe_version < version_end
-        elif version_start:
-            if version_start_incl == True:
-                is_matching = version_start <= cpe_version
-            elif version_start_incl == False:
-                is_matching = version_start < cpe_version
-        elif version_end:
-            if version_end_incl == True:
-                is_matching = cpe_version <= version_end
-            elif version_end_incl == False:
-                is_matching = cpe_version < version_end
-    
-    return is_matching
+        # check if version start or end matches exactly, otherwise return if in range
+        if version_start_incl and cpe_version == version_start:
+            return True
+        if version_end_incl and cpe_version == version_end:
+            return True
+        return version_start < cpe_version < version_end
 
 
 def has_cpe_lower_versions(cpe1, cpe2, is_distro_query=False):
@@ -380,11 +431,13 @@ def is_more_specific_cpe_contained(vuln_cpe, cve_cpes):
         if vuln_cpe != vuln_other_cpe:
             if is_cpe_included_from_field(vuln_cpe, vuln_other_cpe, 5):
                 # assume the number of fields is the same for both, since they're official NVD CPEs
-                vuln_cpe_fields, vuln_other_cpe_fields = get_cpe_parts(vuln_cpe), get_cpe_parts(vuln_other_cpe)
+                vuln_cpe_fields, vuln_other_cpe_fields = vuln_cpe.split(':'), vuln_other_cpe.split(':')
                 for i in range(len(vuln_other_cpe_fields)-1, -1, -1):
-                    if (not CPEVersion(vuln_cpe_fields[i])) and (not CPEVersion(vuln_other_cpe_fields[i])):
+                    vuln_cpe_field_version = CPEVersion(vuln_cpe_fields[i])
+                    vuln_other_cpe_field_version = CPEVersion(vuln_other_cpe_fields[i])
+                    if (not vuln_cpe_field_version) and (not vuln_other_cpe_field_version):
                         continue
-                    elif CPEVersion(vuln_other_cpe_fields[i]):
+                    elif (not vuln_cpe_field_version) and vuln_other_cpe_field_version:
                         return True
                     else:
                         break
@@ -403,3 +456,54 @@ def get_possible_versions_in_query(query):
         if len(version_parts) > 1 and version_parts[0] == version_parts[1]:
             version_parts = version_parts[1:]
     return version_parts
+
+
+def retrieve_eol_info(cpe, db_cursor):
+    """Retrieve information from endoflife.date whether the provided version is eol or outdated"""
+
+    version_status = {}
+    cpe_split = cpe.split(':')
+    cpe_prefix, query_version = ':'.join(cpe_split[:5]) + ':', CPEVersion(cpe_split[5])
+    eol_releases = []
+    db_cursor.execute('SELECT eold_id, version_start, version_latest, eol_info FROM eol_date_data WHERE cpe_prefix = ? ORDER BY release_id DESC', (cpe_prefix,))
+    if db_cursor:
+        eol_releases = db_cursor.fetchall()
+
+    latest = ''
+    for i, release in enumerate(eol_releases):
+        # set up release information
+        eol_ref = 'https://endoflife.date/' + release[0]
+        release_start, release_end = CPEVersion(release[1]), CPEVersion(release[2])
+        release_eol, now = release[3], datetime.datetime.now()
+        if release_eol not in ('true', 'false'):
+            release_eol = datetime.datetime.strptime(release_eol, '%Y-%m-%d')
+        elif release_eol != 'true':
+            release_eol = False
+
+        # set latest version in first iteration
+        if not latest:
+            latest = release_end
+
+        if not query_version:
+            if release_eol and now >= release_eol:
+                version_status = {'status': 'eol', 'latest': str(latest), 'ref': eol_ref}
+            else:
+                version_status = {'status': 'N/A', 'latest': str(latest), 'ref': eol_ref}
+        else:
+            # check query version status
+            if query_version >= release_end:
+                if release_eol and (release_eol == 'true' or now >= release_eol):
+                    version_status = {'status': 'eol', 'latest': str(latest), 'ref': eol_ref}
+                else:
+                    version_status = {'status': 'current', 'latest': str(latest), 'ref': eol_ref}
+            elif ((release_start <= query_version < release_end) or
+                  (i == len(eol_releases) - 1 and query_version <= release_start)):
+                if release_eol and (release_eol == 'true' or now >= release_eol):
+                    version_status = {'status': 'eol', 'latest': str(latest), 'ref': eol_ref}
+                else:
+                    version_status = {'status': 'outdated', 'latest': str(latest), 'ref': eol_ref}
+
+        if version_status:
+            break
+
+    return version_status

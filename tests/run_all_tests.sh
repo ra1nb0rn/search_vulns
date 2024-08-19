@@ -24,11 +24,32 @@ EXIT_6=$?
 echo '[+] Running test_version_considered_equal.py'
 python3 "${SCRIPT_DIR}/test_version_considered_equal.py"
 EXIT_7=$?
-echo '[+] Running cpe_search/test_cpes.py'
-python3 "${SCRIPT_DIR}/../cpe_search/test_cpes.py"
+echo '[+] Running test_version_comparison.py'
+python3 "${SCRIPT_DIR}/test_version_comparison.py"
 EXIT_8=$?
-echo '[+] Running cpe_search/test_cpe_suggestions.py'
-python3 "${SCRIPT_DIR}/../cpe_search/test_cpe_suggestions.py"
+
+# don't run cpe_search tests for now, b/c search_vulns appends to CPE DB
+# and because the test pipeline of cpe_search should ensure correct working by itself
+
+# create temporary symlink for cpe_search tests
+# CPE_DICT_LOCATION="${SCRIPT_DIR}/../$(cat "${SCRIPT_DIR}/../config.json" | jq -r '.cpe_search.DATABASE_NAME')"
+# ln -s ${CPE_DICT_LOCATION} ${SCRIPT_DIR}/../cpe_search/cpe-search-dictionary.db3 &>/dev/null
+# CREATED_SYMLINK=$?
+
+# echo '[+] Running cpe_search/test_cpes.py'
+# python3 "${SCRIPT_DIR}/../cpe_search/test_cpes.py"
+# EXIT_5=$?
+# echo '[+] Running cpe_search/test_cpe_suggestions.py'
+# python3 "${SCRIPT_DIR}/../cpe_search/test_cpe_suggestions.py"
+# EXIT_6=$?
+
+# # remove temporary symlink if one was created
+# if [ $CREATED_SYMLINK -eq 0 ]; then
+#     rm "${SCRIPT_DIR}/../cpe_search/cpe-search-dictionary.db3"
+# fi
+
+echo '[+] Running test_eol_date.py'
+python3 "${SCRIPT_DIR}/test_eol_date.py"
 EXIT_9=$?
 
 # https://stackoverflow.com/a/16358989

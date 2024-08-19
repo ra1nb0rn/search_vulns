@@ -32,7 +32,7 @@
                     class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
                     <li><a href="/">Home</a></li>
                     <li><a href="/usage">Usage</a></li>
-                    <li><a href="/api-setup">API</a></li>
+                    <li><a href="/api/setup">API</a></li>
                     <li><a href="/news">News</a></li>
                 </ul>
             </div>
@@ -43,7 +43,7 @@
             <ul class="menu menu-horizontal px-1">
                 <li><a href="/">Home</a></li>
                 <li><a href="/usage">Usage</a></li>
-                <li><a href="/api-setup">API</a></li>
+                <li><a href="/api/setup">API</a></li>
                 <li><a href="/news">News</a></li>
             </ul>
         </div>
@@ -70,8 +70,10 @@
     </div>
 
     <!-- BEGIN API Setup -->
-    <div class="md:max-w-8xl lg:max-w-6xl mx-auto text-center mt-4" style="min-height: 65vh;">
-        <h2 class="text-4xl">Work in Progress</h2>
+    <div class="xs:max-w-4xl sm:max-w-3xl mx-auto mt-4 px-3" style="min-height: 65vh;">
+        <div id="newsHtml">
+            {{ news_html | safe }}
+        </div>
     </div>
 
     <button id="toTopButton" onclick="backToTop()" title="Go To Top"
@@ -80,7 +82,7 @@
     </button>
 
     <!-- Include classes only used by frontend JS for compiler
-    <div class="hidden text-error text-warning badge border-none text-success btn-xs text-warning loading loading-spinner bg-warning text-right tooltip relative z-10 w-80 p-2 p-1 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300 table table-sm table-rounded btn-disabled mr-1 mr-2 shadow-base-300 btn-success btn-outline ml-1 ml-2 sm:ml-1 sm:ml-2 divider divider-info text-lg text-info text-left grid place-items-center list-disc text-nowrap p-1.5">
+    <div class="list-disc text-left text-2xl text-xl text-lg text-base font-bold font-semibold font-medium my-3 my-2 my-1 ml-6 mb-3 mt-3">
     </div>
     -->
 

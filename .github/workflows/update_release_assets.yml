@@ -26,8 +26,6 @@ jobs:
         run: python3 ./tests/test_cve_attr_completeness.py
       - name: Test Exploit Completeness
         run: python3 ./tests/test_exploit_completeness.py
-      - name: Test Related Queries Functionality
-        run: python3 ./tests/test_related_queries.py
       - name: Get latest release tag
         run: |
           LATEST_TAG=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/ra1nb0rn/search_vulns/releases/latest | jq -r '.tag_name')
@@ -38,7 +36,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.LATEST_RELEASE_TAG }}
           files: |
-            vulndb.db3
-            cveid_to_edbid.json
-            cpe_search/cpe-search-dictionary.db3
-            cpe_search/deprecated-cpes.json
+            resources/vulndb.db3
+            resources/cveid_to_edbid.json
+            resources/cpe-search-dictionary.db3
+            resources/deprecated-cpes.json

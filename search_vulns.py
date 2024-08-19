@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import json
 import re
 import threading
@@ -8,6 +9,7 @@ import threading
 from cpe_search.cpe_search import (
     search_cpes,
     match_cpe23_to_cpe23_from_dict,
+    cpe_matches_query
 )
 from search_vulns_modules.config import _load_config, DEFAULT_CONFIG_FILE
 from search_vulns_modules.generic_functions import *
@@ -18,32 +20,6 @@ from search_vulns_modules.process_distribution_matches import (
     add_distribution_infos_to_cpe,
     get_distribution_data_from_version
 )
-MATCH_CPE_23_RE = re.compile(r'cpe:2\.3:[aoh](:[^:]+){2,10}')
-CPE_SEARCH_THRESHOLD = 0.72
-MATCH_DISTRO_CPE_OTHER_FIELD = re.compile(r'([<>]?=?)(ubuntu|debian|rhel)_?([\d\.]{1,5}|inf|upstream|sid)?')
-MATCH_DISTRO_QUERY = re.compile(r'(ubuntu|debian|redhat enterprise linux|redhat|rhel)[ _]?([\w\.]*)')
-MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat|rhel)(?:[^\d]|$)')
-MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|rhel|debian)_?([\d\.]+|upstream|sid)?$')
-MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'([\w\.\:\-\_\~]*\s){2,}')
-
-EQUIVALENT_CPES = {}
-LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
-DEDUP_LINEBREAKS_RE_1 = re.compile(r'(\r\n)+')
-DEDUP_LINEBREAKS_RE_2 = re.compile(r'\n+')
-
-UNIX_CPES = ['cpe:2.3:o:linux:linux_kernel:-:*:*:*:*:*:*:*', 'cpe:2.3:o:opengroup:unix:-:*:*:*:*:*:*:*', 'cpe:2.3:o:unix:unix:*:*:*:*:*:*:*:*']
-
-# define ANSI color escape sequences
-# Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
-# and: http://www.topmudsites.com/forums/showthread.php?t=413
-SANE = '\u001b[0m'
-GREEN = '\u001b[32m'
-BRIGHT_GREEN = '\u001b[32;1m'
-RED = '\u001b[31m'
-YELLOW = '\u001b[33m'
-BRIGHT_BLUE = '\u001b[34;1m'
-MAGENTA = '\u001b[35m'
-BRIGHT_CYAN = '\u001b[36;1m'
 
 
 def parse_args():
@@ -56,14 +32,16 @@ def parse_args():
     parser.add_argument('-f', '--format', type=str, default='txt', choices={'txt', 'json'}, help='Output format, either \'txt\' or \'json\' (default: \'txt\')')
     parser.add_argument('-o', '--output', type=str, help='File to write found vulnerabilities to')
     parser.add_argument('-q', '--query', dest='queries', metavar='QUERY', action='append', help='A query, either software title like \'Apache 2.4.39\' or a CPE 2.3 string')
+    parser.add_argument('-c', '--config', type=str, default=DEFAULT_CONFIG_FILE, help='A config file to use (default: config.json)')
+    parser.add_argument('-V', '--version', action='store_true', help='Print the version of search_vulns')
     parser.add_argument('--cpe-search-threshold', type=float, default=CPE_SEARCH_THRESHOLD_MATCH, help='Similarity threshold used for retrieving a CPE via the cpe_search tool')
     parser.add_argument('--ignore-general-cpe-vulns', action='store_true', help='Ignore vulnerabilities that only affect a general CPE (i.e. without version)')
     parser.add_argument('--include-single-version-vulns', action='store_true', help='Include vulnerabilities that only affect one specific version of a product when querying a lower version')
-    parser.add_argument('--ignore-general-distribution-matches', action='store_true', help='Ignore vulnerabilities that neither have a NVD entry nor a matching distribution entry')
-    parser.add_argument('-c', '--config', type=str, default=DEFAULT_CONFIG_FILE, help='A config file to use (default: config.json)')
+    parser.add_argument('--ignore-general-distribution-vulns', action='store_true', help='Ignore vulnerabilities that neither have a NVD entry nor a matching distribution entry')
+    parser.add_argument('--use-created-cpes', action='store_true', help='If no matching CPE exists in the software database, automatically use a matching CPE created by search_vulns')
 
     args = parser.parse_args()
-    if not args.update and not args.queries and not args.full_update:
+    if not args.update and not args.queries and not args.full_update and not args.version:
         parser.print_help()
     return args
 
@@ -78,6 +56,10 @@ def main():
     elif args.full_update == True:
         from updates.updater import run as run_updater
         run_updater(True, args.api_key, args.config)
+    elif args.version == True:
+        with open(VERSION_FILE) as f:
+            print(f.read())
+        return
 
     if not args.queries:
         return
@@ -116,6 +98,14 @@ def main():
                 check_str = cpe[8:]
                 if any(char.isdigit() for char in query) and not any(char.isdigit() for char in check_str):
                     found_cpe = False
+                
+            # if a good CPE couldn't be found, use a created one if configured
+            if not found_cpe and args.use_created_cpes and cpe_search_results['pot_cpes']:
+                for pot_cpe in cpe_search_results['pot_cpes']:
+                    if cpe_matches_query(pot_cpe[0], query):
+                        cpe = pot_cpe[0]
+                        found_cpe = True
+                        break
 
             if not found_cpe:
                 if args.format.lower() == 'txt':
@@ -148,7 +138,7 @@ def main():
 
         not_affected_cve_ids = []
         for cur_cpe in equivalent_cpes:
-            cur_vulns, not_affected_cve_ids_returned = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns, args.include_single_version_vulns, args.ignore_general_distribution_matches, config)
+            cur_vulns, not_affected_cve_ids_returned = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns, args.include_single_version_vulns, args.ignore_general_distribution_vulns, config)
             not_affected_cve_ids += not_affected_cve_ids_returned
             
             for cve_id, vuln in cur_vulns[cur_cpe]['vulns'].items():
@@ -161,6 +151,15 @@ def main():
                 del vulns[query][cve_id]
             except:
                 pass
+
+        eol_info = {}
+        for cur_cpe in equivalent_cpes:
+            cur_vulns = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns, args.include_single_version_vulns, config)
+            for cve_id, vuln in cur_vulns[cur_cpe]['vulns'].items():
+                if cve_id not in vulns[query]:
+                    vulns[query][cve_id] = vuln
+            if cur_vulns[cur_cpe]['version_status']:
+                eol_info = cur_vulns[cur_cpe]['version_status']
 
         # print found vulnerabilities
         if args.format.lower() == 'txt':
@@ -175,7 +174,8 @@ def main():
             cpe_vulns_sorted = {}
             for cve_id in cve_ids_sorted:
                 cpe_vulns_sorted[cve_id] = cpe_vulns[cve_id]
-            vulns[query] = {'cpe': '/'.join(equivalent_cpes), 'vulns': cpe_vulns_sorted}
+            vulns[query] = {'cpe': '/'.join(equivalent_cpes), 'vulns': cpe_vulns_sorted,
+                            'version_status': eol_info}
 
     if args.output:
         with open(args.output, 'w') as f:

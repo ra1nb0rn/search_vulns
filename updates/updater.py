@@ -5,8 +5,8 @@ import shlex
 import subprocess
 import sys
 
-from .update_nvd import update_vuln_db
-from .update_cpes import handle_cpes_update, add_new_cpes_to_db
+from .update_nvd import update_vuln_db, get_not_contained_nvd_cpes
+from .update_cpes import handle_cpes_update
 from .update_generic import *
 from .update_debian import update_vuln_debian_db
 from .update_ubuntu import update_vuln_ubuntu_db
@@ -19,6 +19,7 @@ from .update_distributions_generic import (
     initialize_packagename_cpe_mapping
 )
 from search_vulns_modules.config import update_config_generic, _load_config
+from cpe_search.cpe_search import add_cpes_to_db
 
 CONFIG = {}
 
@@ -26,7 +27,7 @@ CONFIG = {}
 def migrate_to_mariadb(config_file):
     try:
         print('[+] Migrating from SQLite to MariaDB (takes around 2 minutes)...')
-        return_code = subprocess.call('./migrate_sqlite_to_mariadb.sh %s %s %s' % (shlex.quote(CONFIG['DATABASE_NAME']), shlex.quote(CONFIG['cpe_search']['DATABASE_NAME']), config_file), shell=True, stderr=subprocess.DEVNULL)
+        return_code = subprocess.call('./resources/migrate_sqlite_to_mariadb.sh %s %s %s' % (shlex.quote(CONFIG['DATABASE_NAME']), shlex.quote(CONFIG['cpe_search']['DATABASE_NAME']), config_file), shell=True, stderr=subprocess.DEVNULL)
         if return_code != 0:
             raise(Exception('Migration of database failed'))
         os.remove(MARIADB_BACKUP_FILE)
@@ -151,11 +152,11 @@ def full_update(nvd_api_key, config_file):
     if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
         os.remove(CONFIG['DATABASE_BACKUP_FILE'])
 
-    print('[+] Add new cpes to database')
-    error = add_new_cpes_to_db(NEW_CPES_INFOS, CONFIG)
-    if error:
-        print('[-] Error adding new cpe information')
-        sys.exit(1)
+    # add CPE infos from vulnerability data and from distribution data to CPE DB
+    print('[+] Adding software/CPE information from vulns to CPE-DB')
+    not_contained_nvd_cpes = get_not_contained_nvd_cpes()
+    all_not_contained_cpes = not_contained_nvd_cpes.union(set(NEW_CPES_INFOS))
+    add_cpes_to_db(all_not_contained_cpes, CONFIG['cpe_search'], check_duplicates=False)
 
 
 def quick_update(config_file):
@@ -228,8 +229,7 @@ def run(full=False, nvd_api_key=None, config_file=''):
     CONFIG = update_config_generic()
 
     # create file dirs as needed
-    update_files = [CONFIG['CVE_EDB_MAP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'],
-                    CONFIG['MAN_EQUIVALENT_CPES_FILE']]
+    update_files = [CONFIG['CVE_EDB_MAP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE']]
     if CONFIG['DATABASE']['TYPE'] == 'sqlite':
         update_files += [CONFIG['DATABASE_NAME'], CONFIG['cpe_search']['DATABASE_NAME']]
     for file in update_files:

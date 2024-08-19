@@ -18,13 +18,20 @@ NVD_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "nv
 CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary.db3"
 CPE_DEPRECATIONS_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/deprecated-cpes.json"
 CVE_EDB_MAP_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cveid_to_edbid.json"
+
 POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
 POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PoC-in-GitHub")
+
+EOLD_GITHUB_REPO = "https://github.com/endoflife-date/endoflife.date"
+EOLD_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "endoflife.date")
+EOLD_HARDCODED_MATCHES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('..', 'resources', 'eold_hardcoded_matches.json'))
+
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+
 MARIADB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'mariadb_dump.sql')
-CREATE_SQL_STATEMENTS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'create_sql_statements.json')
+CREATE_SQL_STATEMENTS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('..', 'resources', 'create_sql_statements.json'))
 QUIET = False
 DEBUG = False
 API_RESULTS_PER_PAGE = 2000

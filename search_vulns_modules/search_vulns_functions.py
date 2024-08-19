@@ -77,14 +77,16 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, ignore_general_dis
 
     cpe_parts = get_cpe_parts(cpe)
     cpe_version = CPEVersion(cpe_parts[5])
-    cpe_subversion = CPEVersion(cpe_parts[6])
     vulns = []
     not_affected_cve_ids = []
 
-    general_cpe_prefix = ':'.join(get_cpe_parts(cpe)[:5]) + ':'
+    general_cpe_prefix_query = ':'.join(get_cpe_parts(cpe)[:5]) + ':'
+    if 'mariadb' in str(type(db_cursor)):  # backslashes have to be escaped for MariaDB
+        general_cpe_prefix_query = general_cpe_prefix_query.replace('\\', '\\\\')
+
     query = ('SELECT cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, ' +
              'is_cpe_version_end_including FROM cve_cpe WHERE cpe LIKE ? AND source == "nvd"')
-    db_cursor.execute(query, (general_cpe_prefix + '%%', ))
+    db_cursor.execute(query, (general_cpe_prefix_query + '%%', ))
     general_cpe_nvd_data = set()
     if db_cursor:
         general_cpe_nvd_data =  set(db_cursor.fetchall())
@@ -108,7 +110,7 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, ignore_general_dis
 
             if cpe_version and (version_start or version_end):
                 # additionally check if version matches range
-                is_cpe_vuln = is_version_start_end_matching(cpe_version, cpe_subversion, version_start, version_start_incl, version_end, version_end_incl)
+                is_cpe_vuln = is_version_start_end_matching(cpe_parts, version_start, version_start_incl, version_end, version_end_incl)
                 match_reason = 'version_in_range'
             elif is_cpe_vuln:
                 # check if the NVD's affected products entry for the CPE is considered faulty
@@ -174,6 +176,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
             distribution = get_distribution_data_from_version(possible_versions[0], db_cursor)
         cpe_search_query = query
     if not MATCH_CPE_23_RE.match(query_stripped):
+        is_good_cpe = False
         if is_possible_distro_query(query):
             # remove distro information before searching for a cpe
             distribution, cpe_search_query = seperate_distribution_information_from_query(query, db_cursor)
@@ -182,7 +185,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         cpe_search_results = search_cpes(cpe_search_query, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
 
         if not cpe_search_results['cpes']:
-            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': cpe_search_results['pot_cpes']}}, []
+            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': cpe_search_results['pot_cpes'], 'version_status': {}}}, []
 
         cpes = cpe_search_results['cpes']
         pot_cpes = cpe_search_results['pot_cpes']
@@ -220,8 +223,15 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         except:
             pass
 
+    # add outdated software / endoflife.date information
+    eol_info = {}
+    for equiv_cpe in equivalent_cpes:
+        eol_info = retrieve_eol_info(equiv_cpe, db_cursor)
+        if eol_info:
+            break
+
     if close_cursor_after:
         db_cursor.close()
         db_conn.close()
 
-    return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes}}, not_affected_cve_ids
+    return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes, 'version_status': {}}}, not_affected_cve_ids

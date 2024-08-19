@@ -1,11 +1,20 @@
 {
-    "DATABASE_NAME": "vulndb.db3",
-    "MAN_EQUIVALENT_CPES_FILE": "man_equiv_cpes.json",
-    "CVE_EDB_MAP_FILE": "cveid_to_edbid.json",
+    "DATABASE_NAME": "resources/vulndb.db3",
+    "CVE_EDB_MAP_FILE": "resources/cveid_to_edbid.json",
     "NVD_API_KEY": "",
+    "RECAPTCHA_AND_API": {
+        "ENABLED": false,
+        "SITE_KEY_V3": "<YOUR_SITE_KEY_V3>",
+        "SECRET_KEY_V3": "<YOUR_SECRET_KEY_V3>",
+        "SITE_KEY_V2": "<YOUR_SITE_KEY_V2>",
+        "SECRET_KEY_V2": "<YOUR_SECRET_KEY_V2>",
+        "API_REQUESTS_RATE_LIMIT_WINDOW": 300,
+        "API_REQUESTS_RATE_LIMIT_COUNT": 60,
+        "DATABASE_NAME": "resources/search_vulns_api.db3"
+    },
     "cpe_search": {
-        "DATABASE_NAME": "cpe_search/cpe-search-dictionary.db3",
-        "DEPRECATED_CPES_FILE": "cpe_search/deprecated-cpes.json"
+        "DATABASE_NAME": "resources/cpe-search-dictionary.db3",
+        "DEPRECATED_CPES_FILE": "resources/deprecated-cpes.json"
     },
     "DATABASE": {
         "TYPE": "sqlite"

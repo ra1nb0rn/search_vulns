@@ -7,10 +7,7 @@ from urllib.parse import unquote
 from .update_generic import *
 from search_vulns_modules.generic_functions import get_cpe_parts
 
-from cpe_search.cpe_search import (
-    search_cpes,
-    perform_calculations,
-    )
+from cpe_search.cpe_search import search_cpes
 from cpe_search.cpe_search import get_all_cpes, TEXT_TO_VECTOR_RE
 
 SPLIT_VERSION = re.compile(r'^([v\d\~:]{0,2}[\d\.\-]+\w{0,2}[\d\.\-]+)(?<=\w)')
@@ -335,12 +332,6 @@ def get_distribution_cpe(distro_version, source, cpe, extra_cpe=''):
     return cpe
 
 
-def get_cpe_infos(cpe):
-    '''Return perform calculations for given cpe'''
-    calculations_string = cpe+';'
-    return perform_calculations([calculations_string], -1)[0]
-
-
 def is_cve_rejected(cve_id, config):
     '''Return True if cve is rejected from MITRE'''
     db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
@@ -429,7 +420,7 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
         is_cpe_version_start_including = False
 
     db_cursor.execute('INSERT OR IGNORE INTO cve_cpe (cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including, source) VALUES (?, ?, ?, ?, ?, ?, ?)', (cve_id, distro_cpe, version_start, is_cpe_version_start_including , version_end, False, source))
-    NEW_CPES_INFOS.append(get_cpe_infos(matching_cpe))
+    NEW_CPES_INFOS.append(matching_cpe)
 
 
 def add_not_found_packages(not_found_cpes, distribution, db_cursor):

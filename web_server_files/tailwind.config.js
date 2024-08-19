@@ -5,7 +5,12 @@ module.exports = {
     "./tailwind_input.css",
   ],
   theme: {
-    extend: {},
+    extend: {
+      spacing: {
+        "90": "22.5rem",
+        "104": "26rem"
+      }
+    }
   },
   plugins: [require("daisyui")],
   // daisyUI config (optional - here are the default values)

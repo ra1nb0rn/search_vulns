@@ -107,9 +107,11 @@ def get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_gen
     '''
     vulns = []
     cpe_parts = get_cpe_parts(cpe)
-    cpe_version = CPEVersion(cpe_parts[5])
-    cpe_subversion = CPEVersion(cpe_parts[6])
-    
+    cpe_version = CPEVersion('*')
+    # check that CPE is not short/incomplete
+    if len(cpe_parts) > 5:
+        cpe_version = CPEVersion(cpe_parts[5])
+
     pot_vulns = query_distribution_matches(cpe_parts, distribution, db_cursor)
 
     vulns = []
@@ -157,7 +159,7 @@ def get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_gen
             continue
 
         if cpe_version:
-            is_cpe_vuln = is_version_start_end_matching(cpe_version, cpe_subversion, version_start, version_start_incl, version_end, version_end_incl, is_distro=True)
+            is_cpe_vuln = is_version_start_end_matching(cpe_parts, version_start, version_start_incl, version_end, version_end_incl, is_distro=True)
             vuln_match_reason = 'version_in_range'
         else:
             is_cpe_vuln = pot_vuln[4] != '-1'

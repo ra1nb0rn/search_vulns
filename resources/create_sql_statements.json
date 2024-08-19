@@ -23,6 +23,10 @@
         "DISTRIBUTION_VERSION_CODENAME_MAPPING": {
             "sqlite": "DROP TABLE IF EXISTS distribution_codename_version_mapping; CREATE TABLE distribution_codename_version_mapping (source CHAR(6), version VARCHAR(23), codename VARCHAR(23), support_expires DATETIME, esm_lts_expires DATETIME, PRIMARY KEY(source, version, codename));",
             "mariadb": "CREATE OR REPLACE TABLE distribution_codename_version_mapping (source CHAR(6) CHARACTER SET ascii, version VARCHAR(15) CHARACTER SET ascii, codename VARCHAR(15) CHARACTER SET ascii, support_expires DATETIME, esm_lts_expires DATETIME, PRIMARY KEY(source, version, codename));"
+        },
+        "EOL_DATE": {
+            "sqlite": "DROP TABLE IF EXISTS eol_date_data; CREATE TABLE eol_date_data (cpe_prefix VARCHAR(255), release_id INTEGER, eold_id VARCHAR(255), eold_title VARCHAR(255), version_start VARCHAR(100), version_latest VARCHAR(100), eol_info VARCHAR(25), PRIMARY KEY (cpe_prefix, release_id));",
+            "mariadb": "CREATE OR REPLACE TABLE eol_date_data (cpe_prefix VARCHAR(255), release_id INTEGER, eold_id VARCHAR(255), eold_title VARCHAR(255), version_start VARCHAR(100), version_latest VARCHAR(100), eol_info VARCHAR(25), PRIMARY KEY (cpe_prefix, release_id));"
         }
     },
     "VIEWS" : {
