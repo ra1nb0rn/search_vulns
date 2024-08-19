@@ -5,7 +5,7 @@ import os
 from flask import Flask, request
 from flask import render_template, jsonify
 from cpe_search.database_wrapper_functions import get_database_connection, get_connection_pools
-from search_vulns import (
+from search_vulns_modules.search_vulns_functions import (
     _load_config,
     search_vulns as search_vulns_call,
     CPE_SEARCH_THRESHOLD_MATCH,
@@ -78,6 +78,12 @@ def search_vulns():
         include_single_version_vulns = True
     else:
         include_single_version_vulns = False
+    
+    ignore_general_distro_vulns = request.args.get('ignore-general-cpe-vulns')
+    if ignore_general_distro_vulns and ignore_general_distro_vulns.lower() == 'true':
+        ignore_general_distro_vulns = True
+    else:
+        ignore_general_distro_vulns = False
 
     is_good_cpe = request.args.get('is-good-cpe')
     if is_good_cpe and is_good_cpe.lower() == 'false':
@@ -93,10 +99,10 @@ def search_vulns():
     if cpe_suggestions:
         query_cpe = cpe_suggestions[0][0]
         is_good_cpe = False  # query was never issued as CPE --> use CPE deprecations and equivalences
-        vulns,_ = search_vulns_call(query_cpe, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
+        vulns,_ = search_vulns_call(query_cpe, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, ignore_general_distribution_vulns=ignore_general_distro_vulns, is_good_cpe=is_good_cpe, config=config)
         vulns = {query: {'cpe': vulns[query_cpe]['cpe'], 'vulns': vulns[query_cpe]['vulns'], 'pot_cpes': cpe_suggestions}}
     else:
-        vulns,_ = search_vulns_call(query, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
+        vulns,_ = search_vulns_call(query, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, ignore_general_distribution_vulns=ignore_general_distro_vulns, is_good_cpe=is_good_cpe, config=config)
         query_lower = query.lower()
         if not MATCH_CPE_23_RE.match(query_lower):
             CPE_SUGGESTIONS_CACHE[query_lower] = vulns[query]['pot_cpes']

@@ -1,7 +1,7 @@
 
 var curVulnData = {}, onlyShowCVEs = null;
 var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
-var ignoreGeneralCpeVulns = false, onlyShowEDBExploits = false;
+var ignoreGeneralCpeVulns = false, ignoreGeneralDistributionVulns = false, onlyShowEDBExploits = false;
 var showSingleVersionVulns = false, isGoodCpe = true, showTableFiltering = false;
 var noVulnsFoundHtml = '<div class="w-full text-center"><h5 class="text-success">No known vulnerabilities could be found.</h5></div>';
 var filterCVEDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="filterCVEsAll" onclick="changeFilterCVEs(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="filterCVEsNone" onclick="changeFilterCVEs(this)">None</button></div>`;
@@ -93,7 +93,7 @@ function createVulnTableRowHtml(idx, vuln) {
     if (selectedColumns.length < 1)
         return '';
 
-    if (vuln.vuln_match_reason == "general_cpe" || vuln.vuln_match_reason == "single_higher_version_cpe")
+    if (vuln.vuln_match_reason == "general_cpe" || vuln.vuln_match_reason == "single_higher_version_cpe" || vuln.vuln_match_reason == "general_distribution_match")
         vuln_style_class = "uncertain-vuln";
     if (vuln.cisa_known_exploited)
         vuln_style_class += " exploited-vuln";  // overwrites color of uncertain vuln
@@ -107,6 +107,8 @@ function createVulnTableRowHtml(idx, vuln) {
             vuln_flag_html += `<br><center><span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects the queried software in general and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
         else if (vuln.vuln_match_reason == "single_higher_version_cpe")
             vuln_flag_html += `<br><center><span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects only a single higher version of the product and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+        else if (vuln.vuln_match_reason == "general_distribution_match")
+            vuln_flag_html += `<br><center><span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">It is unclear if the software is vulnerable. There is no NVD entry, but it is vulnerable on other distributions or other releases.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
 
         if (vuln.cisa_known_exploited) {
             if (vuln_flag_html)
@@ -232,6 +234,8 @@ function renderSearchResults(reloadFilterDropdown) {
             continue;
         else if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
             continue;
+        else if (ignoreGeneralDistributionVulns && vulns[i].vuln_match_reason == "general_distribution_match")
+            continue;
 
         has_vulns = true;
         var checked_html = "";
@@ -272,6 +276,8 @@ function createVulnsMarkDownTable() {
         if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
             continue;
         if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+            continue;
+        if (ignoreGeneralDistributionVulns && vulns[i].vuln_match_reason == "general_distribution_match")
             continue;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
@@ -321,6 +327,8 @@ function createVulnsMarkDownTable() {
         if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
             continue;
         if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+            continue;
+        if (ignoreGeneralDistributionVulns && vulns[i].vuln_match_reason == "general_distribution_match")
             continue;
 
         cur_vuln_has_exploits = false;
@@ -378,6 +386,8 @@ function createVulnsCSV() {
             continue;
         if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
             continue;
+        if (ignoreGeneralDistributionVulns && vulns[i].vuln_match_reason == "general_distribution_match")
+            continue;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
@@ -413,6 +423,8 @@ function createVulnsCSV() {
         if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
             continue;
         if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+            continue;
+        if (ignoreGeneralDistributionVulns && vulns[i].vuln_match_reason == "general_distribution_match")
             continue;
 
         if (selectedColumns.length < 1 || selectedColumns.includes('cve'))
@@ -645,6 +657,10 @@ function changeSearchConfig(configElement) {
         ignoreGeneralCpeVulns = settingEnabled;
         localStorage.setItem("ignoreGeneralCpeVulns", settingEnabledStr);
     }
+    else if (configElement.id == "generalDistributionsVulnsConfig") {
+        ignoreGeneralDistributionVulns = settingEnabled;
+        localStorage.setItem("ignoreGeneralDistributionsVulns", settingEnabledStr);
+    }
     else if (configElement.id == "onlyEdbExploitsConfig") {
         onlyShowEDBExploits = settingEnabled;
         localStorage.setItem("onlyShowEDBExploits", settingEnabledStr);
@@ -727,6 +743,9 @@ function setupConfigFromLocalstorage() {
     if (localStorage.getItem('ignoreGeneralCpeVulns') === null) {
         localStorage.setItem('ignoreGeneralCpeVulns', 'false');
     }
+    if (localStorage.getItem('ignoreGeneralDistributionsVulns') === null) {
+        localStorage.setItem('ignoreGeneralDistributionsVulns', 'false');
+    }
     if (localStorage.getItem('onlyShowEDBExploits') === null) {
         localStorage.setItem('onlyShowEDBExploits', 'false');
     }
@@ -740,6 +759,10 @@ function setupConfigFromLocalstorage() {
     if (localStorage.getItem('ignoreGeneralCpeVulns') == 'true') {
         ignoreGeneralCpeVulns = true;
         document.getElementById("generalVulnsConfig").checked = true;
+    }
+    if (localStorage.getItem('ignoreGeneralDistributionsVulns') == 'true') {
+        ignoreGeneralDistributionVulns = true;
+        document.getElementById("generalDistributionsVulnsConfig").checked = true;
     }
     if (localStorage.getItem('onlyShowEDBExploits') == 'true') {
         onlyShowEDBExploits = true;
