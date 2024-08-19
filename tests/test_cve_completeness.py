@@ -6,7 +6,7 @@ import sys
 
 SEARCH_VULNS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.insert(1, SEARCH_VULNS_PATH)
-from search_vulns_modules import search_vulns
+from search_vulns_modules.search_vulns_functions import search_vulns
 
 class TestSearches(unittest.TestCase):
 
@@ -14,14 +14,14 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:wordpress:wordpress:5.7.2:*:*:*:*:*:*:*'
         result, _ = search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2021-44223', 'CVE-2022-21663', 'CVE-2022-21664', 'CVE-2012-6527', 'CVE-2022-43497', 'CVE-2007-2627', 'CVE-2012-4271', 'CVE-2022-3590', 'CVE-2011-5216', 'CVE-2023-22622', 'CVE-2013-7240', 'CVE-2022-21661', 'CVE-2021-39201', 'CVE-2022-21662', 'CVE-2023-2745', 'CVE-2021-39200', 'CVE-2022-43504', 'CVE-2022-43500', 'CVE-2023-5561', 'CVE-2023-39999']
+        expected_cves = ['CVE-2022-31129','CVE-2024-31211','CVE-2024-31210','CVE-2023-5692','CVE-2021-44223', 'CVE-2022-21663', 'CVE-2022-21664', 'CVE-2012-6527', 'CVE-2022-43497', 'CVE-2007-2627', 'CVE-2012-4271', 'CVE-2022-3590', 'CVE-2011-5216', 'CVE-2023-22622', 'CVE-2013-7240', 'CVE-2022-21661', 'CVE-2021-39201', 'CVE-2022-21662', 'CVE-2023-2745', 'CVE-2021-39200', 'CVE-2022-43504', 'CVE-2022-43500', 'CVE-2023-5561', 'CVE-2023-39999', 'CVE-2024-4439', 'CVE-2024-31111', 'CVE-2024-32111', 'CVE-2024-6307']
         self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
     def test_search_apache_2425(self):
         self.maxDiff = None
         query = 'cpe:2.3:a:apache:http_server:2.4.25:*:*:*:*:*:*:*'
         result, _ = search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2017-15710', 'CVE-2017-3169', 'CVE-2017-7659', 'CVE-2017-7668', 'CVE-2017-9798', 'CVE-2018-1312', 'CVE-2018-17189', 'CVE-2020-9490', 'CVE-2021-26691', 'CVE-2017-3167', 'CVE-2022-28615', 'CVE-2023-25690', 'CVE-1999-0289', 'CVE-2021-33193', 'CVE-2019-9517', 'CVE-2022-30556', 'CVE-2019-0217', 'CVE-2018-1303', 'CVE-2018-11763', 'CVE-2022-37436', 'CVE-2022-22719', 'CVE-2006-20001', 'CVE-2021-26690', 'CVE-2022-36760', 'CVE-2022-26377', 'CVE-2017-9788', 'CVE-2020-13938', 'CVE-2019-17567', 'CVE-2022-31813', 'CVE-2021-40438', 'CVE-2019-0211', 'CVE-2021-34798', 'CVE-2019-10092', 'CVE-1999-1237', 'CVE-1999-0236', 'CVE-2019-0220', 'CVE-2018-1301', 'CVE-2020-11993', 'CVE-1999-1412', 'CVE-2020-1927', 'CVE-2017-7679', 'CVE-2021-39275', 'CVE-2022-28330', 'CVE-2019-10098', 'CVE-2022-28614', 'CVE-2019-10081', 'CVE-2020-1934', 'CVE-2007-0450', 'CVE-2018-17199', 'CVE-2021-44790', 'CVE-1999-0678', 'CVE-2022-29404', 'CVE-2021-44224', 'CVE-2019-0196', 'CVE-2022-22720', 'CVE-2017-15715', 'CVE-2022-23943', 'CVE-2020-35452', 'CVE-2018-1283', 'CVE-2019-10082', 'CVE-2022-22721', 'CVE-2018-1302', 'CVE-2007-0086', 'CVE-2018-1333', 'CVE-2023-31122', 'CVE-2023-45802']
+        expected_cves = ['CVE-2023-38709','CVE-2024-27316','CVE-2024-24795','CVE-2017-15710', 'CVE-2017-3169', 'CVE-2017-7659', 'CVE-2017-7668', 'CVE-2017-9798', 'CVE-2018-1312', 'CVE-2018-17189', 'CVE-2020-9490', 'CVE-2021-26691', 'CVE-2017-3167', 'CVE-2022-28615', 'CVE-2023-25690', 'CVE-1999-0289', 'CVE-2021-33193', 'CVE-2019-9517', 'CVE-2022-30556', 'CVE-2019-0217', 'CVE-2018-1303', 'CVE-2018-11763', 'CVE-2022-37436', 'CVE-2022-22719', 'CVE-2006-20001', 'CVE-2021-26690', 'CVE-2022-36760', 'CVE-2022-26377', 'CVE-2017-9788', 'CVE-2020-13938', 'CVE-2019-17567', 'CVE-2022-31813', 'CVE-2021-40438', 'CVE-2019-0211', 'CVE-2021-34798', 'CVE-2019-10092', 'CVE-1999-1237', 'CVE-1999-0236', 'CVE-2019-0220', 'CVE-2018-1301', 'CVE-2020-11993', 'CVE-1999-1412', 'CVE-2020-1927', 'CVE-2017-7679', 'CVE-2021-39275', 'CVE-2022-28330', 'CVE-2019-10098', 'CVE-2022-28614', 'CVE-2019-10081', 'CVE-2020-1934', 'CVE-2007-0450', 'CVE-2018-17199', 'CVE-2021-44790', 'CVE-1999-0678', 'CVE-2022-29404', 'CVE-2021-44224', 'CVE-2019-0196', 'CVE-2022-22720', 'CVE-2017-15715', 'CVE-2022-23943', 'CVE-2020-35452', 'CVE-2018-1283', 'CVE-2019-10082', 'CVE-2022-22721', 'CVE-2018-1302', 'CVE-2007-0086', 'CVE-2018-1333', 'CVE-2023-31122', 'CVE-2023-45802', 'CVE-2024-39884', 'CVE-2024-38475', 'CVE-2024-38473', 'CVE-2024-38477', 'CVE-2024-40898', 'CVE-2024-38474', 'CVE-2024-36387', 'CVE-2024-40725', 'CVE-2024-39573', 'CVE-2024-38476']
         self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
     def test_search_proftpd_133c(self):
@@ -98,7 +98,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:proftpd:proftpd:1.3.5f:-:*:*:*:*:*:*'
         result, _ = search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=False)
-        expected_cves = ['CVE-2015-3306', 'CVE-2019-18217', 'CVE-2019-19270', 'CVE-2019-19271', 'CVE-2019-19272', 'CVE-2020-9272', 'CVE-2021-46854', 'CVE-2023-51713', 'CVE-2023-48795']
+        expected_cves = ['CVE-2001-0027','CVE-2015-3306', 'CVE-2019-18217', 'CVE-2019-19270', 'CVE-2019-19271', 'CVE-2019-19272', 'CVE-2020-9272', 'CVE-2021-46854', 'CVE-2023-51713', 'CVE-2023-48795']
         self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
 

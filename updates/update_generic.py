@@ -5,7 +5,8 @@ import asyncio
 import shutil
 from cpe_search.database_wrapper_functions import get_database_connection
 import subprocess
-from search_vulns_modules.config import CONFIG
+from search_vulns_modules.config import get_config, _load_config
+from cpe_version import CPEVersion
 
 try:  # use ujson if available
     import ujson as json
@@ -34,22 +35,24 @@ with open(CREATE_SQL_STATEMENTS_FILE) as f:
 def rollback():
     '''Rollback the DB / module update'''
 
+    config = get_config()
+
     communicate_warning('An error occured, rolling back database update')
-    if CONFIG['DATABASE']['TYPE'] == 'sqlite':
-        if os.path.isfile(CONFIG['DATABASE_NAME']):
-            os.remove(CONFIG['DATABASE_NAME'])
-    if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
-        shutil.move(CONFIG['DATABASE_BACKUP_FILE'], CONFIG['DATABASE_NAME'])
+    if config['DATABASE']['TYPE'] == 'sqlite':
+        if os.path.isfile(config['DATABASE_NAME']):
+            os.remove(config['DATABASE_NAME'])
+    if os.path.isfile(config['DATABASE_BACKUP_FILE']):
+        shutil.move(config['DATABASE_BACKUP_FILE'], config['DATABASE_NAME'])
     if os.path.isdir(NVD_DATAFEED_DIR):
         shutil.rmtree(NVD_DATAFEED_DIR)
     if os.path.isfile(MARIADB_BACKUP_FILE):
         with open(MARIADB_BACKUP_FILE, 'rb') as f:
             mariadb_backup_data = f.read()
-        restore_call = ['mariadb', '-u', CONFIG['DATABASE']['USER'],
-                        '-h', CONFIG['DATABASE']['HOST'],
-                        '-P', str(CONFIG['DATABASE']['PORT'])]
-        if CONFIG['DATABASE']['PASSWORD']:
-            restore_call.append(f"-p{CONFIG['DATABASE']['PASSWORD']}")
+        restore_call = ['mariadb', '-u', config['DATABASE']['USER'],
+                        '-h', config['DATABASE']['HOST'],
+                        '-P', str(config['DATABASE']['PORT'])]
+        if config['DATABASE']['PASSWORD']:
+            restore_call.append(f"-p{config['DATABASE']['PASSWORD']}")
         restore_call_run = subprocess.run(restore_call, input=mariadb_backup_data)
         if restore_call_run.returncode != 0:
             print('[-] Failed to restore MariaDB')
@@ -59,7 +62,7 @@ def rollback():
         # Restore failed b/c database is down -> not delete backup file
         # check whether database is up by trying to get a connection
         try:
-            get_database_connection(CONFIG['DATABASE'], CONFIG['cpe_search']['DATABASE_NAME'])
+            get_database_connection(config['DATABASE'], config['cpe_search']['DATABASE_NAME'])
         except:
             print('[!] MariaDB seems to be down. The backup file wasn\'t deleted. To restore manually from the file, run the following command:')
             print(' '.join(restore_call+['<', MARIADB_BACKUP_FILE, '&&', 'rm', MARIADB_BACKUP_FILE]))
@@ -74,22 +77,22 @@ def communicate_warning(msg: str):
         print('Warning: ' + msg)
 
 
-def backup_mariadb_database(database):
+def backup_mariadb_database(database, config):
     try:
         # check whether database exists
-        get_database_connection(CONFIG['DATABASE'], database)
+        get_database_connection(config['DATABASE'], database)
     except:
         pass
     else:
         # backup MariaDB
         backup_call = ['mariadb-dump',
-                       '-u', CONFIG['DATABASE']['USER'],
-                        '-h', CONFIG['DATABASE']['HOST'],
-                        '-P', str(CONFIG['DATABASE']['PORT']),
+                       '-u', config['DATABASE']['USER'],
+                        '-h', config['DATABASE']['HOST'],
+                        '-P', str(config['DATABASE']['PORT']),
                         '--add-drop-database', '--add-locks',
                         '-B', database, '-r', MARIADB_BACKUP_FILE]
-        if CONFIG['DATABASE']['PASSWORD']:
-            backup_call.append(f"-p{CONFIG['DATABASE']['PASSWORD']}")
+        if config['DATABASE']['PASSWORD']:
+            backup_call.append(f"-p{config['DATABASE']['PASSWORD']}")
 
         return_code = subprocess.call(backup_call)
         if return_code != 0:

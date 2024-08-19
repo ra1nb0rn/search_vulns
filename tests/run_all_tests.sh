@@ -21,14 +21,14 @@ EXIT_5=$?
 echo '[+] Running test_redhat_queries.py'
 python3 "${SCRIPT_DIR}/test_redhat_queries.py"
 EXIT_6=$?
-echo '[+] Running cpe_search/test_cpes.py'
-python3 "${SCRIPT_DIR}/../cpe_search/test_cpes.py"
-EXIT_7=$?
-echo '[+] Running cpe_search/test_cpe_suggestions.py'
-python3 "${SCRIPT_DIR}/../cpe_search/test_cpe_suggestions.py"
-EXIT_8=$?
 echo '[+] Running test_version_considered_equal.py'
 python3 "${SCRIPT_DIR}/test_version_considered_equal.py"
+EXIT_7=$?
+echo '[+] Running cpe_search/test_cpes.py'
+python3 "${SCRIPT_DIR}/../cpe_search/test_cpes.py"
+EXIT_8=$?
+echo '[+] Running cpe_search/test_cpe_suggestions.py'
+python3 "${SCRIPT_DIR}/../cpe_search/test_cpe_suggestions.py"
 EXIT_9=$?
 
 # https://stackoverflow.com/a/16358989

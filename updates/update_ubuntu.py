@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
 
-import asyncio
-import json
-import os
-import re
-import requests
-import sys
-
-ROOT_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-sys.path.insert(1, ROOT_PATH)
-
 import aiohttp
 from aiolimiter import AsyncLimiter
 
@@ -20,14 +10,12 @@ ROOT_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.insert(1, ROOT_PATH)
 
 UBUNTU_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ubuntu_data_feeds')
+CVE_UBUNTU_API_URL = 'https://ubuntu.com/security/cves.json'
 
 UBUNTU_NOT_FOUND_NAME = {}
-DB_CURSOR = None
-CONFIG = None
-
+UBUNTU_RELEASES = {}
 UBUNTU_UPDATE_SUCCESS = None
-CVE_UBUNTU_API_URL = 'https://ubuntu.com/security/cves.json'
-DEBUG = False
+UBUNTU_API_REQUESTS_PER_SECOND = 1.0
 
 def rollback_ubuntu():
     '''Performs rollback specific for ubuntu'''
@@ -66,25 +54,34 @@ async def api_request(headers, params, requestno, url):
 
 
 def get_version_end_ubuntu(version, status):
+    '''Return a version_end matching the format from the database and reflecting the status'''
     version_end = '-1'
+
     if status == 'released':
-        version_end = get_clean_version(version, True)
+        # released only returns a version, not any describing words, so returning a good version is easier
+        version_end = get_clean_version(version, is_good_version=True)
         if not version_end:
             version_end =  ''
     else:
-        version_end = get_clean_version(version, False)
+        version_end = get_clean_version(version, is_good_version=False)
+
+    # if distro is not affected or package does-not-exists(dne). use version_end = -1 to describe it
     if (not version_end and status == 'not-affected') or status == 'DNE' :
-        # no valid version found (occur with status not-affected and DNE)
         version_end = '-1'
     elif status == 'pending':
+        # update is ready, but not enrolled
         if version:
             version_end = get_clean_version(version, True)
+        # distro is vulnerable, but no update ready. use MAX_INT-1 to describe it
         else:
             version_end = str(sys.maxsize-1)
+    # distro is vulnerable, but no update ready. use MAX_INT-1 to describe it
     elif status in ['needed', 'active', 'deferred']:
         version_end = str(sys.maxsize-1)
+    # distro could be vulnerable, but needs further investigation. use MAX_INT to describe it
     elif status == 'needs-triage':
         version_end = str(sys.maxsize)
+    # status ignored can have many reasons, try to find a suiting version for the most popular cases
     elif status == 'ignored':
         if not version or any(version.startswith(string) for string in ['end of', 'code', 'superseded', 'was not-affected']):
             version_end = ''
@@ -94,6 +91,7 @@ def get_version_end_ubuntu(version, status):
             version_end = str(sys.maxsize-1)
         else:
             version_end = ''
+
     # remove all whitespaces, b/c ubuntu could return versions like ' 1.11.15. 1.12.1'
     version_end = version_end.replace(' ','')
     return version_end
@@ -127,12 +125,12 @@ def download_ubuntu_release_codename_mapping():
     return ubuntu_api_initial_response.json()['releases']
 
 
-def initialize_ubuntu_release_version_codename():
+def initialize_ubuntu_release_version_codename(config):
     '''Add release -> codename mapping to db and dict''' 
     releases_dict = {}
     releases_json = download_ubuntu_release_codename_mapping()
 
-    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
+    db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
     query = 'INSERT INTO distribution_codename_version_mapping (source, version, codename, support_expires, esm_lts_expires) VALUES (?, ?, ?, ?, ?)'
 
@@ -143,11 +141,13 @@ def initialize_ubuntu_release_version_codename():
         support_expires = str(release['support_expires']).split('T')[0]
         esm_expires = str(release['esm_expires']).split('T')[0]
         
-        # use upstream as upstream version
+        # use upstream as upstream version name
         if not version:
             version = 'upstream'
 
+        # add information to database
         db_cursor.execute(query, ('ubuntu', version, codename, support_expires, esm_expires))
+        # fill a dictionary used during the update
         releases_dict[codename] = {'version': version}
 
     db_conn.commit()
@@ -182,6 +182,7 @@ async def worker_ubuntu(headers, params, requestno, rate_limit):
 
 def add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, ubuntu_version, version_end, extra_cpe):
     '''Add given given ubuntu version in a package to UBUNTU_NOT_FOUND_NAME'''
+    global UBUNTU_NOT_FOUND_NAME
     try:
         UBUNTU_NOT_FOUND_NAME[name].append((version_end, ubuntu_version, cve_id, name_version, matching_cpe, extra_cpe))
     except:
@@ -189,44 +190,50 @@ def add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, ub
 
 
 def get_ubuntu_version_for_codename(codename):
+    '''Return the matching version for a given codename'''
     if codename == 'upstream':
         return '-1'
     else:    
         return UBUNTU_RELEASES[codename]['version']
 
         
-def process_cve(cve):
+def process_cve(cve, db_cursor):
     '''Get cpes for all packages of a cve and add these information to the db'''
     cve_id = cve['cve_id']
     cpes = cve['cpes']
-    general_given_cpes = [get_general_cpe(cpe[1]) for cpe in cpes]
+    general_given_cpes = list(set([get_general_cpe(cpe[1]) for cpe in cpes]))
 
-    # skip cve if only hardware cpes
+    # skip cve if only hardware cpes from the nvd given
     if cpes and are_only_hardware_cpes(cpes):
         return
 
     packages_cpes = []
 
-    # iterate thrpough every package mentioned in the given cve entry
+    # iterate through every package mentioned in the given cve entry
     for package in cve['packages']:
-        statuses = [(get_version_end_ubuntu(status['description'], status['status']), get_ubuntu_version_for_codename(status['release_codename']), '') for status in package['statuses']]
-        statuses.sort(key = lambda status:float(status[1]))
-        
         matching_cpe = ''
+        # split something like openssl098 to openssl 098, so 098 can be considered as version_start = 0.9.8
         name, name_version = split_name(package['name'])
         add_to_vuln_db_bool = True
 
+        # list of (version_end, status, ubuntu_version)
+        statuses = [(get_version_end_ubuntu(status['description'], status['status']), get_ubuntu_version_for_codename(status['release_codename']), '') for status in package['statuses']]
+        statuses.sort(key = lambda status:float(status[1]))
+        # try to summarize statuses with the same version_end to minimize the amount of entries in the db
         relevant_statuses = summarize_statuses_with_version(statuses, 'upstream')
-    
+        
+        #  force to use '>=' as operator in the entry with the highest distribution version
         if relevant_statuses[-1][1] == statuses[-1][1] and not relevant_statuses[-1][2] and len(cpes) == 0:
             relevant_statuses[-1] = (relevant_statuses[-1][0], relevant_statuses[-1][1], '>=')
 
-        # iterate through every relevant entry
+        # iterate through every relevant entry for a given package in a given cve
         for version_end, ubuntu_version, extra_cpe in relevant_statuses:
-
+            # skip entries with no version_end, could happen with status ignored
+            # use the nvd data in this case, b/c distribution will not fix it, but user could manually update
             if not version_end:
                 continue
 
+            # create a search string with all relevant information (package name, found version in package name and version end) 
             name_version, search = get_search_version_string(name, name_version, version_end)
 
             # add to not found if initial cpe search wasn't successful
@@ -234,9 +241,12 @@ def process_cve(cve):
                 add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, ubuntu_version, version_end, extra_cpe)
                 continue
 
+            # no matching cpe for the given package found in a previous loop run
             if not matching_cpe:
+                # if only one cpe given from nvd and only one package affected, the given cpe is the one we're searching for
                 if len(cve['packages']) == 1 and len(general_given_cpes) == 1 and name in general_given_cpes[0] and name != 'linux':
                     matching_cpe = get_general_cpe(general_given_cpes[0])
+                # else try to find a matching cpe
                 else:
                     matching_cpe = get_matching_cpe(name, package['name'], name_version, version_end, search, cpes)
                 
@@ -252,7 +262,7 @@ def process_cve(cve):
                     matching_cpe = ''
                     continue
 
-                # check if similiar packages are part of the given cve
+                # check if cve has similar packages which we need to consider
                 matching_cpe, add_to_vuln_db_bool = check_similar_packages(cve_id, packages_cpes, matching_cpe, name_version, ubuntu_version, version_end, extra_cpe)
                 # add packages to found packages for cve
                 if add_to_vuln_db_bool:
@@ -264,15 +274,17 @@ def process_cve(cve):
                     continue
                 
                 # match found cpe to all previous not found packages
-                match_not_found_cpe(cpes, matching_cpe, name)
+                match_not_found_cpe(cpes, matching_cpe, name, db_cursor)
 
+            # add distribution information to cpe and add to database
             distro_cpe= get_distribution_cpe(ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)
-            add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'ubuntu', DB_CURSOR)
+            add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'ubuntu', db_cursor)
 
 
 def check_similar_packages(cve_id, packages_cpes, matching_cpe, name_version, ubuntu_version, note, extra_cpe):
     '''Check whether given package name with found cpe is close to another package with the same cpe'''
     add_to_vuln_db_bool = True
+    # use found cpe of a similar package from the same cve entry
     for cpe, name, best_match in packages_cpes:
         if best_match:
             continue
@@ -288,14 +300,15 @@ def check_similar_packages(cve_id, packages_cpes, matching_cpe, name_version, ub
     return matching_cpe,add_to_vuln_db_bool
 
 
-def match_not_found_cpe(cpes, matching_cpe, name):
+def match_not_found_cpe(cpes, matching_cpe, name, db_cursor):
     '''Add all not found entries with the same package name to vuln_db after a matching cpe was found'''
+    global UBUNTU_NOT_FOUND_NAME
     try:
         backport_cpes = UBUNTU_NOT_FOUND_NAME[name]
         for version_end, ubuntu_version, cve_id, name_version, _, extra_cpe in backport_cpes:
             distro_cpe = get_distribution_cpe(ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)
             if version_end:
-                add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'ubuntu', DB_CURSOR)
+                add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'ubuntu', db_cursor)
         del UBUNTU_NOT_FOUND_NAME[name]
     except:
         pass
@@ -311,6 +324,8 @@ def get_ubuntu_data_from_files():
                 print('[!] Ubuntu download failed')
                 communicate_warning('Ubuntu download failed')
                 rollback_ubuntu()
+                global UBUNTU_UPDATE_SUCCESS
+                UBUNTU_UPDATE_SUCCESS = False
                 return 'Ubuntu download failed'
             cves = res_json['cves']
             cves_ubuntu += cves
@@ -319,12 +334,12 @@ def get_ubuntu_data_from_files():
     return cves_ubuntu
 
 
-def process_data():
+def process_data(config):
     '''Process ubuntu api data''' 
     if not QUIET:
         print('[+] Adding ubuntu data to database')
 
-    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
+    db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
 
     # get cve data from vuln_db
@@ -332,7 +347,7 @@ def process_data():
     cve_cpe_list = db_cursor.execute(query, ()).fetchall()
     cve_cpe_list.sort(key=lambda cve: cve[0])
     db_conn.close()
-    
+
     cves_ubuntu = get_ubuntu_data_from_files()
     cve_cpe_ubuntu = []
  
@@ -341,18 +356,24 @@ def process_data():
     found = False   # used for cves which occur more than one time in the cve_cpe_table
     length_cve_cpe_list = len(cve_cpe_list)
 
-    # match cve and cpe
+    # download failed
+    if type(cves_ubuntu) == string:
+        return cves_ubuntu
+
+    # match cve and cpes from nvd
     for cve in cves_ubuntu:
         cve_id = cve['id']
 
         # iterate through all cves from nvd
         for i in range(pointer_cves_nvd, length_cve_cpe_list):
             nvd_cve_id = cve_cpe_list[i][0]
+            # use information from nvd for the cves from ubuntu
             if cve_id ==  nvd_cve_id:
                 if not found:
-                    cve_cpe_ubuntu.append({'cve_id': cve_id, 'cpes': [], 'packages': cve['packages']})#'infos_ubuntu': cve, 'infos_nvd': cve_cpe_list[i]})
+                    cve_cpe_ubuntu.append({'cve_id': cve_id, 'cpes': [], 'packages': cve['packages']})
                     found = True
                 cve_cpe_ubuntu[pointer_cve_cpe_ubuntu]['cpes'].append(cve_cpe_list[i])                           
+            # a cve can have more than one matching cpe
             elif found:
                 found = False
                 pointer_cve_cpe_ubuntu += 1
@@ -360,37 +381,31 @@ def process_data():
                 break
         # cve_id not found in cve_cpe
         else:
-            if is_cve_rejected(cve_id, CONFIG):
+            if is_cve_rejected(cve_id, config):
                 continue
             else:
-                cve_cpe_ubuntu.append({'cve_id': cve_id, 'cpes': [], 'packages': cve['packages']})#'infos_ubuntu': cve, 'infos_nvd': cve_cpe_list[i]})
+                cve_cpe_ubuntu.append({'cve_id': cve_id, 'cpes': [], 'packages': cve['packages']})
                 pointer_cve_cpe_ubuntu += 1
 
     cves_ubuntu = []
     cve_cpe_list = []
-    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
-    global DB_CURSOR
-    DB_CURSOR = db_conn.cursor()
+    db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
+    db_cursor = db_conn.cursor()
 
     for cve in cve_cpe_ubuntu:
-        process_cve(cve)
-    
+        process_cve(cve, db_cursor)
+
     # add all not found packages to vuln_db
-    add_not_found_packages(UBUNTU_NOT_FOUND_NAME, 'ubuntu', DB_CURSOR) 
+    add_not_found_packages(UBUNTU_NOT_FOUND_NAME, 'ubuntu', db_cursor) 
 
     db_conn.commit()
     db_conn.close()
 
 
-
-async def update_vuln_ubuntu_db(config):
-    '''Update the vulnerability database for ubuntu'''
-
+async def download_ubuntu_data():
     global UBUNTU_UPDATE_SUCCESS
 
-    global CONFIG
-    CONFIG = config
-    rate_limit = AsyncLimiter(5.0, 1.0)
+    rate_limit = AsyncLimiter(UBUNTU_API_REQUESTS_PER_SECOND, 1.0)
 
     # download vulnerability data via Ubuntu Security API
     if os.path.exists(UBUNTU_DATAFEED_DIR):
@@ -408,7 +423,7 @@ async def update_vuln_ubuntu_db(config):
     api_results_per_page = 100
 
     try:
-        cve_api_initial_response = requests.get(url=CVE_UBUNTU_API_URL, headers=headers, params=params)
+        cve_api_initial_response = requests.get(url=CVE_UBUNTU_API_URL, headers=headers)
     except:
             UBUNTU_UPDATE_SUCCESS = False
             communicate_warning('An error occured when making initial request for parameter setting to https://ubuntu.com/security/cves.json')
@@ -441,17 +456,29 @@ async def update_vuln_ubuntu_db(config):
         communicate_warning('Could not download vuln data from https://ubuntu.com/security/cves.json')
         rollback_ubuntu()
         return 'Could not download vuln data from https://ubuntu.com/security/cves.json'
-        
-    # get ubuntu releases data
-    initialize_ubuntu_release_version_codename()
+
+
+
+async def update_vuln_ubuntu_db(config):
+    '''Update the vulnerability database for ubuntu'''
+
+    global UBUNTU_UPDATE_SUCCESS
+
+    # download the data from the api
+    error = await download_ubuntu_data()
+    if error:
+        return error
+    # get releases information from api
+    initialize_ubuntu_release_version_codename(config)
 
     try:
-        process_data()
+        process_data(config)
     except:
         UBUNTU_UPDATE_SUCCESS = False
         communicate_warning('Could not process vuln data from the Ubuntu Security Api')
         rollback_ubuntu()
         return 'Could not process vuln data from the Ubuntu Security Api'
 
-    shutil.rmtree(UBUNTU_DATAFEED_DIR)
+    if UBUNTU_UPDATE_SUCCESS != False:
+        shutil.rmtree(UBUNTU_DATAFEED_DIR)
     return False

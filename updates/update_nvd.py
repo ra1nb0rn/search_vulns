@@ -9,9 +9,6 @@ import aiohttp
 from aiolimiter import AsyncLimiter
 from .update_generic import *
 
-CONFIG = None
-
-
 def rollback_nvd():
     rollback()
     if os.path.isdir(NVD_DATAFEED_DIR):
@@ -70,11 +67,13 @@ async def worker(headers, params, requestno, rate_limit):
     write_data_to_json_file(api_data=api_data_response, requestno=requestno)
 
 
-async def update_vuln_db(nvd_api_key=None, config_file=''):
+async def update_vuln_db(nvd_api_key=None, config='', config_file=''):
     '''Update the vulnerability database'''
 
     global NVD_UPDATE_SUCCESS
-    
+    global CONFIG
+    CONFIG = config
+
     if nvd_api_key:
         if not QUIET:
             print('[+] API Key found - Requests will be sent at a rate of 25 per 30s.')

@@ -28,7 +28,7 @@ def get_config():
 
 def update_config_generic():
     global CONFIG
-    CONFIG['DATABASE_BACKUP_FILE'] = CONFIG['DATABASE_FILE'] + '.bak'
-    CONFIG['CPE_DATABASE_BACKUP_FILE'] = CONFIG['cpe_search']['CPE_DATABASE_FILE'] + '.bak'
+    CONFIG['DATABASE_BACKUP_FILE'] = CONFIG['DATABASE_NAME'] + '.bak'
+    CONFIG['CPE_DATABASE_BACKUP_FILE'] = CONFIG['cpe_search']['DATABASE_NAME'] + '.bak'
     CONFIG['DEPRECATED_CPES_BACKUP_FILE'] = CONFIG['cpe_search']['DEPRECATED_CPES_FILE'] + '.bak'
     return CONFIG

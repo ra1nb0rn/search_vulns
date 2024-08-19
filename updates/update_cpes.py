@@ -13,61 +13,66 @@ from cpe_search.cpe_search import get_all_cpes
 
 async def handle_cpes_update(config, nvd_api_key=None):
     # backup database and deprecated cpes file
-    if os.path.isfile(CONFIG['cpe_search']['DATABASE_NAME']):
-        shutil.move(CONFIG['cpe_search']['DATABASE_NAME'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
-    if os.path.isfile(CONFIG['cpe_search']['DEPRECATED_CPES_FILE']):
-        shutil.move(CONFIG['cpe_search']['DEPRECATED_CPES_FILE'], CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
-    if CONFIG['DATABASE']['TYPE'] == 'mariadb':
-       backup_mariadb_database(CONFIG['cpe_search']['DATABASE_NAME'])
+    if os.path.isfile(config['cpe_search']['DATABASE_NAME']):
+        shutil.move(config['cpe_search']['DATABASE_NAME'], config['CPE_DATABASE_BACKUP_FILE'])
+    if os.path.isfile(config['cpe_search']['DEPRECATED_CPES_FILE']):
+        shutil.move(config['cpe_search']['DEPRECATED_CPES_FILE'], config['DEPRECATED_CPES_BACKUP_FILE'])
+    if config['DATABASE']['TYPE'] == 'mariadb':
+       backup_mariadb_database(config['cpe_search']['DATABASE_NAME'], config)
 
     success = await update_cpe(nvd_api_key, config['cpe_search'])
     if not success:
-        if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
-            shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['DATABASE_NAME'])
-        if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
-            shutil.move(CONFIG['DEPRECATED_CPES_BACKUP_FILE'], CONFIG['cpe_search']['DEPRECATED_CPES_FILE'])
-        if os.path.isfile(MARIADB_BACKUP_FILE) and CONFIG['DATABASE']['TYPE'] == 'mariadb':
-            with open(MARIADB_BACKUP_FILE, 'rb') as f:
-                mariadb_backup_data = f.read()
-            restore_call = ['mariadb', '-u', CONFIG['DATABASE']['USER'],
-                            '-h', CONFIG['DATABASE']['HOST'],
-                            '-P', str(CONFIG['DATABASE']['PORT'])]
-            if CONFIG['DATABASE']['PASSWORD']:
-                restore_call.append(f"-p{CONFIG['DATABASE']['PASSWORD']}")
-            restore_call_run = subprocess.run(restore_call, input=mariadb_backup_data)
-            if restore_call_run.returncode != 0:
-                print('[-] Failed to restore MariaDB')
-            else:
-                print('[+] Restored MariaDB from backup')
-
-            # Restore failed b/c database is down -> not delete backup file
-            # check whether database is up by trying to get a connection
-            try:
-                get_database_connection(CONFIG['DATABASE'], CONFIG['cpe_search']['DATABASE_NAME'])
-            except:
-                print('[!] MariaDB seems to be down. The backup file wasn\'t deleted. To restore manually from the file, run the following command:')
-                print(' '.join(restore_call+['<', MARIADB_BACKUP_FILE, '&&', 'rm', MARIADB_BACKUP_FILE]))
-            else:
-                os.remove(MARIADB_BACKUP_FILE)
+        if os.path.isfile(config['CPE_DATABASE_BACKUP_FILE']):
+            shutil.move(config['CPE_DATABASE_BACKUP_FILE'], config['cpe_search']['DATABASE_NAME'])
+        if os.path.isfile(config['DEPRECATED_CPES_BACKUP_FILE']):
+            shutil.move(config['DEPRECATED_CPES_BACKUP_FILE'], config['cpe_search']['DEPRECATED_CPES_FILE'])
+        if os.path.isfile(MARIADB_BACKUP_FILE) and config['DATABASE']['TYPE'] == 'mariadb':
+            restore_mariadb(config)
     else:
-        if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
-            os.remove(CONFIG['CPE_DATABASE_BACKUP_FILE'])
-        if os.path.isfile(CONFIG['DEPRECATED_CPES_BACKUP_FILE']):
-            os.remove(CONFIG['DEPRECATED_CPES_BACKUP_FILE'])
+        if os.path.isfile(config['CPE_DATABASE_BACKUP_FILE']):
+            os.remove(config['CPE_DATABASE_BACKUP_FILE'])
+        if os.path.isfile(config['DEPRECATED_CPES_BACKUP_FILE']):
+            os.remove(config['DEPRECATED_CPES_BACKUP_FILE'])
         if os.path.isfile(MARIADB_BACKUP_FILE):
             os.remove(MARIADB_BACKUP_FILE)
 
     return not success
 
+
+def restore_mariadb(config):
+        with open(MARIADB_BACKUP_FILE, 'rb') as f:
+            mariadb_backup_data = f.read()
+        restore_call = ['mariadb', '-u', config['DATABASE']['USER'],
+                        '-h', config['DATABASE']['HOST'],
+                        '-P', str(config['DATABASE']['PORT'])]
+        if config['DATABASE']['PASSWORD']:
+            restore_call.append(f"-p{config['DATABASE']['PASSWORD']}")
+        restore_call_run = subprocess.run(restore_call, input=mariadb_backup_data)
+        if restore_call_run.returncode != 0:
+            print('[-] Failed to restore MariaDB')
+        else:
+            print('[+] Restored MariaDB from backup')
+
+        # Restore failed b/c database is down -> not delete backup file
+        # check whether database is up by trying to get a connection
+        try:
+            get_database_connection(config['DATABASE'], config['cpe_search']['DATABASE_NAME'])
+        except:
+            print('[!] MariaDB seems to be down. The backup file wasn\'t deleted. To restore manually from the file, run the following command:')
+            print(' '.join(restore_call+['<', MARIADB_BACKUP_FILE, '&&', 'rm', MARIADB_BACKUP_FILE]))
+        else:
+            os.remove(MARIADB_BACKUP_FILE)
+
+
 def add_new_cpes_to_db(new_cpes, config):
     # backup database
-    if os.path.isfile(CONFIG['cpe_search']['DATABASE_NAME']):
-        shutil.copy(CONFIG['cpe_search']['DATABASE_NAME'], CONFIG['CPE_DATABASE_BACKUP_FILE'])
+    if os.path.isfile(config['cpe_search']['DATABASE_NAME']):
+        shutil.copy(config['cpe_search']['DATABASE_NAME'], config['CPE_DATABASE_BACKUP_FILE'])
     try:
         add_cpe_infos_to_db(new_cpes, config)
     except:
-        if os.path.isfile(CONFIG['CPE_DATABASE_BACKUP_FILE']):
-            shutil.move(CONFIG['CPE_DATABASE_BACKUP_FILE'], CONFIG['cpe_search']['DATABASE_NAME'])
+        if os.path.isfile(config['CPE_DATABASE_BACKUP_FILE']):
+            shutil.move(config['CPE_DATABASE_BACKUP_FILE'], config['cpe_search']['DATABASE_NAME'])
         return True
     # remove database backup on success
     if os.path.isfile(config['CPE_DATABASE_BACKUP_FILE']):
@@ -78,7 +83,7 @@ def add_new_cpes_to_db(new_cpes, config):
 def add_cpe_infos_to_db(new_cpes, config):
     '''Add all new cpes to the cpe-search database'''
 
-    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['cpe_search']['DATABASE_NAME'])
+    db_conn = get_database_connection(config['DATABASE'], config['cpe_search']['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
     counter_cpe_entries = db_cursor.execute('SELECT COUNT(*) FROM cpe_entries').fetchone()[0]+1
     db_terms_to_entries = db_cursor.execute('SELECT * FROM terms_to_entries').fetchall()
@@ -96,7 +101,7 @@ def add_cpe_infos_to_db(new_cpes, config):
             unique_cpes.append(cpe_infos)
     new_cpes = unique_cpes
 
-    all_cpes = set(get_all_cpes(False, config['cpe_search']))
+    all_cpes = set(get_all_cpes(config['cpe_search']))
 
     terms_to_entries = {}
     for term, entry_ids in db_terms_to_entries:

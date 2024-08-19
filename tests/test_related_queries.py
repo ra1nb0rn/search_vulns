@@ -6,7 +6,7 @@ import sys
 
 SEARCH_VULNS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.insert(1, SEARCH_VULNS_PATH)
-from search_vulns_modules.search_vulns import search_vulns_return_cpe
+from search_vulns_modules.search_vulns_functions import search_vulns_return_cpe
 
 class TestSearches(unittest.TestCase):
 

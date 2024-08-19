@@ -1,34 +1,14 @@
 #!/usr/bin/env python3
 
-import json
-import os
-import re
-import requests
-import sys
 import subprocess
-
-ROOT_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-sys.path.insert(1, ROOT_PATH)
-
 from bs4 import BeautifulSoup
-from search_vulns import get_equivalent_cpes
 
 from .update_generic import *
 from .update_distributions_generic import *
 
-try:  # use ujson if available
-    import ujson as json
-except ModuleNotFoundError:
-    import json
+ROOT_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.insert(1, ROOT_PATH)
 
-REDHAT_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'redhat_data_feeds')
-
-REDHAT_NOT_FOUND_NAME = {}
-REDHAT_RELEASES = {}
-DB_CURSOR = None
-CONFIG = None
-
-REDHAT_UPDATE_SUCCESS = None
 MATCH_RELEVANT_RHEL_CPE = re.compile(r'cpe:\/[ao]:redhat:(?:enterprise_linux|rhel_[\w]{3}):([0-9\.]{1,3})')
 MATCH_RHEL_VERSION_IN_PACKAGE = re.compile(r'\.[Ee][Ll](\d{1,2}[_\.]\d{1,2})[_\.]?\d{0,2}')
 CVE_REDHAT_API_URL = 'https://access.redhat.com/hydra/rest/securitydata'
@@ -36,7 +16,11 @@ GITHUB_REDHAT_API_DATA_URL = 'https://github.com/aquasecurity/vuln-list-redhat.g
 REQUEST_HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0'}
 REDHAT_MAPPING_VERSION_CODENAME_URL = 'https://docs.fedoraproject.org/en-US/quick-docs/fedora-and-red-hat-enterprise-linux/'
 REDHAT_EOL_DATA_API_URL = 'https://endoflife.date/api/rhel.json' 
-DEBUG = False
+REDHAT_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'redhat_data_feeds')
+
+REDHAT_NOT_FOUND_NAME = {}
+REDHAT_RELEASES = {}
+REDHAT_UPDATE_SUCCESS = None
 
 
 def rollback_redhat():
@@ -65,52 +49,6 @@ def get_redhat_api_data():
     )
     if return_code != 0:
         raise (Exception('Could not download latest resources of RedHat Api from GitHub'))
-
-
-def summarize_statuses_redhat(statuses):
-    '''Summarize equal statuses to one entry'''
-    relevant_statuses = [] # (status, redhat_version, operators)
-    temp_statuses = []
-    possible_min = True
-    start_status = None
-
-    # try to summarize entries with version_end = -1
-    for i, (status, distro_version, _) in enumerate(statuses):
-
-        # skip out of support scope
-        if not status['version']:
-            continue
-        if i == 0 and not status['version'] == '-1':
-            possible_min = False
-        if not status['version'] == '-1':
-            if possible_min:
-                possible_min = False
-                relevant_statuses.append((statuses[i-1][0], statuses[i-1][1], '<='))
-                relevant_statuses.append((status, distro_version, ''))
-                continue
-            elif start_status:
-                for s in temp_statuses:
-                    relevant_statuses.append(s)
-                temp_statuses = []
-                start_status = None
-            else:
-                relevant_statuses.append((status, distro_version, ''))
-        else:
-            if possible_min:
-                continue
-            if not start_status:
-                start_status = (status, distro_version)
-            temp_statuses.append((status, distro_version, ''))
-    
-    if possible_min:
-        start_status = (statuses[0][0], statuses[0][1])
-        relevant_statuses.append((statuses[0][0], statuses[0][1], '<='))
-
-    # try to summarize entries with same version_end
-    if relevant_statuses:
-        relevant_statuses = summarize_statuses_with_version(relevant_statuses, fixed_status_names=['Fixed', 'Will not fix'], version_field='version', dev_distro_name='upstream')
-
-    return relevant_statuses
 
 
 def get_redhat_version_codename_mapping():
@@ -169,7 +107,7 @@ def get_redhat_eol_data():
     return redhat_eol_api_response.json()
 
 
-def initialize_redhat_release_version_codename():
+def initialize_redhat_release_version_codename(config):
     '''Download redhat release data via redhat Security API'''
     
     if not QUIET:
@@ -178,7 +116,7 @@ def initialize_redhat_release_version_codename():
     get_redhat_version_codename_mapping()
     redhat_eol_json = get_redhat_eol_data()
 
-    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
+    db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
     query = 'INSERT INTO distribution_codename_version_mapping (source, version, codename, support_expires, esm_lts_expires) VALUES (?, ?, ?, ?, ?)'
 
@@ -191,7 +129,9 @@ def initialize_redhat_release_version_codename():
         latest_version = str(release['latest'])
         for i in range(int(latest_version.split('.')[1])+1):
             version =  main_version+'.'+str(i)
-            db_cursor.execute(query, ('redhat', version, codename, support_expires, esm_expires))
+            # codename to empty string b/c only base entry gets a codename
+            db_cursor.execute(query, ('redhat', version, '', support_expires, esm_expires))
+        db_cursor.execute(query, ('redhat', main_version, codename, support_expires, esm_expires))
 
     # add versions with no eol data
     for main_version, codename in REDHAT_RELEASES.items():
@@ -209,15 +149,16 @@ def initialize_redhat_release_version_codename():
     db_conn.close()
 
 
-def add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, status, redhat_version, note, extra_cpe):
+def add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, redhat_version, version_end, extra_cpe):
     '''Add given given redhat version in a package to REDHAT_NOT_FOUND_NAME'''
+    global REDHAT_NOT_FOUND_NAME
     try:
-        REDHAT_NOT_FOUND_NAME[name].append((note, redhat_version, cve_id, name_version, matching_cpe, status, extra_cpe))
+        REDHAT_NOT_FOUND_NAME[name].append((version_end, redhat_version, cve_id, name_version, matching_cpe, extra_cpe))
     except:
-        REDHAT_NOT_FOUND_NAME[name] = [(note, redhat_version, cve_id, name_version, matching_cpe, status, extra_cpe)]
+        REDHAT_NOT_FOUND_NAME[name] = [(version_end, redhat_version, cve_id, name_version, matching_cpe, extra_cpe)]
 
 
-def process_cve(cve):
+def process_cve(cve, db_cursor):
     '''Get cpes for all packages in a cve and add these information to the db'''
     cve_id = cve['cve_id']
     cpes = cve['cpes']
@@ -230,6 +171,7 @@ def process_cve(cve):
         return
 
     packages_cpes = []
+    # list of (version_end, redhat_version, package_name.lower())
     relevant_package_infos = process_relevant_package_infos(packages) 
 
     package_names = set([name[2] for name in relevant_package_infos])
@@ -239,7 +181,12 @@ def process_cve(cve):
         # skip all entries with flatpak b/c these packages get updates directly from the maintainer and not from the distributiomn
         if 'flatpak' in package_name:
             continue
-        relevant_packages[package_name] = [(package_info[0], package_info[1], '') for package_info in relevant_package_infos if package_info[2] == package_name]
+        # create list of relevant packages for a certain name, list of (version_end, redhat_version, operator) with operator in ('', '<=','>=')
+        # relevant_packages[package_name] = [(package_info[0], package_info[1], '') for package_info in relevant_package_infos if package_info[2] == package_name]
+        relevant_packages[package_name] = []
+        for package_info in relevant_package_infos:
+            if package_info[2] == package_name:
+                relevant_packages[package_name].append((package_info[0], package_info[1], ''))
 
     for package_name, relevant_package_info in relevant_packages.items():
 
@@ -257,29 +204,21 @@ def process_cve(cve):
         if relevant_package_info_summarized[-1][1] == relevant_package_info[-1][1] and not relevant_package_info_summarized[-1][2] and len(cpes) == 0:
             relevant_package_info_summarized[-1] = (relevant_package_info_summarized[-1][0], relevant_package_info_summarized[-1][1], '>=')
 
-            # highest version needs a '>=' as operator 
-            if relevant_package_info:
-                relevant_package_info[-1] = (relevant_package_info[-1][0], relevant_package_info[-1][1], '>=')
-
         matching_cpe = ''
         original_package_name = package_name
         package_name, name_version = split_name(package_name)
         add_to_vuln_db_bool = True
 
         for version_end, redhat_version, extra_cpe in relevant_package_info_summarized:
-            # package_name is cpe
-            if MATCH_RELEVANT_RHEL_CPE.match(package_name):
-                add_to_vuln_db(cve_id, version_end, package_name, distro_cpe=package_name, name_version='', cpes=[], source='redhat', db_cursor=DB_CURSOR)
+
+            if not version_end:
                 continue
+
             # add to not found if initial cpe search wasn't successful
             if not add_to_vuln_db_bool:
-                add_package_status_to_not_found(cve_id, matching_cpe, package_name, name_version, status, redhat_version, version_end, extra_cpe)
+                add_package_status_to_not_found(cve_id, matching_cpe, package_name, name_version, redhat_version, version_end, extra_cpe)
                 continue
             if not matching_cpe:
-                # virt:av/qemu-kvm -> qemu-kvm
-                package_name = package_name.replace(':', ' ')
-                if '/' in package_name:
-                    package_name = package_name.split('/')[1]
                 name_version, search = get_search_version_string(package_name, name_version, version_end)
                 if len(package_names) == 1 and len(general_given_cpes) == 1 and package_name in general_given_cpes[0] and package_name != 'linux':
                     matching_cpe = get_general_cpe(general_given_cpes[0])
@@ -293,28 +232,28 @@ def process_cve(cve):
                 # check whether similarity between name and cpe is high enough
                 sim_score = cpe_matching_score(package_name, matching_cpe)
                 if sim_score < PACKAGE_CPE_MATCH_THRESHOLD:
-                    add_package_status_to_not_found(cve_id, matching_cpe, package_name, name_version, status, redhat_version, version_end, extra_cpe) 
+                    add_package_status_to_not_found(cve_id, matching_cpe, package_name, name_version, redhat_version, version_end, extra_cpe) 
                     add_to_vuln_db_bool = False
                     matching_cpe = ''
                     continue
 
                 # check if similiar packages are part of the given cve
-                matching_cpe, add_to_vuln_db_bool = check_similar_packages(cve_id, packages_cpes, matching_cpe, name_version, status, redhat_version, version_end, extra_cpe)
+                # this approach works under the assumption that more specific packages occur later, e.g. first 'openssl', than 'openssl-ibmpkcs11'
+                matching_cpe, add_to_vuln_db_bool = check_similar_packages(cve_id, packages_cpes, matching_cpe, package_name, name_version, redhat_version, version_end, extra_cpe)
                 # add packages to found packages for cve
                 if add_to_vuln_db_bool:
-                    best_match = False
-                    if package_name == matching_cpe.split(':')[4]:
-                        best_match = True
-                    packages_cpes.append((matching_cpe, package_name, best_match))
+                    packages_cpes.append((matching_cpe, package_name, name_version))
                 else:
                     continue
                 
                 # match found cpe to all previous not found packages
-                match_not_found_cpe(cpes, matching_cpe, package_name)
+                match_not_found_cpe(cpes, matching_cpe, package_name, db_cursor)
+        
+            # remove .el<REDHAT_VERSION> from version_end
+            version_end = re.sub(r'\.el[0-9]{1,2}', '', version_end)
 
-            version_end = get_clean_version(version_end, True)
             distro_cpe= get_distribution_cpe(redhat_version, 'rhel', matching_cpe, extra_cpe)
-            add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', DB_CURSOR)
+            add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', db_cursor)
 
 
 def remove_duplicates(relevant_package_info):
@@ -330,7 +269,9 @@ def remove_duplicates(relevant_package_info):
 
 
 def process_relevant_package_infos(packages):
+    '''return list of (version_end, redhat_version, package_name)'''
     relevant_package_infos = []
+    redhat_version = ''
     for package in packages:
         redhat_version_exact = ''
         redhat_cpe = package['cpe']
@@ -351,15 +292,14 @@ def process_relevant_package_infos(packages):
             try:
                 package_fix_state = package['fix_state']
             except:
-                # no package or no version in 'affected_release' given 
+                # no version given, e.g. 'kpatch-patch'
+                if not any(char.isdigit() for char in package['package']):
+                    continue
                 try:
-                    # no version given, e.g. 'kpatch-patch'
-                    if not any(char.isdigit() for char in package['package']):
-                        continue
                     package_name, version = package['package'].split('-', maxsplit=1)
                 except:
-                    package_name = transform_cpe_uri_binding_to_formatted_string(redhat_cpe)
-                    version = package.split(':')[5]
+                    # e.g. dotnet7.0
+                    package_name, version = re.match(r'([a-z]*)([0-9\.]*)', package['package']).groups()
             else:
                 package_name = package['package_name']
                 if package_fix_state in ['Affected', 'Fix deferred', 'New', 'Will not fix']:
@@ -368,47 +308,53 @@ def process_relevant_package_infos(packages):
                     version = str(sys.maxsize)
                 elif package_fix_state == 'Not affected':
                     version = '-1'
+                # Missing state: 'Out of support scope' -> a product could be fixed by Extended life cycle support (ELS, paid), but not with the standard license -> has an extra entry therefore ignored here
                 else:
                     version = ''
         if not redhat_version:
             continue
-        version_end = get_clean_version(version, True)
+        # change 'container-tools:4.0/podman' to 'podman4.0'
+        if (':') in package_name and ('/') in package_name:
+            package_name_parts = package_name.split(':')[1].split('/', maxsplit=1)
+            package_name = package_name_parts[1]
+            # only add something like 2.4 to package_name, not rhel8
+            if '.' in package_name_parts:
+                package_name += package_name_parts[0]
+        version_end = get_clean_version(version, is_good_version=True)
         relevant_package_infos.append((version_end, redhat_version, package_name.lower()))
         if redhat_version_exact:
             relevant_package_infos.append((version_end, redhat_version_exact, package_name.lower()))
     return relevant_package_infos
 
 
-def check_similar_packages(cve_id, packages_cpes, matching_cpe, name_version, status, redhat_version, note, extra_cpe):
+def check_similar_packages(cve_id, packages_cpes, matching_cpe, name, name_version, redhat_version, note, extra_cpe):
     '''Check whether given package name with found cpe is close to another package with the same cpe'''
     add_to_vuln_db_bool = True
-    for cpe, name, best_match in packages_cpes:
-        if best_match:
-            continue
-        if matching_cpe == cpe:
+    for cpe, name_package, name_version_package in packages_cpes:
+        if matching_cpe == cpe and name_version_package != name_version and  (name in name_package or name_package in name):
             cpe_parts = matching_cpe.split(':')
-            if cpe_parts[4] in name:
+            if cpe_parts[4] in name and name != name_package:
                 cpe_parts[4] = name
                 matching_cpe = ':'.join(cpe_parts)
             else:
-                add_package_status_to_not_found(cve_id, cpe, name, name_version, status, redhat_version, note, extra_cpe)
+                add_package_status_to_not_found(cve_id, cpe, name, name_version, redhat_version, note, extra_cpe)
                 add_to_vuln_db_bool = False
                 continue
     return matching_cpe,add_to_vuln_db_bool
 
 
-def match_not_found_cpe(cpes, matching_cpe, name):
+def match_not_found_cpe(cpes, matching_cpe, name, db_cursor):
     '''Add all not found entries with the same package name to vuln_db after a matching cpe was found'''
+    global REDHAT_NOT_FOUND_NAME
     try:
         backport_cpes = REDHAT_NOT_FOUND_NAME[name]
         for version_end, redhat_version, cve_id, name_version, _, extra_cpe in backport_cpes:
             distro_cpe = get_distribution_cpe(redhat_version, 'rhel', matching_cpe, extra_cpe)
             if version_end:
-                add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', DB_CURSOR)
+                add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'redhat', db_cursor)
         del REDHAT_NOT_FOUND_NAME[name]
     except:
         pass
- 
 
 
 def get_redhat_data_from_files():
@@ -431,12 +377,12 @@ def get_redhat_data_from_files():
     return cves_redhat
 
 
-def process_data():
+def process_data(config):
     '''Process RedHat api data''' 
     if not QUIET:
         print('[+] Adding RedHat data to database')
 
-    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
+    db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
 
     # get cve data from vuln_db
@@ -481,7 +427,7 @@ def process_data():
                 break
         # cve_id not found in cve_cpe
         else:
-            if is_cve_rejected(cve_id, CONFIG):
+            if is_cve_rejected(cve_id, config):
                 continue
             else:
                 cve_cpe_redhat.append({'cve_id': cve_id, 'cpes': [], 'affected_release': affected_release, 'package_state': package_state})
@@ -489,15 +435,15 @@ def process_data():
 
     cves_redhat = []
     cve_cpe_list = []
-    db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
-    global DB_CURSOR
-    DB_CURSOR = db_conn.cursor()
+    db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
+    db_cursor = db_conn.cursor()
 
+    # process every cve
     for cve in cve_cpe_redhat:
-       process_cve(cve)
+       process_cve(cve, db_cursor)
     
     # add all not found packages to vuln_db
-    add_not_found_packages(REDHAT_NOT_FOUND_NAME, 'redhat', DB_CURSOR) 
+    add_not_found_packages(REDHAT_NOT_FOUND_NAME, 'redhat', db_cursor) 
 
     db_conn.commit()
     db_conn.close()
@@ -508,9 +454,6 @@ async def update_vuln_redhat_db(config):
 
     global REDHAT_UPDATE_SUCCESS
 
-    global CONFIG
-    CONFIG = config
-    
     if not QUIET:
         print('[+] Downloading RedHat data feeds')
 
@@ -523,10 +466,10 @@ async def update_vuln_redhat_db(config):
         return f'Could not download RedHat vuln data from {GITHUB_REDHAT_API_DATA_URL}.'
 
     # get redhat releases data
-    initialize_redhat_release_version_codename()
+    initialize_redhat_release_version_codename(config)
 
     try:
-       process_data()
+       process_data(config)
     except:
         REDHAT_UPDATE_SUCCESS = False
         communicate_warning('Could not process vuln data from the RedHat Security Api')
