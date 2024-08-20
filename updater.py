@@ -248,7 +248,7 @@ async def update_vuln_db(nvd_api_key=None):
         return 'Building PoCs in GitHub table failed'
 
     # print this in the end, because it might take the most time / runs in background
-    print('[+] Adding vuln data from GitHub Security Advisories Vuln Data')
+    print('[+] Adding vuln data from GitHub Security Advisories')
     build_ghsa_data_thread.join()
 
     # remove backup file on success
@@ -818,7 +818,7 @@ def add_ghsa_data_to_db():
                 pname_cpe_map[pname] = (pname, None)
                 continue
 
-            cpe_search_results = search_cpes(pname)
+            cpe_search_results = search_cpes(pname, config=CONFIG['cpe_search'])
             cpe_search_cpes = cpe_search_results.get('cpes', [])
             if not cpe_search_cpes:
                 cpe_search_cpes = cpe_search_results.get('pot_cpes', [])
