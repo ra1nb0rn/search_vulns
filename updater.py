@@ -538,6 +538,9 @@ def create_endoflife_date_table():
         with open(os.path.join(eold_products_dir, filename)) as f:
             product_content = f.read()
 
+        # work around (temporary) EoLD data bug, see https://github.com/endoflife-date/endoflife.date/commit/2c23c3f7e58a19cbefed814d3125403b61a7b035#diff-788cea2420ea468fc502aabb8477fb4063f25db4091d95004e0ca31bc6b52227R22
+        product_content = product_content.replace('releases:\nreleases:', 'releases:')
+
         eold_product_title = product_title_re.search(product_content)
         if not eold_product_title:
             continue
