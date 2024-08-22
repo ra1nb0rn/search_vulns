@@ -9,8 +9,9 @@ from .update_distributions_generic import *
 ROOT_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.insert(1, ROOT_PATH)
 
+GITHUB_UBUNTU_API_DATA_URL = 'https://github.com/aquasecurity/vuln-list.git'
+CVE_UBUNTU_RELEASES_API_URL = 'https://ubuntu.com/security/releases.json'
 UBUNTU_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ubuntu_data_feeds')
-CVE_UBUNTU_API_URL = 'https://ubuntu.com/security/cves.json'
 
 UBUNTU_NOT_FOUND_NAME = {}
 UBUNTU_RELEASES = {}
@@ -24,33 +25,34 @@ def rollback_ubuntu():
         shutil.rmtree(UBUNTU_DATAFEED_DIR)
 
 
-async def api_request(headers, params, requestno, url):
-    '''Perform request to API for one task'''
+def download_ubuntu_data():
+    '''Download Ubuntu Api data from GitHub'''
 
-    global UBUNTU_UPDATE_SUCCESS
+    # Thanks to aquasecurity for providing the data of 
+    # the Ubuntu Security API in a GitHub Repository
+    # https://github.com/aquasecurity/vuln-list
 
-    if UBUNTU_UPDATE_SUCCESS is not None and not UBUNTU_UPDATE_SUCCESS:
-        return None
+    if os.path.isdir(UBUNTU_DATAFEED_DIR):
+        shutil.rmtree(UBUNTU_DATAFEED_DIR)
 
-    retry_limit = 3
-    retry_interval = 6
-    for _ in range(retry_limit + 1):
-        async with aiohttp.ClientSession() as session:
-            try:
-                cve_api_data_response = await session.get(url=url, headers=headers, params=params)
-                if cve_api_data_response.status == 200 and cve_api_data_response.text is not None:
-                    if DEBUG:
-                        print(f'[+] Successfully received data from request {requestno}.')
-                    return await cve_api_data_response.json()
-                else:
-                    if DEBUG:
-                        print(f'[-] Received status code {cve_api_data_response.status} on request {requestno} Retrying...')
-                await asyncio.sleep(retry_interval)
-            except Exception as e:
-                if UBUNTU_UPDATE_SUCCESS is None:
-                    communicate_warning('Got the following exception when downloading vuln data via API: %s' % str(e))
-                UBUNTU_UPDATE_SUCCESS = False
-                return None
+    # download ubuntu data from a GitHub Repo
+    return_code = subprocess.call(
+        'git clone -n --depth 1 --filter=tree:0 %s \'%s\''
+        % (GITHUB_UBUNTU_API_DATA_URL, UBUNTU_DATAFEED_DIR),
+        shell=True,
+        stderr=subprocess.DEVNULL
+    )
+    
+    if return_code == 0:
+        return_code = subprocess.call(
+            'cd %s; git sparse-checkout set --no-cone ubuntu; git checkout;'
+            % (UBUNTU_DATAFEED_DIR),
+            shell=True,
+            stderr=subprocess.DEVNULL
+        )
+
+    if return_code != 0:
+        raise (Exception('Could not download latest resources of ubuntu api from GitHub'))
 
 
 def get_version_end_ubuntu(version, status):
@@ -107,10 +109,9 @@ def download_ubuntu_release_codename_mapping():
 
     # initial request to set paramters
     headers = {'accept': 'application/json'}
-    api_url =  CVE_UBUNTU_API_URL.replace('cves', 'releases')
  
     try:
-        ubuntu_api_initial_response = requests.get(url=api_url, headers=headers)
+        ubuntu_api_initial_response = requests.get(url=CVE_UBUNTU_RELEASES_API_URL, headers=headers)
     except:
             UBUNTU_UPDATE_SUCCESS = False
             communicate_warning('An error occured when making initial request to https://ubuntu.com/security/releases.json')
@@ -157,29 +158,6 @@ def initialize_ubuntu_release_version_codename(config):
     UBUNTU_RELEASES = releases_dict
 
 
-def write_data_to_json_file(api_data, requestno):
-    '''Perform creation of cve json files'''
-
-    if DEBUG:
-        print(f'[+] Writing data from request number {requestno} to file.')
-    with open(os.path.join(UBUNTU_DATAFEED_DIR, f'ubuntu_cve-{requestno}.json'), 'a') as outfile:
-        json.dump(api_data, outfile)
-
-
-async def worker_ubuntu(headers, params, requestno, rate_limit):
-    '''Handle requests within its offset space asychronously, then performs processing steps to produce final database.'''
-    
-    global UBUNTU_UPDATE_SUCCESS
-
-    async with rate_limit:
-        api_data_response = await api_request(headers=headers, params=params, requestno=requestno, url=CVE_UBUNTU_API_URL)
-
-    if UBUNTU_UPDATE_SUCCESS is not None and not UBUNTU_UPDATE_SUCCESS:
-        return None
-
-    write_data_to_json_file(api_data=api_data_response, requestno=requestno)
-    
-
 def add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, ubuntu_version, version_end, extra_cpe):
     '''Add given given ubuntu version in a package to UBUNTU_NOT_FOUND_NAME'''
     global UBUNTU_NOT_FOUND_NAME
@@ -193,8 +171,14 @@ def get_ubuntu_version_for_codename(codename):
     '''Return the matching version for a given codename'''
     if codename == 'upstream':
         return '-1'
-    else:    
-        return UBUNTU_RELEASES[codename]['version']
+    else:
+        for codename_part in codename.split('/'):
+            try:
+                return UBUNTU_RELEASES[codename_part]['version']
+            except:
+                pass
+    # codename not found
+    return ''
 
         
 def process_cve(cve, db_cursor):
@@ -210,14 +194,14 @@ def process_cve(cve, db_cursor):
     packages_cpes = []
 
     # iterate through every package mentioned in the given cve entry
-    for package in cve['packages']:
+    for package_name, package_data in cve['packages'].items():
         matching_cpe = ''
         # split something like openssl098 to openssl 098, so 098 can be considered as version_start = 0.9.8
-        name, name_version = split_name(package['name'])
+        name, name_version = split_name(package_name)
         add_to_vuln_db_bool = True
 
         # list of (version_end, status, ubuntu_version)
-        statuses = [(get_version_end_ubuntu(status['description'], status['status']), get_ubuntu_version_for_codename(status['release_codename']), '') for status in package['statuses']]
+        statuses = [(get_version_end_ubuntu(release_data['Note'], release_data['Status']), get_ubuntu_version_for_codename(release_name), '') for release_name, release_data in package_data.items() if any([True for codename in UBUNTU_RELEASES if codename in release_name])]
         statuses.sort(key = lambda status:float(status[1]))
         # try to summarize statuses with the same version_end to minimize the amount of entries in the db
         relevant_statuses = summarize_statuses_with_version(statuses, 'upstream')
@@ -248,7 +232,7 @@ def process_cve(cve, db_cursor):
                     matching_cpe = get_general_cpe(general_given_cpes[0])
                 # else try to find a matching cpe
                 else:
-                    matching_cpe = get_matching_cpe(name, package['name'], name_version, version_end, search, cpes)
+                    matching_cpe = get_matching_cpe(name, package_name, name_version, version_end, search, cpes)
                 
                 # linux-* package
                 if not matching_cpe:
@@ -317,20 +301,22 @@ def match_not_found_cpe(cpes, matching_cpe, name, db_cursor):
 def get_ubuntu_data_from_files():
     '''Extract the cve data from ubuntu api data, saved in files'''
     cves_ubuntu = []
-    for filename in os.listdir(UBUNTU_DATAFEED_DIR):
-        with open(os.path.join(UBUNTU_DATAFEED_DIR, filename), 'r') as f:
-            res_json = json.load(f)
-            if not res_json:
-                print('[!] Ubuntu download failed')
-                communicate_warning('Ubuntu download failed')
-                rollback_ubuntu()
-                global UBUNTU_UPDATE_SUCCESS
-                UBUNTU_UPDATE_SUCCESS = False
-                return 'Ubuntu download failed'
-            cves = res_json['cves']
-            cves_ubuntu += cves
-            continue
-    cves_ubuntu.sort(key=lambda id: id['id'])    
+    working_dir = os.path.join(UBUNTU_DATAFEED_DIR, 'ubuntu')
+    for dir_year in os.listdir(working_dir):
+        working_year_dir = os.path.join(working_dir, dir_year)
+        for filename in os.listdir(working_year_dir):
+            with open(os.path.join(working_year_dir, filename), 'r') as f:
+                res_json = json.load(f)
+                if not res_json:
+                    print('[!] Ubuntu download failed')
+                    communicate_warning('Ubuntu download failed')
+                    rollback_ubuntu()
+                    global UBUNTU_UPDATE_SUCCESS
+                    UBUNTU_UPDATE_SUCCESS = False
+                    return 'Ubuntu download failed'
+                cves_ubuntu.append(res_json)
+                continue
+    cves_ubuntu.sort(key=lambda cve: cve['Candidate'])
     return cves_ubuntu
 
 
@@ -362,7 +348,7 @@ def process_data(config):
 
     # match cve and cpes from nvd
     for cve in cves_ubuntu:
-        cve_id = cve['id']
+        cve_id = cve['Candidate']
 
         # iterate through all cves from nvd
         for i in range(pointer_cves_nvd, length_cve_cpe_list):
@@ -370,7 +356,7 @@ def process_data(config):
             # use information from nvd for the cves from ubuntu
             if cve_id ==  nvd_cve_id:
                 if not found:
-                    cve_cpe_ubuntu.append({'cve_id': cve_id, 'cpes': [], 'packages': cve['packages']})
+                    cve_cpe_ubuntu.append({'cve_id': cve_id, 'cpes': [], 'packages': cve['Patches']})
                     found = True
                 cve_cpe_ubuntu[pointer_cve_cpe_ubuntu]['cpes'].append(cve_cpe_list[i])                           
             # a cve can have more than one matching cpe
@@ -384,7 +370,7 @@ def process_data(config):
             if is_cve_rejected(cve_id, config):
                 continue
             else:
-                cve_cpe_ubuntu.append({'cve_id': cve_id, 'cpes': [], 'packages': cve['packages']})
+                cve_cpe_ubuntu.append({'cve_id': cve_id, 'cpes': [], 'packages': cve['Patches']})
                 pointer_cve_cpe_ubuntu += 1
 
     cves_ubuntu = []
@@ -402,82 +388,30 @@ def process_data(config):
     db_conn.close()
 
 
-async def download_ubuntu_data():
-    global UBUNTU_UPDATE_SUCCESS
-
-    rate_limit = AsyncLimiter(UBUNTU_API_REQUESTS_PER_SECOND, 1.0)
-
-    # download vulnerability data via Ubuntu Security API
-    if os.path.exists(UBUNTU_DATAFEED_DIR):
-        shutil.rmtree(UBUNTU_DATAFEED_DIR)
-    os.makedirs(UBUNTU_DATAFEED_DIR)
-
-    if not QUIET:
-        print('[+] Downloading ubuntu data feeds')
-
-    offset = 0
-
-    # initial request to set paramters
-    params = {'offset': 0, 'limit': 1, 'order': 'descending', 'sort_by': 'published', 'show_hidden': 'false', 'cve_status': 'active'}
-    headers = {'accept': 'application/json'}
-    api_results_per_page = 100
-
-    try:
-        cve_api_initial_response = requests.get(url=CVE_UBUNTU_API_URL, headers=headers)
-    except:
-            UBUNTU_UPDATE_SUCCESS = False
-            communicate_warning('An error occured when making initial request for parameter setting to https://ubuntu.com/security/cves.json')
-            rollback_ubuntu()
-            return 'An error occured when making initial request for parameter setting to https://ubuntu.com/security/cves.json'
-    if cve_api_initial_response.status_code != requests.codes.ok:
-        UBUNTU_UPDATE_SUCCESS = False
-        rollback_ubuntu()
-        communicate_warning('An error occured when making initial request for parameter setting to https://ubuntu.com/security/cves.json; received a non-ok response code.')
-        return 'An error occured when making initial request for parameter setting to https://ubuntu.com/security/cves.json; received a non-ok response code.'
-
-    numTotalResults = cve_api_initial_response.json().get('total_results')
-
-    # make necessary amount of requests
-    requestno = 0
-    tasks = []
-    while(offset <= numTotalResults):
-        requestno += 1
-        params = {'offset': offset, 'limit': api_results_per_page, 'order': 'descending', 'sort_by': 'published', 'show_hidden': 'false', 'cve_status': 'active'}
-        task = asyncio.create_task(worker_ubuntu(headers=headers, params=params, requestno = requestno, rate_limit=rate_limit))
-        tasks.append(task)
-        offset += api_results_per_page
-
-    while True:
-        _, pending = await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED, timeout=2)
-        if len(pending) < 1 or (UBUNTU_UPDATE_SUCCESS is not None and not UBUNTU_UPDATE_SUCCESS):
-            break
-    if (not len(os.listdir(UBUNTU_DATAFEED_DIR))) or (UBUNTU_UPDATE_SUCCESS is not None and not UBUNTU_UPDATE_SUCCESS):
-        UBUNTU_UPDATE_SUCCESS = False
-        communicate_warning('Could not download vuln data from https://ubuntu.com/security/cves.json')
-        rollback_ubuntu()
-        return 'Could not download vuln data from https://ubuntu.com/security/cves.json'
-
-
-
 async def update_vuln_ubuntu_db(config):
     '''Update the vulnerability database for ubuntu'''
 
     global UBUNTU_UPDATE_SUCCESS
 
-    # download the data from the api
-    error = await download_ubuntu_data()
-    if error:
-        return error
+    if not QUIET:
+        print('[+] Downloading ubuntu data feeds')
+
     # get releases information from api
     initialize_ubuntu_release_version_codename(config)
 
     try:
-        process_data(config)
+       download_ubuntu_data()
     except:
-        UBUNTU_UPDATE_SUCCESS = False
-        communicate_warning('Could not process vuln data from the Ubuntu Security Api')
-        rollback_ubuntu()
-        return 'Could not process vuln data from the Ubuntu Security Api'
+       UBUNTU_UPDATE_SUCCESS = False
+       communicate_warning(f'Could not download ubuntu vuln data from {GITHUB_UBUNTU_API_DATA_URL}.')
+
+    try:
+       process_data(config)
+    except:
+       UBUNTU_UPDATE_SUCCESS = False
+       communicate_warning('Could not process vuln data from the Ubuntu Security Api')
+       rollback_ubuntu()
+       return 'Could not process vuln data from the Ubuntu Security Api'
 
     if UBUNTU_UPDATE_SUCCESS != False:
         shutil.rmtree(UBUNTU_DATAFEED_DIR)
