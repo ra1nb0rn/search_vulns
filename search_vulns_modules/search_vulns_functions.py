@@ -234,4 +234,4 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         db_cursor.close()
         db_conn.close()
 
-    return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes, 'version_status': {}}}, not_affected_cve_ids
+    return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes, 'version_status': eol_info}}, not_affected_cve_ids

@@ -181,13 +181,14 @@ class CPEVersion:
         But 1.1.1 and 1.1 are not considered equal, b/c you probably meant 1.1.0 with 1.1
         '''
 
-        parts, other_parts = self.get_version_parts(), other.get_version_parts()
+        parts = VERSION_PART_SEP_RE.split(self.version_str)
+        other_parts = VERSION_PART_SEP_RE.split(other.version_str)
 
         # do not consider emtpy string and version as equal
         if len(parts) == 0 or len(other_parts) == 0:
             return False
  
-        if len(parts) == len(other_parts) +1 and \
+        if len(other_parts) == len(parts) +1 and \
             CONSIDER_SUBVERSION_VERSION_RE.match(other.version_str):
             return other_parts[:len(parts)] == parts
         elif len(parts) == len(other_parts) +1 and \

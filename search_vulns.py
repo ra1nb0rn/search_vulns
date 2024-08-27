@@ -137,6 +137,7 @@ def main():
                 printit('[+] %s (%s)' % (query, '/'.join(equivalent_cpes)), color=BRIGHT_BLUE)
 
         not_affected_cve_ids = []
+        eol_info = {}
         for cur_cpe in equivalent_cpes:
             cur_vulns, not_affected_cve_ids_returned = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns, args.include_single_version_vulns, args.ignore_general_distribution_vulns, config)
             not_affected_cve_ids += not_affected_cve_ids_returned
@@ -144,6 +145,8 @@ def main():
             for cve_id, vuln in cur_vulns[cur_cpe]['vulns'].items():
                 if cve_id not in vulns[query]:
                     vulns[query][cve_id] = vuln
+            if cur_vulns[cur_cpe]['version_status']:
+                eol_info = cur_vulns[cur_cpe]['version_status']
     
         # delete not affected vulns
         for cve_id in not_affected_cve_ids:
@@ -151,15 +154,6 @@ def main():
                 del vulns[query][cve_id]
             except:
                 pass
-
-        eol_info = {}
-        for cur_cpe in equivalent_cpes:
-            cur_vulns = search_vulns(cur_cpe, db_cursor, args.cpe_search_threshold, False, True, args.ignore_general_cpe_vulns, args.include_single_version_vulns, config)
-            for cve_id, vuln in cur_vulns[cur_cpe]['vulns'].items():
-                if cve_id not in vulns[query]:
-                    vulns[query][cve_id] = vuln
-            if cur_vulns[cur_cpe]['version_status']:
-                eol_info = cur_vulns[cur_cpe]['version_status']
 
         # print found vulnerabilities
         if args.format.lower() == 'txt':

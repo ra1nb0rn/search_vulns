@@ -12,20 +12,18 @@ class TestSearches(unittest.TestCase):
 
     def test_search_libcurl_7501_debian_sid(self):
         self.maxDiff = None
-        # query = 'Debian sid LibCurl 7.50.1'
         query = 'cpe:2.3:a:haxx:libcurl:7.50.1:*:*:*:*:*:*:debian_sid'
         result,_ = search_vulns(query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2024-7264', 'CVE-2023-38546','CVE-2023-27538','CVE-2023-27536','CVE-2023-27535','CVE-2021-22924','CVE-2021-22876','CVE-2020-8286','CVE-2020-8285','CVE-2020-8231','CVE-2019-5436','CVE-2019-3823','CVE-2019-3822','CVE-2018-16890','CVE-2018-14618','CVE-2018-1000005','CVE-2017-8817','CVE-2017-8816','CVE-2017-1000257','CVE-2016-8622','CVE-2016-7167','CVE-2016-7141', 'CVE-2017-1000254', 'CVE-2017-1000100']
+        expected_cves = ['CVE-2024-32928', 'CVE-2024-7264', 'CVE-2023-38546','CVE-2023-27538','CVE-2023-27536','CVE-2023-27535','CVE-2021-22924','CVE-2021-22876','CVE-2020-8286','CVE-2020-8285','CVE-2020-8231','CVE-2019-5436','CVE-2019-3823','CVE-2019-3822','CVE-2018-16890','CVE-2018-14618','CVE-2018-1000005','CVE-2017-8817','CVE-2017-8816','CVE-2017-1000257','CVE-2016-8622','CVE-2016-7167','CVE-2016-7141', 'CVE-2017-1000254', 'CVE-2017-1000100']
         self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
 
     def test_search_libssh2_general_debian_10(self):
         self.maxDiff = None
         query = 'cpe:2.3:a:libssh2:libssh2:-:*:*:*:*:*:*:debian_10'
-        # query = 'Libssh2 Debian 10'
         result,_ = search_vulns(query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2020-22218', 'CVE-2019-3863', 'CVE-2019-3862', 'CVE-2019-3861', 'CVE-2019-3860', 'CVE-2019-3859', 'CVE-2019-3858', 'CVE-2019-3857', 'CVE-2019-3856', 'CVE-2019-3855', 'CVE-2019-17498', 'CVE-2019-13115', 'CVE-2016-0787', 'CVE-2015-1782']
+        expected_cves = ['CVE-2020-1730', 'CVE-2020-22218', 'CVE-2019-3863', 'CVE-2019-3862', 'CVE-2019-3861', 'CVE-2019-3860', 'CVE-2019-3859', 'CVE-2019-3858', 'CVE-2019-3857', 'CVE-2019-3856', 'CVE-2019-3855', 'CVE-2019-17498', 'CVE-2019-13115', 'CVE-2016-0787', 'CVE-2015-1782']
         self.assertEqual(set(expected_cves), set(list(result[query]['vulns'].keys())))
-    
+
     def test_search_glibc2383_debian_14(self):
         self.maxDiff = None
         query = 'cpe:2.3:a:gnu:glibc:2.38-3:*:*:*:*:*:*:debian_14'
