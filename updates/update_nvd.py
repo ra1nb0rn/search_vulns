@@ -435,11 +435,11 @@ def create_endoflife_date_table():
         shutil.rmtree(EOLD_GITHUB_DIR)
 
 
-def get_not_contained_nvd_cpes():
+def get_not_contained_nvd_cpes(config):
     '''Get CPEs only present in NVD vulnerability data'''
 
     # get distinct official NVD CPEs
-    db_conn_cpes = get_database_connection(CONFIG['DATABASE'], CONFIG['cpe_search']['DATABASE_NAME'])
+    db_conn_cpes = get_database_connection(config['DATABASE'], config['cpe_search']['DATABASE_NAME'])
     db_cursor_cpes = db_conn_cpes.cursor()
     db_cursor_cpes.execute('SELECT DISTINCT cpe FROM cpe_entries')
     nvd_official_cpes = db_cursor_cpes.fetchall()
@@ -448,7 +448,7 @@ def get_not_contained_nvd_cpes():
     db_conn_cpes.close()
 
     # get distinct CPEs from vulns
-    db_conn_vulndb = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
+    db_conn_vulndb = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
     db_cursor_vulndb = db_conn_vulndb.cursor()
     db_cursor_vulndb.execute('SELECT DISTINCT cpe FROM cve_cpe')
     vuln_cpes = db_cursor_vulndb.fetchall()

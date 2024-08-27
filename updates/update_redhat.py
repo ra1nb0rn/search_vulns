@@ -11,7 +11,6 @@ sys.path.insert(1, ROOT_PATH)
 
 MATCH_RELEVANT_RHEL_CPE = re.compile(r'cpe:\/[ao]:redhat:(?:enterprise_linux|rhel_[\w]{3}):([0-9\.]{1,3})')
 MATCH_RHEL_VERSION_IN_PACKAGE = re.compile(r'\.[Ee][Ll](\d{1,2}[_\.]\d{1,2})[_\.]?\d{0,2}')
-CVE_REDHAT_API_URL = 'https://access.redhat.com/hydra/rest/securitydata'
 GITHUB_REDHAT_API_DATA_URL = 'https://github.com/aquasecurity/vuln-list-redhat.git'
 REQUEST_HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0'}
 REDHAT_MAPPING_VERSION_CODENAME_URL = 'https://docs.fedoraproject.org/en-US/quick-docs/fedora-and-red-hat-enterprise-linux/'
@@ -278,41 +277,38 @@ def process_relevant_package_infos(packages):
         if not MATCH_RELEVANT_RHEL_CPE.match(redhat_cpe):
             continue
         redhat_version = MATCH_RELEVANT_RHEL_CPE.match(redhat_cpe).group(1)
-        # extend redhat version
-        try:
-            package_name, version = package['package'].split(':', maxsplit=1)
-            # remove attached '-0' to some package names
-            if package_name[-2:] == '-0':
-                package_name = package_name[:-2]
-            # get exact redhat version from package if something like 'RedHat Enterprise Linux 7' is given
-            # add two entries to database, one general and one specific
-            if len(redhat_version.split('.')) == 1 and MATCH_RHEL_VERSION_IN_PACKAGE.search(version):
-                redhat_version_exact = MATCH_RHEL_VERSION_IN_PACKAGE.search(version).group(1).replace('_', '.')
-        except:
-            try:
-                package_fix_state = package['fix_state']
-            except:
-                # no version given, e.g. 'kpatch-patch'
-                if not any(char.isdigit() for char in package['package']):
-                    continue
-                try:
-                    package_name, version = package['package'].split('-', maxsplit=1)
-                except:
-                    # e.g. dotnet7.0
-                    package_name, version = re.match(r'([a-z]*)([0-9\.]*)', package['package']).groups()
+        if 'package' in package.keys():
+            # no version given, e.g. 'kpatch-patch'
+            if not any(char.isdigit() for char in package['package']):
+                continue
+            if ':' in package['package']:
+                package_name, version = package['package'].split(':', maxsplit=1)
+            elif '-' in package['package']:
+                package_name, version = package['package'].split('-', maxsplit=1)
             else:
-                package_name = package['package_name']
-                if package_fix_state in ['Affected', 'Fix deferred', 'New', 'Will not fix']:
-                    version = str(sys.maxsize-1)
-                elif package_fix_state == 'Under investigation':
-                    version = str(sys.maxsize)
-                elif package_fix_state == 'Not affected':
-                    version = '-1'
-                # Missing state: 'Out of support scope' -> a product could be fixed by Extended life cycle support (ELS, paid), but not with the standard license -> has an extra entry therefore ignored here
-                else:
-                    version = ''
+                # e.g. dotnet7.0
+                package_name, version = re.match(r'([a-z]*)([0-9\.]*)', package['package']).groups()
+        elif 'fix_state' in package.keys():
+            package_fix_state = package['fix_state']
+            package_name = package['package_name']
+            if package_fix_state in ['Affected', 'Fix deferred', 'New', 'Will not fix']:
+                version = str(sys.maxsize-1)
+            elif package_fix_state == 'Under investigation':
+                version = str(sys.maxsize)
+            elif package_fix_state == 'Not affected':
+                version = '-1'
+            # Missing state: 'Out of support scope' -> a product could be fixed by Extended life cycle support (ELS, paid), but not with the standard license -> has an extra entry therefore ignored here
+            else:
+                version = ''
         if not redhat_version:
             continue
+        # remove attached '-0' to some package names
+        if package_name[-2:] == '-0':
+            package_name = package_name[:-2]
+        # get exact redhat version from package if something like 'RedHat Enterprise Linux 7' is given
+        # add two entries to database, one general and one specific
+        if len(redhat_version.split('.')) == 1 and MATCH_RHEL_VERSION_IN_PACKAGE.search(version):
+            redhat_version_exact = MATCH_RHEL_VERSION_IN_PACKAGE.search(version).group(1).replace('_', '.')
         # change 'container-tools:4.0/podman' to 'podman4.0'
         if (':') in package_name and ('/') in package_name:
             package_name_parts = package_name.split(':')[1].split('/', maxsplit=1)

@@ -154,7 +154,7 @@ def full_update(nvd_api_key, config_file):
 
     # add CPE infos from vulnerability data and from distribution data to CPE DB
     print('[+] Adding software/CPE information from vulns to CPE-DB')
-    not_contained_nvd_cpes = get_not_contained_nvd_cpes()
+    not_contained_nvd_cpes = get_not_contained_nvd_cpes(CONFIG)
     all_not_contained_cpes = not_contained_nvd_cpes.union(set(NEW_CPES_INFOS))
     add_cpes_to_db(all_not_contained_cpes, CONFIG['cpe_search'], check_duplicates=False)
 

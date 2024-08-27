@@ -172,15 +172,20 @@ def get_ubuntu_version_for_codename(codename):
     if codename == 'upstream':
         return '-1'
     else:
-        for codename_part in codename.split('/'):
-            try:
-                return UBUNTU_RELEASES[codename_part]['version']
-            except:
-                pass
-    # codename not found
-    return ''
+        codename_parts = codename.split('/')
+        if len(codename_parts) > 1:
+            # only use plain esm infos, no 'esm-infra-legacy' etc
+            if not codename_parts[0] == 'esm' and not codename_parts[1] == 'esm':
+                return ''
+            if codename_parts[0] in UBUNTU_RELEASES.keys():
+               return UBUNTU_RELEASES[codename_parts[0]]['version'] + '_esm'
+            elif codename_parts[1] in UBUNTU_RELEASES.keys():
+               return UBUNTU_RELEASES[codename_parts[1]]['version'] + '_esm'
+        elif codename in UBUNTU_RELEASES.keys():
+            return UBUNTU_RELEASES[codename]['version']
+        return ''
 
-        
+
 def process_cve(cve, db_cursor):
     '''Get cpes for all packages of a cve and add these information to the db'''
     cve_id = cve['cve_id']
@@ -201,8 +206,14 @@ def process_cve(cve, db_cursor):
         add_to_vuln_db_bool = True
 
         # list of (version_end, status, ubuntu_version)
-        statuses = [(get_version_end_ubuntu(release_data['Note'], release_data['Status']), get_ubuntu_version_for_codename(release_name), '') for release_name, release_data in package_data.items() if any([True for codename in UBUNTU_RELEASES if codename in release_name])]
-        statuses.sort(key = lambda status:float(status[1]))
+        statuses = []
+        for release_name, release_data in package_data.items():
+            ubuntu_version = get_ubuntu_version_for_codename(release_name)
+            if not ubuntu_version:
+                continue
+            version_end = get_version_end_ubuntu(release_data['Note'], release_data['Status'])
+            statuses.append((version_end, ubuntu_version, ''))
+        statuses.sort(key = lambda status:float(status[1].split('_')[0]))
         # try to summarize statuses with the same version_end to minimize the amount of entries in the db
         relevant_statuses = summarize_statuses_with_version(statuses, 'upstream')
         

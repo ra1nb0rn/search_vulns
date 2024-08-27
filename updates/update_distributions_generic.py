@@ -310,7 +310,8 @@ def get_clean_version(version, is_good_version):
             clean_version = clean_version.split(value)[0]
         # 'released 0.10.3-1' -> '0.10.3-1'
         clean_version.replace('released ', '')
-    else:
+
+    if not clean_version:
         return ''
 
     split_colon = clean_version.split(':')
