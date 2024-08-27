@@ -19,6 +19,11 @@ from search_vulns_modules.search_vulns_functions import (
     MATCH_CPE_23_RE,
     VERSION_FILE
 )
+from search_vulns_modules.process_distribution_matches import (
+    is_possible_distro_query,
+    seperate_distribution_information_from_query,
+    add_distribution_infos_to_cpe
+)
 from cpe_search.cpe_search import search_cpes
 from search_vulns_modules.config import _load_config
 
@@ -127,9 +132,20 @@ def cpe_suggestions():
             return auth_error
 
     query = request.args.get('query')
+    query = query.strip()
     if not query:
         return "No query provided", 400
-    query = query.strip()
+
+    # handle distribution info
+    if is_possible_distro_query(query):
+        db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
+        db_cursor = db_conn.cursor()
+        distribution, query = seperate_distribution_information_from_query(query, db_cursor)
+        db_cursor.close()
+        db_conn.close()
+    else:
+        distribution = None
+
     query_lower = query.lower()
 
     # limit query length in CAPTCHA / API scenario
@@ -140,7 +156,12 @@ def cpe_suggestions():
         return [(query_lower, -1)]
 
     if query_lower in CPE_SUGGESTIONS_CACHE:
-        return jsonify(CPE_SUGGESTIONS_CACHE[query_lower])
+        cpe_suggestions = CPE_SUGGESTIONS_CACHE[query_lower]
+        # add distribution data only only in ui, save suggestions without distribution info
+        if distribution:
+            for i, suggestion in enumerate(cpe_suggestions):
+                cpe_suggestions[i] = (add_distribution_infos_to_cpe(cpe_suggestions[i][0], distribution), cpe_suggestions[i][1])
+        return jsonify(cpe_suggestions)
 
     cpe_suggestions = search_cpes(query, threshold=CPE_SEARCH_THRESHOLD_MATCH, count=CPE_SUGGESTIONS_COUNT, config=config['cpe_search'])
     cpe_suggestions = cpe_suggestions['pot_cpes']
@@ -154,6 +175,11 @@ def cpe_suggestions():
         return jsonify([])
     else:
         CPE_SUGGESTIONS_CACHE[query_lower] = cpe_suggestions
+
+        # add distribution data only only in ui, save suggestions without distribution info
+        if distribution:
+            for i, suggestion in enumerate(cpe_suggestions):
+                cpe_suggestions[i] = (add_distribution_infos_to_cpe(cpe_suggestions[i][0], distribution), cpe_suggestions[i][1])
         return jsonify(cpe_suggestions)
 
 
