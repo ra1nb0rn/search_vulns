@@ -716,11 +716,11 @@ def main():
     args = parse_args()
 
     if args.update == True:
-        from updater import run as run_updater
-        run_updater(False, args.api_key, args.config)
+        from db_build.main_builder import run as run_db_builder
+        run_db_builder(False, args.api_key, args.config)
     elif args.full_update == True:
-        from updater import run as run_updater
-        run_updater(True, args.api_key, args.config)
+        from db_build.main_builder import run as run_db_builder
+        run_db_builder(True, args.api_key, args.config)
     elif args.version == True:
         with open(VERSION_FILE) as f:
             print(f.read())

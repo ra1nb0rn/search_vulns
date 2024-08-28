@@ -17,8 +17,7 @@ jobs:
         with:
           filters: |
             db_build_code_changed:
-              - 'db_creation_src/**'
-              - 'updater.py'
+              - 'db_build/**'
 
       - name: Set up Python and Pip
         uses: actions/setup-python@v5

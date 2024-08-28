@@ -29,24 +29,26 @@ except ModuleNotFoundError:
     import json
 
 
-NVD_DATAFEED_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "nvd_data_feeds"))
+SEARCH_VULNS_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+SEARCH_VULNS_RESOURCE_DIR = os.path.join(SEARCH_VULNS_DIR, 'resources')
+NVD_DATAFEED_DIR = os.path.join(SEARCH_VULNS_RESOURCE_DIR, "nvd_data_feeds")
 VULNDB_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/vulndb.db3"
 CPE_DICT_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cpe-search-dictionary.db3"
 CPE_DEPRECATIONS_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/deprecated-cpes.json"
 CVE_EDB_MAP_ARTIFACT_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/cveid_to_edbid.json"
 POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
-POC_IN_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "PoC-in-GitHub"))
+POC_IN_GITHUB_DIR = os.path.join(SEARCH_VULNS_RESOURCE_DIR, "PoC-in-GitHub")
 EOLD_GITHUB_REPO = "https://github.com/endoflife-date/endoflife.date"
-EOLD_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "endoflife.date"))
-EOLD_HARDCODED_MATCHES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "eold_hardcoded_matches.json"))
+EOLD_GITHUB_DIR = os.path.join(SEARCH_VULNS_RESOURCE_DIR, "endoflife.date")
+EOLD_HARDCODED_MATCHES_FILE = os.path.join(SEARCH_VULNS_RESOURCE_DIR, "eold_hardcoded_matches.json")
 GHSA_GITHUB_REPO = "https://github.com/github/advisory-database"
-GHSA_GITHUB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "ghsa-database"))
-GHSA_HARDCODED_MATCHES_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join("resources", "ghsa_hardcoded_matches.json"))
+GHSA_GITHUB_DIR = os.path.join(SEARCH_VULNS_RESOURCE_DIR, "ghsa-database")
+GHSA_HARDCODED_MATCHES_FILE = os.path.join(SEARCH_VULNS_RESOURCE_DIR, "ghsa_hardcoded_matches.json")
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/62.0"}
 NVD_UPDATE_SUCCESS = None
 CVE_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-MARIADB_BACKUP_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'mariadb_dump.sql'))
-CREATE_SQL_STATEMENTS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.join('resources', 'create_sql_statements.json'))
+MARIADB_BACKUP_FILE = os.path.join(SEARCH_VULNS_RESOURCE_DIR, 'mariadb_dump.sql')
+CREATE_SQL_STATEMENTS_FILE = os.path.join(SEARCH_VULNS_RESOURCE_DIR, 'create_sql_statements.json')
 QUIET = False
 DEBUG = False
 API_RESULTS_PER_PAGE = 2000
@@ -206,7 +208,7 @@ async def update_vuln_db(nvd_api_key=None):
 
     # build local NVD copy with downloaded data feeds
     print('[+] Building vulnerability database')
-    create_db_call = ["./create_db", NVD_DATAFEED_DIR, CONFIG_FILE, CONFIG['DATABASE_NAME'], CREATE_SQL_STATEMENTS_FILE]
+    create_db_call = ["./db_build/core/create_db", NVD_DATAFEED_DIR, CONFIG_FILE, CONFIG['DATABASE_NAME'], CREATE_SQL_STATEMENTS_FILE]
     with open(os.devnull, "w") as outfile:
         return_code = subprocess.call(create_db_call, stdout=outfile, stderr=subprocess.STDOUT)
 

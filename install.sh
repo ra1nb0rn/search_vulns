@@ -47,7 +47,7 @@ install_linux_packages() {
 
 setup_create_db() {
     ## configure submodules of SQLiteCpp for create_db
-    cd "db_creation_src/SQLiteCpp"
+    cd "db_build/core/build_source_cpp/SQLiteCpp"
     if [ $QUIET != 1 ]; then
         git submodule init
         git submodule update
@@ -90,12 +90,12 @@ setup_create_db() {
         make --quiet
     fi
     cp create_db ../../
-    cd "../../"
+    cd "../../../../"
 }
 
 create_vuln_and_software_db() {
-    if [ -f vulndb.db3 ]; then
-        rm vulndb.db3
+    if [ -f resources/vulndb.db3 ]; then
+        rm resources/vulndb.db3
     fi
 
     if [ $FULL_RESOURCE_INSTALL != 0 ]; then

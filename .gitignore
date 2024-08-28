@@ -2,9 +2,9 @@
 .DS_Store
 __pycache__
 create_db
-db_creation_src/build/
-db_creation_src/json/
-db_creation_src/mariadb-connector-cpp/
+db_build/core/build_source_cpp/build/
+db_build/core/build_source_cpp/json/
+db_build/core/build_source_cpp/mariadb-connector-cpp/
 vulndb.db3
 cveid_to_edbid.json
 web_server_files/node_modules/
