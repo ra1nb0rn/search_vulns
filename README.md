@@ -7,6 +7,7 @@ Search for known vulnerabilities in software using software titles or a CPE 2.3 
 * CVE information from the [National Vulnerability Database (NVD)](https://nvd.nist.gov/)
 * Exploit information from the [Exploit-DB (EDB)](https://www.exploit-db.com/)
 * Exploit information from [PoC-in-GitHub](https://github.com/nomi-sec/PoC-in-GitHub)
+* Vulnerability information from the [GitHub Security Advisory Database](https://github.com/github/advisory-database)
 * Software currency information from [endoflife.date](https://github.com/endoflife-date/endoflife.date)
 
 Using the *search_vulns* tool, this local information can be queried, either by providing software titles like 'Apache 2.4.39' or by providing a CPE 2.3 string like ``cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*``.
