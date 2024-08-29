@@ -85,8 +85,8 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
 
     // read a JSON file
     std::ifstream input_file(filepath);
-    json j;
-    input_file >> j;
+    json vulns_json;
+    input_file >> vulns_json;
 
     json metrics_entry, metrics_type_entry, references_entry;
     std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity;
@@ -99,9 +99,16 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     int cur_node_id;
 
     // iterate the array
-    for (auto &cve_entry : j["vulnerabilities"]) {
+    for (auto &cve_entry : vulns_json["vulnerabilities"]) {
         cve_id = cve_entry["cve"]["id"];
         edb_ids = "";
+
+        // skip rejected entries without content
+        if ((cve_entry["cve"]["metrics"].empty() &&
+             cve_entry["cve"].find("vulnStatus") != cve_entry["cve"].end() &&
+             cve_entry["cve"]["vulnStatus"] == "Rejected")) {
+            continue;
+        }
 
         // first retrieve data about CVE and put it into DB
         description = "N/A";
