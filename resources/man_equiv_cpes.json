@@ -72,5 +72,5 @@
     "cpe:2.3:a:owncloud:owncloud:": ["cpe:2.3:a:owncloud:graph_api:"],
     "cpe:2.3:a:nats:nats_server:": ["cpe:2.3:a:linuxfoundation:nats-server:"],
     "cpe:2.3:a:keycloak:keycloak:": ["cpe:2.3:a:redhat:keycloak:"],
-    "cpe:2.3:a:f5:nginx_open_source:": ["cpe:2.3:a:f5:nginx:1.15.2:"]
+    "cpe:2.3:a:f5:nginx_open_source:": ["cpe:2.3:a:f5:nginx:"]
 }

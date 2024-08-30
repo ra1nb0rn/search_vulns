@@ -544,10 +544,34 @@ def get_equivalent_cpes(cpe, config):
         cpe_split[6] = '*'
         cpes.append(':'.join(cpe_split))
 
+    # get raw equivalent cpe prefixes, including transitively
+    raw_equiv_cpe_prefixes = set()
+
+    def get_additional_equiv_cpes(cpe_prefix):
+        if cpe_prefix not in EQUIVALENT_CPES:
+            return set()
+        if cpe_prefix in raw_equiv_cpe_prefixes:
+            return set()
+        raw_equiv_cpe_prefixes.add(cpe_prefix)
+
+        additional_cpe_prefixes = set()
+        for other_cpe_prefix in EQUIVALENT_CPES[cpe_prefix]:
+            if other_cpe_prefix not in raw_equiv_cpe_prefixes:
+                additional_cpe_prefixes.add(other_cpe_prefix)
+                additional_cpe_prefixes |= get_additional_equiv_cpes(other_cpe_prefix)
+                raw_equiv_cpe_prefixes.add(other_cpe_prefix)
+
+        return additional_cpe_prefixes
+
+    for equivalent_cpe_prefix in EQUIVALENT_CPES.get(cpe_prefix, []):
+        if equivalent_cpe_prefix not in raw_equiv_cpe_prefixes:
+            raw_equiv_cpe_prefixes |= get_additional_equiv_cpes(equivalent_cpe_prefix)
+
+    # generate proper equivalent CPEs with version info
     equiv_cpes = cpes.copy()
     for cur_cpe in cpes:
         cur_cpe_split = cur_cpe.split(':')
-        for equivalent_cpe in EQUIVALENT_CPES.get(cpe_prefix, []):
+        for equivalent_cpe in raw_equiv_cpe_prefixes:
             equivalent_cpe_prefix = ':'.join(equivalent_cpe.split(':')[:5]) + ':'
             if equivalent_cpe != cpe_prefix:
                 equiv_cpes.append(equivalent_cpe_prefix + ':'.join(cur_cpe_split[5:]))
