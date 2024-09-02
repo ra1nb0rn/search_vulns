@@ -152,8 +152,10 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
             query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score, vector, cisa_known_exploited FROM cve WHERE cve_id = ?'
             db_cursor.execute(query, (vuln_id,))
             edb_ids, descr, publ, last_mod, cvss_ver, score, vector, cisa_known_exploited = db_cursor.fetchone()
+            if cvss_ver:
+                cvss_ver = str(float(cvss_ver))
             detailed_vulns[vuln_id] = {"id": vuln_id, "description": descr, "published": str(publ), "modified": str(last_mod),
-                                    "href": "https://nvd.nist.gov/vuln/detail/%s" % vuln_id, "cvss_ver": str(float(cvss_ver)),
+                                    "href": "https://nvd.nist.gov/vuln/detail/%s" % vuln_id, "cvss_ver": cvss_ver,
                                     "cvss": str(float(score)), "cvss_vec": vector, "vuln_match_reason": match_reason,
                                     "cisa_known_exploited": bool(cisa_known_exploited), "aliases": [], "sources": [source]}
 
@@ -199,12 +201,14 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
             query = 'SELECT aliases, description, published, last_modified, cvss_version, base_score, vector FROM ghsa WHERE ghsa_id = ?'
             db_cursor.execute(query, (vuln_id,))
             aliases, descr, publ, last_mod, cvss_ver, score, vector = db_cursor.fetchone()
+            if cvss_ver:
+                cvss_ver = str(float(cvss_ver))
             if aliases:
                 aliases = aliases.split(',')
             else:
                 aliases = []
             detailed_vulns[vuln_id] = {"id": vuln_id, "description": descr, "published": str(publ), "modified": str(last_mod),
-                                       "href": "https://github.com/advisories/%s" % vuln_id, "cvss_ver": str(float(cvss_ver)),
+                                       "href": "https://github.com/advisories/%s" % vuln_id, "cvss_ver": cvss_ver,
                                        "cvss": str(float(score)), "cvss_vec": vector, "vuln_match_reason": match_reason,
                                        "aliases": aliases, "sources": [source]}
 

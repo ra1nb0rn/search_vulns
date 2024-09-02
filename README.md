@@ -5,6 +5,7 @@ Search for known vulnerabilities in software using software titles or a CPE 2.3 
 *search_vulns* can be used to search for known vulnerabilities in software. To achieve this, the tool utilizes a locally built vulnerability database, currently containing:
 
 * CVE information from the [National Vulnerability Database (NVD)](https://nvd.nist.gov/)
+* Enhanced NVD information from [VulnCheck NVD++](https://vulncheck.com/nvd2)
 * Exploit information from the [Exploit-DB (EDB)](https://www.exploit-db.com/)
 * Exploit information from [PoC-in-GitHub](https://github.com/nomi-sec/PoC-in-GitHub)
 * Vulnerability information from the [GitHub Security Advisory Database](https://github.com/github/advisory-database)

@@ -32,7 +32,8 @@ jobs:
         if: steps.changes.outputs.db_build_code_changed == 'true'
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: NVD_API_KEY=$NVD_API_KEY ./install.sh --full
+          VULNCHECK_API_KEY: ${{ secrets.VULNCHECK_API_KEY }}
+        run: NVD_API_KEY=$NVD_API_KEY VULNCHECK_API_KEY=$VULNCHECK_API_KEY ./install.sh --full
 
       - name: Install tool and pull resources from release
         if: steps.changes.outputs.db_build_code_changed == 'false'

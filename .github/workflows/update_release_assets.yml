@@ -19,7 +19,8 @@ jobs:
       - name: Install tool and build DB
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: NVD_API_KEY=$NVD_API_KEY ./install.sh --full
+          VULNCHECK_API_KEY: ${{ secrets.VULNCHECK_API_KEY }}
+        run: NVD_API_KEY=$NVD_API_KEY VULNCHECK_API_KEY=$VULNCHECK_API_KEY ./install.sh --full
       - name: Test CVE Completeness
         run: python3 ./tests/test_cve_completeness.py
       - name: Test CVE Attribute Completeness

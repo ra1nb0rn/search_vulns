@@ -106,6 +106,72 @@ async def worker(headers, params, requestno, rate_limit):
     write_data_to_json_file(api_data=api_data_response, requestno=requestno)
 
 
+async def vulncheck_worker(cveids, headers):
+    '''Pull cve<->cpe data for the given cveids asyncronously and return results'''
+
+    global NVD_UPDATE_SUCCESS
+
+    affects_statements = []
+    retry_limit = 3
+    retry_interval = 1
+    async with aiohttp.ClientSession() as session:
+        for cveid in cveids:
+            # get extra data from vulncheck API
+            vulncheck_data = None
+            for _ in range(retry_limit + 1):
+                try:
+                    vulncheck_url = 'https://api.vulncheck.com/v3/index/nist-nvd2'
+                    params = {'cve': cveid}
+                    vulncheck_response = await session.get(url=vulncheck_url, headers=headers, params=params)
+                    if vulncheck_response.status == 200 and vulncheck_response.text is not None:
+                        vulncheck_data = await vulncheck_response.json()
+                        if vulncheck_data:
+                            break
+                    await asyncio.sleep(retry_interval)
+                except Exception as e:
+                    if NVD_UPDATE_SUCCESS is None:
+                        communicate_warning('Got an exception when downloading data from vulncheck API: %s' % str(e))
+                    NVD_UPDATE_SUCCESS = False
+                    return None
+            if not vulncheck_data:
+                if NVD_UPDATE_SUCCESS is None:
+                    communicate_warning('Could not get vulncheck data for: %s' % str(cveid))
+                NVD_UPDATE_SUCCESS = False
+                return None
+
+            # extract CPE configurations data from vulncheck's extra data
+            if vulncheck_data.get('data', []):
+                for vc_configs_entry in vulncheck_data['data'][0].get('vcConfigurations', []):
+                    for vc_configs_node in vc_configs_entry.get('nodes', []):
+                        for cpe_entry in vc_configs_node.get('cpeMatch', []):
+                            if not cpe_entry['vulnerable']:
+                                continue
+                            cpe = cpe_entry['criteria']
+                            cpe_version_start, cpe_version_end = '', ''
+                            is_cpe_version_start_incl, is_cpe_version_end_incl = False, False
+                            if 'versionStartIncluding' in cpe_entry:
+                                cpe_version_start = cpe_entry['versionStartIncluding']
+                                is_cpe_version_start_incl = True
+                            elif 'versionStartExcluding' in cpe_entry:
+                                cpe_version_start = cpe_entry['versionStartExcluding']
+                                is_cpe_version_start_incl = False
+
+                            if 'versionEndIncluding' in cpe_entry:
+                                cpe_version_end = cpe_entry['versionEndIncluding']
+                                is_cpe_version_end_incl = True
+                            elif 'versionEndExcluding' in cpe_entry:
+                                cpe_version_end = cpe_entry['versionEndExcluding']
+                                is_cpe_version_end_incl = False
+
+                            affects_statements.append((cveid, cpe, cpe_version_start, is_cpe_version_start_incl,
+                                                      cpe_version_end, is_cpe_version_end_incl))
+
+    if NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS:
+        return None
+
+    return affects_statements
+
+
 def backup_mariadb_database(database):
     try:
         # check whether database exists
@@ -220,6 +286,52 @@ async def update_vuln_db(nvd_api_key=None):
         return f"Building NVD database failed with status code {return_code}."
 
     shutil.rmtree(NVD_DATAFEED_DIR)
+
+    # Pull extra CVE <-> CPE data from vulncheck (if configured)
+    vulncheck_api_key = os.getenv('VULNCHECK_API_KEY')
+    if (not vulncheck_api_key) and CONFIG:
+        vulncheck_api_key = CONFIG.get('VULNCHECK_API_KEY', None)
+
+    if vulncheck_api_key:
+        print('[+] Adding CVE <-> CPE information from VulnCheck')
+        db_conn = get_database_connection(CONFIG['DATABASE'], CONFIG['DATABASE_NAME'])
+        db_cursor = db_conn.cursor()
+        db_cursor.execute('SELECT cve_id from cve where cve_id not in (SELECT DISTINCT cve_id FROM cve_cpe);')
+        cves_no_cpe = [result[0] for result in db_cursor.fetchall()]
+        offset, batchsize = 0, 100
+        headers = {'Authorization': 'Bearer %s' % vulncheck_api_key}
+        tasks = []
+
+        # vulncheck API does not require a rate limit, see https://vulncheck.com/blog/nvd-plus-plus
+        while(offset < len(cves_no_cpe)):
+            cveids = cves_no_cpe[offset:min(offset+batchsize, len(cves_no_cpe))]
+            task = asyncio.create_task(vulncheck_worker(cveids=cveids, headers=headers))
+            tasks.append(task)
+            offset += batchsize
+
+        while True:
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED, timeout=2)
+            if len(pending) < 1:
+                break
+
+        insert_cve_cpe_query = 'INSERT INTO cve_cpe VALUES(?, ?, ?, ?, ?, ?);'
+        if CONFIG['DATABASE']['TYPE'] == 'sqlite':
+            import sqlite3
+            sql_integrity_error = sqlite3.IntegrityError
+        elif CONFIG['DATABASE']['TYPE'] == 'mariadb':
+            import mariadb
+            sql_integrity_error = mariadb.IntegrityError
+        for task in done:
+            affects_statements = task.result()
+            for stmt in affects_statements:
+                try:
+                    db_cursor.execute(insert_cve_cpe_query, stmt)
+                except sql_integrity_error:
+                    pass
+        db_conn.commit()
+        db_cursor.close()
+        db_conn.close()
+
     NVD_UPDATE_SUCCESS = True
     build_eold_data_thread.join()
 
@@ -784,7 +896,7 @@ def add_ghsa_data_to_db():
                 if cvss_version[0] == '4':
                     cvss_score = CVSS4(cvss_vector).scores()[0]
             else:
-                cvss_score, cvss_vector, cvss_version = '0.0', '', '0.0'
+                cvss_score, cvss_vector, cvss_version = '-1.0', '', ''
             severity = advisory['database_specific'].get('severity', 'N/A')
 
             # retrieve description and dates

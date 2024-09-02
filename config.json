@@ -2,6 +2,7 @@
     "DATABASE_NAME": "resources/vulndb.db3",
     "CVE_EDB_MAP_FILE": "resources/cveid_to_edbid.json",
     "NVD_API_KEY": "",
+    "VULNCHECK_API_KEY": "",
     "RECAPTCHA_AND_API": {
         "ENABLED": false,
         "SITE_KEY_V3": "<YOUR_SITE_KEY_V3>",
