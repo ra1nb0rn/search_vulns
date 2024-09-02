@@ -88,11 +88,13 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     json vulns_json;
     input_file >> vulns_json;
 
-    json metrics_entry, metrics_type_entry, references_entry;
+    json metrics_entry, references_entry;
     std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity;
     std::string cvss_version, ref_url, op;
     std::unordered_map<std::string, int> nvd_exploits_refs;
     std::unordered_map<std::string, std::unordered_set<int>> cveid_exploits_map;
+    std::list<std::string> cvss_keys = {"cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2"};
+    std::list<std::string> cvss_scorer_types = {"Primary", "Secondary"};
     std::size_t datetime_dot_pos;
     bool vulnerable, cisa_known_exploited;
     double base_score;
@@ -102,6 +104,10 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     for (auto &cve_entry : vulns_json["vulnerabilities"]) {
         cve_id = cve_entry["cve"]["id"];
         edb_ids = "";
+        base_score = -1;
+        cvss_version = "";
+        vector_string = "";
+        severity = "";
 
         // skip rejected entries without content
         if ((cve_entry["cve"]["metrics"].empty() &&
@@ -119,41 +125,35 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
             }
         }
 
-        // cvss metrics_entry_type (2, 3.0, 3.1)
+        // retrieve CVSS score, vector and severity
+        // check which version is used ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2")
         metrics_entry = cve_entry["cve"]["metrics"];
-        if (metrics_entry.find("cvssMetricV31") != metrics_entry.end()) {
-            metrics_type_entry = metrics_entry["cvssMetricV31"];
-        }
-        else if (metrics_entry.find("cvssMetricV30") != metrics_entry.end()) {
-            metrics_type_entry = metrics_entry["cvssMetricV30"];
-        }
-        else if (metrics_entry.find("cvssMetricV2") != metrics_entry.end()) {
-            metrics_type_entry = metrics_entry["cvssMetricV2"];
-        }
+        for (const auto& cvss_key : cvss_keys) {
+            if (base_score != -1)
+                break;
+            if (metrics_entry.find(cvss_key) != metrics_entry.end()) {
+                // iterate all score entries of found CVSS version
+                for (auto &metric : metrics_entry[cvss_key]) {
+                    if (base_score != -1)
+                        break;
 
-        // get base_score, severity, cvss_version and vector
-        if (metrics_type_entry != NULL){
-            for (auto &metric : metrics_type_entry){
-                // assume there's always a Primary entry
-                if (metric["type"] == "Primary") {
-                    base_score = metric["cvssData"]["baseScore"];
-                    vector_string = metric["cvssData"]["vectorString"];
-                    cvss_version = metric["cvssData"]["version"];
+                    // try to find "Primary" scorer first and use "Secondary" one as fallback
+                    for (auto &cvss_scorer_type : cvss_scorer_types) {  // cvss_scorer_types = {"Primay", "Secondary"}
+                        if (metric["type"] == cvss_scorer_type) {
+                            base_score = metric["cvssData"]["baseScore"];
+                            vector_string = metric["cvssData"]["vectorString"];
+                            cvss_version = metric["cvssData"]["version"];
 
-                    if (cvss_version == "2.0")
-                        severity = metric["baseSeverity"];
-                    else
-                        severity = metric["cvssData"]["baseSeverity"];
+                            if (cvss_version == "2.0")
+                                severity = metric["baseSeverity"];
+                            else
+                                severity = metric["cvssData"]["baseSeverity"];
 
-                    break;
+                            break;
+                        }
+                    }
                 }
             }
-        }
-        else {
-            base_score = -1;
-            vector_string = "";
-            cvss_version = "";
-            severity = "";
         }
 
         // get published date
