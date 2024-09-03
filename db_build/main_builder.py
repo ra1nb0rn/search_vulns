@@ -127,12 +127,11 @@ async def vulncheck_worker(cveids, headers):
                         vulncheck_data = await vulncheck_response.json()
                         if vulncheck_data:
                             break
-                    await asyncio.sleep(retry_interval)
                 except Exception as e:
                     if NVD_UPDATE_SUCCESS is None:
                         communicate_warning('Got an exception when downloading data from vulncheck API: %s' % str(e))
-                    NVD_UPDATE_SUCCESS = False
-                    return None
+                await asyncio.sleep(retry_interval)
+
             if not vulncheck_data:
                 if NVD_UPDATE_SUCCESS is None:
                     communicate_warning('Could not get vulncheck data for: %s' % str(cveid))
