@@ -125,14 +125,14 @@ async def vulncheck_worker(cveids, headers):
                     vulncheck_response = await session.get(url=vulncheck_url, headers=headers, params=params)
                     if vulncheck_response.status == 200 and vulncheck_response.text is not None:
                         vulncheck_data = await vulncheck_response.json()
-                        if vulncheck_data:
+                        if vulncheck_data is not None:
                             break
                 except Exception as e:
                     if NVD_UPDATE_SUCCESS is None:
                         communicate_warning('Got an exception when downloading data from vulncheck API: %s' % str(e))
                 await asyncio.sleep(retry_interval)
 
-            if not vulncheck_data:
+            if vulncheck_data is None:
                 if NVD_UPDATE_SUCCESS is None:
                     communicate_warning('Could not get vulncheck data for: %s' % str(cveid))
                 NVD_UPDATE_SUCCESS = False
@@ -312,6 +312,12 @@ async def update_vuln_db(nvd_api_key=None):
             done, pending = await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED, timeout=2)
             if len(pending) < 1:
                 break
+
+        if NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS:
+            communicate_warning('Retrieving data from VulnCheck failed')
+            rollback()
+            build_eold_data_thread.join()
+            return f"Retrieving data from VulnCheck failed."
 
         insert_cve_cpe_query = 'INSERT INTO cve_cpe VALUES(?, ?, ?, ?, ?, ?);'
         if CONFIG['DATABASE']['TYPE'] == 'sqlite':
