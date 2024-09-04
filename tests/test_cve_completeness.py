@@ -154,5 +154,13 @@ class TestSearches(unittest.TestCase):
         result_cves = [vuln_id for vuln_id in result[query]['vulns'].keys() if vuln_id.startswith('CVE-')]
         self.assertEqual(set(expected_cves), set(result_cves))
 
+    def test_search_portainer_2_19_0(self):
+        self.maxDiff = None
+        query = 'cpe:2.3:a:portainer:portainer:2.19.0:*:*:*:*:*:*:*'
+        result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
+        expected_cves = ['CVE-2021-41874', 'CVE-2024-33661']
+        result_cves = [vuln_id for vuln_id in result[query]['vulns'].keys() if vuln_id.startswith('CVE-')]
+        self.assertEqual(set(expected_cves), set(result_cves))
+
 if __name__ == '__main__':
     unittest.main()

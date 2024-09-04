@@ -350,6 +350,7 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
     cpe_version = CPEVersion(cpe_parts[5])
     vulns = []
 
+    # retrieve vulnerabilities via CPEs and formal applicability statements
     for source in ('nvd', 'ghsa'):
         general_cpe_prefix_query = ':'.join(cpe.split(':')[:5]) + ':'
         if 'mariadb' in str(type(db_cursor)):  # backslashes have to be escaped for MariaDB
@@ -413,6 +414,31 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, include_single_ver
                 if is_cpe_vuln and not bad_nvd_entry:
                     vulns.append((vuln_id, match_reason, source))
                     break
+
+    # try basic text comparison with NVD descriptions to alleviate problem with missing CPEs in newer CVEs
+    product = cpe_parts[4]
+    descr_beginnings = ['%s before %%' % product,
+                        'in %s before %%' % product,
+                        '%s through %%' % product,
+                        'in %s through %%' % product,
+                        '%s %% and earlier %%' % product,
+                        ]
+    descr_beginnings_where = ' OR description LIKE ?' * (len(descr_beginnings) - 1)
+    db_cursor.execute('SELECT cve_id, description FROM cve WHERE (cve_id LIKE "CVE-202%%") ' +
+                      'AND (description LIKE ?%s )' % descr_beginnings_where, descr_beginnings)
+    pot_cves = db_cursor.fetchall()
+    for cve_id, descr in pot_cves:
+        version = None
+        version_beginning = re.search(r'^(in )? *' + product + r' +(before|through) (\d\.?[\da-z\.]*)', descr, re.IGNORECASE)
+        if version_beginning:
+            version = version_beginning.group(3)
+        if not version_beginning:
+            version_beginning = re.search(r'^' + product + r' +(\d\.?[\da-z\.]*) and earlier', descr, re.IGNORECASE)
+            if version_beginning:
+                version = version_beginning.group(1)
+        if version:
+            if cpe_version < CPEVersion(version):
+                vulns.append((cve_id, 'vuln_descr_match', 'nvd'))
 
     # retrieve more information about the found vulns, e.g. CVSS scores and possible exploits
     return get_vuln_details(db_cursor, vulns, add_other_exploit_refs)
