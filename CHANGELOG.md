@@ -1,6 +1,26 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.6.0 - 2024-09-04
+### Added
+- Integrated [GitHub Security Advisory Database](https://github.com/github/advisory-database) as data source.
+- Integrated [VulnCheck's NVD++](https://vulncheck.com/nvd2) with enhanced NVD information as data source.
+- Added very basic retrieval of NVD vulnerabilities via their vuln description text.
+- Add equivalent CPEs for Keycloak, NATS server and Nginx.
+- Equivalent CPEs are now search for transitively as well.
+
+### Changed
+- Increased size of CVSS vectors in DB to accomodate longer CVSS 4.0 vectors.
+- The file structure was changed, such that the build code resides in its own directory.
+- Rejected CVEs without content are no longer stored in the local vuln DB.
+- Reworked C++ build code for NVD CVSS score to also accept secondary CVSS scores and CVSS 4.0.
+- Browsing the CPE dropdown in the web app now wraps around instead of staying fixed to beginning or end.
+
+### Fixed
+- Updated test cases.
+- Fixed processing of EoLD data and made it more resistant to formatting errors.
+
+
 ## v0.5.7 - 2024-07-25
 ### Added
 - Added equivalent CPE for Ghostscript.
