@@ -7,7 +7,7 @@ This file keeps track of all notable changes between the different versions of s
 - Integrated [VulnCheck's NVD++](https://vulncheck.com/nvd2) with enhanced NVD information as data source.
 - Added very basic retrieval of NVD vulnerabilities via their vuln description text.
 - Add equivalent CPEs for Keycloak, NATS server and Nginx.
-- Equivalent CPEs are now search for transitively as well.
+- Equivalent CPEs are now also searched for via indirect connections (i.e. transitively).
 
 ### Changed
 - Increased size of CVSS vectors in DB to accomodate longer CVSS 4.0 vectors.
