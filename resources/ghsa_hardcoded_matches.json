@@ -1,3 +1,7 @@
 {
-    "jquery-rails": "cpe:2.3:a:rubyonrails:jquery-rails:*:*:*:*:*:*:*:*"
+    "jquery-rails": "cpe:2.3:a:rubyonrails:jquery-rails:*:*:*:*:*:*:*:*",
+    "Microsoft.AspNetCore.App.Runtime.win-arm": "cpe:2.3:a:microsoft:asp.net_core:*:*:*:*:*:*:*:*",
+    "Microsoft.AspNetCore.App.Runtime.win-arm64": "cpe:2.3:a:microsoft:asp.net_core:*:*:*:*:*:*:*:*",
+    "Microsoft.AspNetCore.App.Runtime.win-x64": "cpe:2.3:a:microsoft:asp.net_core:*:*:*:*:*:*:*:*",
+    "Microsoft.AspNetCore.App.Runtime.win-x86": "cpe:2.3:a:microsoft:asp.net_core:*:*:*:*:*:*:*:*"
 }
