@@ -74,5 +74,6 @@
     "cpe:2.3:a:keycloak:keycloak:": ["cpe:2.3:a:redhat:keycloak:"],
     "cpe:2.3:a:f5:nginx_open_source:": ["cpe:2.3:a:f5:nginx:"],
     "cpe:2.3:a:cisco:asa:": ["cpe:2.3:a:cisco:adaptive_security_appliance:"],
-    "cpe:2.3:a:microsoft:asp.net:": ["cpe:2.3:a:microsoft:asp.net_core:", "cpe:2.3:a:microsoft:.net:"]
+    "cpe:2.3:a:microsoft:asp.net:": ["cpe:2.3:a:microsoft:asp.net_core:", "cpe:2.3:a:microsoft:.net:"],
+    "cpe:2.3:a:wagtail:wagtail:": ["cpe:2.3:a:torchbox:wagtail:"]
 }

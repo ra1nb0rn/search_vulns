@@ -14,7 +14,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:wordpress:wordpress:5.7.2:*:*:*:*:*:*:*'
         result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2021-44223', 'CVE-2022-21663', 'CVE-2022-21664', 'CVE-2012-6527', 'CVE-2022-43497', 'CVE-2007-2627', 'CVE-2012-4271', 'CVE-2022-3590', 'CVE-2011-5216', 'CVE-2023-22622', 'CVE-2013-7240', 'CVE-2022-21661', 'CVE-2021-39201', 'CVE-2022-21662', 'CVE-2023-2745', 'CVE-2021-39200', 'CVE-2022-43504', 'CVE-2022-43500', 'CVE-2023-5561', 'CVE-2023-39999', 'CVE-2024-31210', 'CVE-2024-32111', 'CVE-2023-5692', 'CVE-2024-31211']
+        expected_cves = ['CVE-2021-44223', 'CVE-2022-21663', 'CVE-2022-21664', 'CVE-2012-6527', 'CVE-2022-43497', 'CVE-2007-2627', 'CVE-2012-4271', 'CVE-2022-3590', 'CVE-2011-5216', 'CVE-2023-22622', 'CVE-2013-7240', 'CVE-2022-21661', 'CVE-2021-39201', 'CVE-2022-21662', 'CVE-2023-2745', 'CVE-2021-39200', 'CVE-2022-43504', 'CVE-2022-43500', 'CVE-2023-5561', 'CVE-2023-39999', 'CVE-2024-31210', 'CVE-2024-32111', 'CVE-2023-5692', 'CVE-2024-31211', 'CVE-2022-4973']
         result_cves = [vuln_id for vuln_id in result[query]['vulns'].keys() if vuln_id.startswith('CVE-')]
         self.assertEqual(set(expected_cves), set(result_cves))
 
@@ -46,7 +46,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:redis:redis:3.2.3:*:*:*:*:*:*:*'
         result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2021-32626', 'CVE-2022-3647', 'CVE-2022-24735', 'CVE-2023-28856', 'CVE-2022-0543', 'CVE-2021-32672', 'CVE-2022-24736', 'CVE-2022-3734', 'CVE-2022-24834', 'CVE-2022-36021', 'CVE-2023-25155', 'CVE-2021-31294', 'CVE-2023-45145']
+        expected_cves = ['CVE-2021-32626', 'CVE-2022-3647', 'CVE-2022-24735', 'CVE-2023-28856', 'CVE-2022-0543', 'CVE-2021-32672', 'CVE-2022-24736', 'CVE-2022-3734', 'CVE-2022-24834', 'CVE-2022-36021', 'CVE-2023-25155', 'CVE-2021-31294', 'CVE-2023-45145', 'CVE-2024-31227', 'CVE-2024-31449', 'CVE-2024-31228']
         result_cves = [vuln_id for vuln_id in result[query]['vulns'].keys() if vuln_id.startswith('CVE-')]
         self.assertEqual(set(expected_cves), set(result_cves))
 
@@ -62,7 +62,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:vmware:spring_framework:5.3.26:*:*:*:*:*:*:*'
         result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2016-1000027', 'CVE-2023-20863', 'CVE-2024-22243', 'CVE-2024-22259', 'CVE-2024-22262']
+        expected_cves = ['CVE-2016-1000027', 'CVE-2023-20863', 'CVE-2024-22243', 'CVE-2024-22259', 'CVE-2024-22262', 'CVE-2024-38809']
         result_cves = [vuln_id for vuln_id in result[query]['vulns'].keys() if vuln_id.startswith('CVE-')]
         self.assertEqual(set(expected_cves), set(result_cves))
 
@@ -158,7 +158,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:portainer:portainer:2.19.0:*:*:*:*:*:*:*'
         result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2021-41874', 'CVE-2024-33661']
+        expected_cves = ['CVE-2021-41874', 'CVE-2024-33661', 'CVE-2024-33662']
         result_cves = [vuln_id for vuln_id in result[query]['vulns'].keys() if vuln_id.startswith('CVE-')]
         self.assertEqual(set(expected_cves), set(result_cves))
 

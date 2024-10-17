@@ -219,8 +219,6 @@ def deduplicate_vulns(vulns):
     """Deduplicate vulnerabilities from different sources and combine aliases"""
 
     deduped_vulns = {}
-    # import json
-    # print(json.dumps(vulns))
     for source in ('nvd', 'ghsa'):  # order of ID preference
         for vuln_id, vuln in vulns.items():
             # since sources are updated dynamically, the same vuln could be iterated
