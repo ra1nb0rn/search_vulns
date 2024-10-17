@@ -1,6 +1,18 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.6.1 - 2024-10-18
+### Added
+- Added equivalent CPEs.
+
+### Changed
+- Limited when NVD vuln description search is performed.
+- Removed bad CPE equivalence from Debian list.
+
+### Fixed
+- Updated test cases.
+
+
 ## v0.6.0 - 2024-09-04
 ### Added
 - Integrated [GitHub Security Advisory Database](https://github.com/github/advisory-database) as data source.
