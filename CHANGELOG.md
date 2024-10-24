@@ -1,6 +1,11 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.6.2 - 2024-10-24
+### Fixed
+- Updated test cases.
+
+
 ## v0.6.1 - 2024-10-18
 ### Added
 - Added equivalent CPEs.

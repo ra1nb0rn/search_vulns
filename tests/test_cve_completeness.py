@@ -62,7 +62,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:vmware:spring_framework:5.3.26:*:*:*:*:*:*:*'
         result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2016-1000027', 'CVE-2023-20863', 'CVE-2024-22243', 'CVE-2024-22259', 'CVE-2024-22262', 'CVE-2024-38809']
+        expected_cves = ['CVE-2016-1000027', 'CVE-2023-20863', 'CVE-2024-22243', 'CVE-2024-22259', 'CVE-2024-22262', 'CVE-2024-38809', 'CVE-2024-38820']
         result_cves = [vuln_id for vuln_id in result[query]['vulns'].keys() if vuln_id.startswith('CVE-')]
         self.assertEqual(set(expected_cves), set(result_cves))
 
