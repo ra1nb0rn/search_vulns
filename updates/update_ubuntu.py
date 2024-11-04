@@ -85,8 +85,13 @@ def get_version_end_ubuntu(version, status):
         version_end = str(sys.maxsize)
     # status ignored can have many reasons, try to find a suiting version for the most popular cases
     elif status == 'ignored':
-        if not version or any(version.startswith(string) for string in ['end of', 'code', 'superseded', 'was not-affected']):
+        if not version or any(version.startswith(string) for string in ['code', 'superseded', 'was not-affected']):
             version_end = ''
+        # data from other sources are enough if present
+        # use version_end = -2 to represent this status
+        elif version.startswith('end of'):
+            version_end = '-2'
+        # e.g. 'only vulnerable on android'
         elif version.startswith('only'):
             version_end = '-1'
         elif not any(x in version for x in ['will not', 'intrusive', 'was', 'fix']):
@@ -215,7 +220,7 @@ def process_cve(cve, db_cursor):
             statuses.append((version_end, ubuntu_version, ''))
         statuses.sort(key = lambda status:float(status[1].split('_')[0]))
         # try to summarize statuses with the same version_end to minimize the amount of entries in the db
-        relevant_statuses = summarize_statuses_with_version(statuses, 'upstream')
+        relevant_statuses = summarize_statuses_with_version(statuses, summarize_skipping_versions=True, dev_distro_name='upstream')
         
         #  force to use '>=' as operator in the entry with the highest distribution version
         if relevant_statuses[-1][1] == statuses[-1][1] and not relevant_statuses[-1][2] and len(cpes) == 0:
@@ -238,24 +243,32 @@ def process_cve(cve, db_cursor):
 
             # no matching cpe for the given package found in a previous loop run
             if not matching_cpe:
+                perfect_match = True
                 # if only one cpe given from nvd and only one package affected, the given cpe is the one we're searching for
                 if len(cve['packages']) == 1 and len(general_given_cpes) == 1 and name in general_given_cpes[0] and name != 'linux':
                     matching_cpe = get_general_cpe(general_given_cpes[0])
                 # else try to find a matching cpe
                 else:
-                    matching_cpe = get_matching_cpe(name, package_name, name_version, version_end, search, cpes)
+                    matching_cpe, perfect_match = get_matching_cpe(name, package_name, version_end, search, cpes)
                 
                 # linux-* package
                 if not matching_cpe:
                     break
-                
-                # check whether similarity between name and cpe is high enough
-                sim_score = cpe_matching_score(name, matching_cpe)
-                if sim_score < PACKAGE_CPE_MATCH_THRESHOLD:
+                # no valid cpe found
+                if matching_cpe == 'cpe:2.3:a:*:*:*:*:*:*:*:*:*:*':
                     add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, ubuntu_version, version_end, extra_cpe) 
                     add_to_vuln_db_bool = False
                     matching_cpe = ''
                     continue
+                
+                # check whether similarity between name and cpe is high enough
+                if not perfect_match:
+                    sim_score = cpe_matching_score(name, matching_cpe)
+                    if sim_score < PACKAGE_CPE_MATCH_THRESHOLD:
+                        add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, ubuntu_version, version_end, extra_cpe) 
+                        add_to_vuln_db_bool = False
+                        matching_cpe = ''
+                        continue
 
                 # check if cve has similar packages which we need to consider
                 matching_cpe, add_to_vuln_db_bool = check_similar_packages(cve_id, packages_cpes, matching_cpe, name_version, ubuntu_version, version_end, extra_cpe)
@@ -270,6 +283,14 @@ def process_cve(cve, db_cursor):
                 
                 # match found cpe to all previous not found packages
                 match_not_found_cpe(cpes, matching_cpe, name, db_cursor)
+
+            # add eol entry if no nvd entry and all given entries eol or most recent distribution not-affected
+            if version_end == '-2':
+                if not matching_cpe in general_given_cpes and \
+                    (relevant_statuses[-1][0] == '-1' or all([ver_end[0]=='-2' for ver_end in relevant_statuses])):
+                    version_end = str(sys.maxsize)
+                else:
+                    continue
 
             # add distribution information to cpe and add to database
             distro_cpe= get_distribution_cpe(ubuntu_version, 'ubuntu', matching_cpe, extra_cpe)

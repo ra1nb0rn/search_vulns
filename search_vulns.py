@@ -77,6 +77,7 @@ def main():
         query = query.strip()
         cpe = query
         distribution = ('', 'inf')
+        # check if given query contains distribution information
         if is_possible_distro_query(query):
             distribution, cpe_search_query = seperate_distribution_information_from_query(query, db_cursor)
         else:
@@ -84,6 +85,8 @@ def main():
             if possible_versions:
                 distribution = get_distribution_data_from_version(possible_versions[0], db_cursor)
             cpe_search_query = query
+        
+        # query is not a cpe
         if not MATCH_CPE_23_RE.match(query):
             cpe_search_results = search_cpes(cpe_search_query, count=1, threshold=args.cpe_search_threshold, config=config['cpe_search'])
             if cpe_search_results.get('cpes', []):
@@ -147,7 +150,7 @@ def main():
                     vulns[query][cve_id] = vuln
             if cur_vulns[cur_cpe]['version_status']:
                 eol_info = cur_vulns[cur_cpe]['version_status']
-    
+
         # delete not affected vulns
         for cve_id in not_affected_cve_ids:
             try:

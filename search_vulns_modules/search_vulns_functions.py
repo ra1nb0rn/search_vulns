@@ -138,7 +138,8 @@ def get_vulns(cpe, db_cursor, ignore_general_cpe_vulns=False, ignore_general_dis
             if is_cpe_vuln and not bad_nvd_entry:
                 vulns.append((cve_id, match_reason))
                 break
-    
+
+    # query for non-nvd entries, either b/c of given cpes or for entries with no nvd data  
     if cpe_parts[12] in ('-', '*') or MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe_parts[12]):
         vulns_distro = get_distribution_matches(cpe, cpe_parts, db_cursor, distribution, ignore_general_distribution_vulns)
         not_affected_cve_ids = get_not_affected_cve_ids(vulns_distro)
@@ -168,6 +169,8 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     query_stripped = query.strip()
     cpe, pot_cpes = query_stripped, []
     distribution = ('', 'inf')
+
+    # check if given query contains distribution information
     if is_possible_distro_query(query):
         distribution, cpe_search_query = seperate_distribution_information_from_query(query, db_cursor)
     else:
@@ -175,6 +178,8 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         if possible_versions:
             distribution = get_distribution_data_from_version(possible_versions[0], db_cursor)
         cpe_search_query = query
+
+    # query is not a cpe
     if not MATCH_CPE_23_RE.match(query_stripped):
         is_good_cpe = False
         if is_possible_distro_query(query):
@@ -182,21 +187,35 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
             distribution, cpe_search_query = seperate_distribution_information_from_query(query, db_cursor)
         else:
             distribution, cpe_search_query = (('', 'inf')), query
+
         cpe_search_results = search_cpes(cpe_search_query, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
 
-        if not cpe_search_results['cpes']:
-            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': cpe_search_results['pot_cpes'], 'version_status': {}}}, []
-
-        cpes = cpe_search_results['cpes']
         pot_cpes = cpe_search_results['pot_cpes']
+        cpes = cpe_search_results['cpes']
+        # add distribution information to all cpes
+        if distribution[0]:
+            pot_cpes = [(add_distribution_infos_to_cpe(cpe_[0], distribution), cpe_[1]) for cpe_ in pot_cpes]
+
+        if not cpes:
+            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': pot_cpes, 'version_status': {}}}, []
 
         if not cpes:
             return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': pot_cpes}}, []
 
         cpe = cpes[0][0]
 
+    # get distribution information from cpe
     if is_possible_distro_query(cpe):
         distribution = get_distro_infos_from_query(cpe, db_cursor)
+
+    # remove unused subversion from distribution version, e.g. 9.2.3 -> 9.2
+    if distribution[0]:
+        distro_version_parts = distribution[1].split('.')
+        distribution_version = '.'.join(distro_version_parts[:2])
+        if distribution[1].endswith('_esm'):
+            distribution_version += '_esm'
+        if len(distro_version_parts) > 2:
+            distribution = (distribution[0], distribution_version)
 
     # use the retrieved CPE to search for known vulnerabilities
     vulns = {}
@@ -208,6 +227,7 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     if distribution[0]:
         equivalent_cpes = [add_distribution_infos_to_cpe(cpe_, distribution) for cpe_ in equivalent_cpes]
 
+    # actual query for vulns
     not_affected_cve_ids = []
     for cur_cpe in equivalent_cpes:
         cur_vulns, not_affected_cve_ids_returned = get_vulns(cur_cpe, db_cursor, ignore_general_cpe_vulns=ignore_general_cpe_vulns, ignore_general_distribution_vulns=ignore_general_distribution_vulns, include_single_version_vulns=include_single_version_vulns, add_other_exploit_refs=add_other_exploit_refs, distribution=distribution)

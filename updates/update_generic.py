@@ -3,10 +3,12 @@
 import os
 import asyncio
 import shutil
+import re
 from cpe_search.database_wrapper_functions import get_database_connection
 import subprocess
-from search_vulns_modules.config import get_config, _load_config
+from search_vulns_modules.config import get_config
 from cpe_version import CPEVersion
+from search_vulns_modules.generic_functions import get_cpe_parts
 
 try:  # use ujson if available
     import ujson as json

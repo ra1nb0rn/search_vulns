@@ -10,6 +10,7 @@ import aiohttp
 from aiolimiter import AsyncLimiter
 from .update_generic import *
 from cpe_search.cpe_search import search_cpes
+from search_vulns_modules.generic_functions import MATCH_DISTRO_CPE
 
 def rollback_nvd():
     rollback()
@@ -452,7 +453,7 @@ def get_not_contained_nvd_cpes(config):
     db_cursor_vulndb = db_conn_vulndb.cursor()
     db_cursor_vulndb.execute('SELECT DISTINCT cpe FROM cve_cpe')
     vuln_cpes = db_cursor_vulndb.fetchall()
-    vuln_cpes = set([cpe[0] for cpe in vuln_cpes])
+    vuln_cpes = set([cpe[0] for cpe in vuln_cpes if not MATCH_DISTRO_CPE.match(cpe[0])])
     db_cursor_vulndb.close()
     db_conn_vulndb.close()
 

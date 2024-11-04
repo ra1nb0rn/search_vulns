@@ -18,11 +18,11 @@ from search_vulns_modules.config import _load_config, DEFAULT_CONFIG_FILE
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
 
 MATCH_DISTRO_CPE_OTHER_FIELD = re.compile(r'([<>]?=?)(ubuntu|debian|rhel)_?((?:[\d\.]{1,5}|inf|upstream|sid)?(?:_esm)?)')
-MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat|rhel)(?:\d)?(?:[^\d]|$)')
+MATCH_DISTRO = re.compile(r'(ubuntu|debian|redhat|rhel|\.el)(?:\d)?(?:[^\d]|$)')
 MATCH_DISTRO_CPE = re.compile(r'cpe:2\.3:[aoh]:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:.*?:[<>]?=?(ubuntu|rhel|debian)_?([\d\.]+|upstream|sid)?(_esm)?$')
 UNIX_CPES = ['cpe:2.3:o:linux:linux_kernel:-:*:*:*:*:*:*:*', 'cpe:2.3:o:opengroup:unix:-:*:*:*:*:*:*:*', 'cpe:2.3:o:unix:unix:*:*:*:*:*:*:*:*']
 
-MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'([\w\.\:\-\_\~]+(\s|(ubuntu|redhat|debian|rhel))){2,}')
+MATCH_TWO_SOFTWARES_AND_VERSIONS = re.compile(r'([\w\.\:\-\_\~]+(\s|(ubuntu|redhat|debian|rhel|\.el))){2,}')
 VERSION_MATCH_CPE_CREATION_RE = re.compile(r'\b((\d[\da-zA-Z\.]{0,6})([\+\-\.\_\~ ][\da-zA-Z\.]+){0,4})[^\w\n]*$')
 NUMERIC_VERSION_RE = re.compile(r'[\d\.]+')
 NON_ALPHANUMERIC_SPLIT_RE = re.compile(r'[^a-zA-Z]')
@@ -64,32 +64,8 @@ def printit(text: str = '', end: str = '\n', color=SANE):
     
 
 def get_cpe_parts(cpe):
+    '''Get all thirteen parts of a cpe'''
     return re.split(r'(?<!\\):', cpe)
-
-
-def is_useful_cpe(cpe, version_end, distribution):
-    '''Return whether a given cpe is useful (nvd cpe or suiting distro cpe)'''
-
-    cpe_other_field = get_cpe_parts(cpe)[12]
-    if not MATCH_DISTRO_CPE.match(cpe) or not MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe_other_field):
-        return True
-    distro, distro_version = distribution
-    if distro_version == 'upstream' or distro_version == 'sid':
-        distro_version = 'inf'
-    try:
-        operator, distro_cpe, distro_version_cpe = MATCH_DISTRO_CPE_OTHER_FIELD.match(cpe_other_field).groups()[0:3]
-    except:
-        operator, distro_cpe, distro_version_cpe = '', '', ''
-    if distro == distro_cpe or (distribution[0] and distro_version == 'inf'):
-        if not operator and distro_version_cpe == distro_version:
-            return True
-        elif operator == '<=' and float(distro_version) <= float(distro_version_cpe):
-            return True
-        elif operator == '>=':
-            return True
-    if operator == '>=' and float(distro_version) >= float(distro_version_cpe):
-        return True and version_end != '-1'
-    return False
 
 
 def is_cpe_included_from_field(cpe1, cpe2, field=6):
@@ -273,7 +249,7 @@ def get_equivalent_cpes(cpe, config):
             if equivalent_cpe != cpe_prefix:
                 equiv_cpes.append(equivalent_cpe_prefix + ':'.join(cur_cpe_split[5:]))
 
-    return equiv_cpes
+    return list(set(equiv_cpes))
 
 
 def is_cpe_included_after_version(cpe1, cpe2):
@@ -338,6 +314,7 @@ def are_versions_considered_equal(cpe_version, version_start, version_start_incl
     version_start_considered_equal = version_start.considered_equal(cpe_version)
     version_end_considered_equal = version_end.considered_equal(cpe_version)
 
+    # version start and version end given, both has to match
     if version_start and version_end:
         if version_start_incl and version_end_incl:
             return (version_start <= cpe_version <= version_end or 
@@ -351,14 +328,14 @@ def are_versions_considered_equal(cpe_version, version_start, version_start_incl
                            version_end_considered_equal) and not version_start_considered_equal
         else:  # not version_start_incl and not version_end_incl
             return (version_start < cpe_version < version_end) and not version_start_considered_equal and not version_end_considered_equal
-    
+    # only start version given 
     elif version_start:
         if version_start_incl:
             return (version_start <= cpe_version or 
                            version_start_considered_equal)
         else:
             return (version_start < cpe_version) and not version_start_considered_equal
-    
+    # only end version given 
     elif version_end:
         if version_end_incl:
             return (cpe_version <= version_end or 
@@ -385,6 +362,7 @@ def is_version_start_end_matching(cpe_parts, version_start, version_start_incl, 
         # set a max version if end is not given explicitly
         version_end = CPEVersion('~' * 256)
 
+    # considered equal check only for distribution results
     if is_distro:
         return are_versions_considered_equal(cpe_version, version_start, version_start_incl, version_end, version_end_incl)
     else:
@@ -445,6 +423,9 @@ def is_more_specific_cpe_contained(vuln_cpe, cve_cpes):
 
 
 def get_possible_versions_in_query(query):
+    '''
+    Return all version parts from query
+    '''
     version_parts = []
     version_str_match = VERSION_MATCH_CPE_CREATION_RE.search(query)
     if version_str_match:

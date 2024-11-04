@@ -27,7 +27,7 @@ def download_debian_release_version_codename_data():
 
     if not QUIET:
         print('[+] Downloading debian releases data')
- 
+
     try:
         debian_api_initial_response = requests.get(url=DEBIAN_RELEASES_URL)
     except:
@@ -65,7 +65,7 @@ def initialize_debian_release_version_codename(config):
         for i in range(len(split_release), 8):
             split_release.append('')
         version,_,codename,_,_,eol,eol_lts,eol_lts = split_release
-        
+
         # sid = unstable development distribution
         if codename == 'sid':
             break
@@ -77,7 +77,7 @@ def initialize_debian_release_version_codename(config):
 
     global DEBIAN_RELEASES
     DEBIAN_RELEASES = releases_dict
-    
+
 
 def add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, debian_version, version_end, extra_cpe):
     '''Add given debian version in a package to DEBIAN_NOT_FOUND_NAME'''
@@ -97,6 +97,7 @@ def get_debian_version_for_codename(codename):
 def get_version_end_debian(status_infos):
     '''Return matching version_end'''
     status = status_infos['status']
+    urgency = status_infos['urgency']
     if status == 'resolved':
         version = status_infos['fixed_version']
     else:
@@ -104,31 +105,38 @@ def get_version_end_debian(status_infos):
     # urgency = unimportant -> version not affected (https://salsa.debian.org/security-tracker-team/security-tracker/-/blame/master/bin/tracker_data.py#L181)
     if version == '0':
         version = '-1'
-    
+
     version_end = '-1'
 
     if status == 'resolved':
+        # given version is fixed version
         version_end = get_clean_version(version, is_good_version=True)
     elif status == 'open':
-        # sys.maxsize-1 is the highest version for us
-        version_end = str(sys.maxsize-1)
+        # data from other sources are enough if present
+        # use version_end = -2 to represent this status
+        if urgency == 'end-of-life':
+            version_end = '-2'
+        else:
+            # sys.maxsize-1 is the highest version for us
+            version_end = str(sys.maxsize-1)
     elif status == 'undetermined':
-        # sys.maxsize -> could be a general info
+        # not sure if vulnerable or not
         version_end = str(sys.maxsize)
-    
+
     return version_end
 
-        
+
 def process_cve(cve, db_cursor):
     '''Get cpes for all packages of a cve and add these information to the db'''
     cve_id = cve['cve_id']
     cpes = cve['cpes']
+    unique_cpes = set([get_versionless_cpe(cpe[1]) for cpe in cpes])
     # split something like openssl098 to openssl 098, so 098 can be considered as version_start = 0.9.8
     name, name_version = split_name(cve['package_name'])
     matching_cpe = cve['cpe']
 
     # check whether given cpe in given cpes
-    if not matching_cpe in  [get_general_cpe(cpe[1]) for cpe in cpes] and name != 'linux':
+    if not matching_cpe in unique_cpes and name != 'linux':
         matching_cpe = ''
 
     # skip cve if only hardware cpes from the nvd given
@@ -141,14 +149,14 @@ def process_cve(cve, db_cursor):
     add_to_vuln_db_bool = True
 
     # try to summarize statuses to decrease the size of the db
-    relevant_statuses = summarize_statuses_with_version(statuses, dev_distro_name='sid')
+    relevant_statuses = summarize_statuses_with_version(statuses, summarize_skipping_versions=True, dev_distro_name='sid')
     relevant_statuses.sort(key = lambda status:float(status[1]) if status[1].isdigit() else -1.0)
 
     #  force to use '>=' as operator in the entry with the highest distribution version
     if relevant_statuses[-1][1] == statuses[-1][1] and not relevant_statuses[-1][2] and len(cpes) == 0:
         relevant_statuses[-1] = (relevant_statuses[-1][0], relevant_statuses[-1][1], '>=')
     # force to use '>=' if only one distribution version (in most cases sid) is given
-    # sid is a trustworthy version other than upstream in ubuntu
+    # sid is a trustworthy version different to upstream in ubuntu
     if len(relevant_statuses) == 1 and len(cpes) == 0:
         relevant_statuses[0] = (relevant_statuses[0][0], relevant_statuses[0][1], '>=')
 
@@ -164,22 +172,39 @@ def process_cve(cve, db_cursor):
 
         # no matching cpe for the given package found in a previous loop run
         if not matching_cpe:
-            matching_cpe = get_matching_cpe(name, cve['package_name'], name_version, version_end, search=name, cpes=cpes)
-            
+            matching_cpe, perfect_match = get_matching_cpe(name, cve['package_name'], version_end, search=name, cpes=cpes)
+
             # linux-* package
             if not matching_cpe:
                 break
-            
-            # check whether similarity between name and cpe is high enough
-            sim_score = cpe_matching_score(name, matching_cpe)
-            if sim_score < PACKAGE_CPE_MATCH_THRESHOLD:
+
+            # no valid cpe found
+            if matching_cpe == 'cpe:2.3:a:*:*:*:*:*:*:*:*:*:*':
                 add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, debian_version, version_end, extra_cpe) 
                 add_to_vuln_db_bool = False
                 matching_cpe = ''
                 continue
 
+            # check whether similarity between name and cpe is high enough
+            if not perfect_match:
+                sim_score = cpe_matching_score(name, matching_cpe)
+                if sim_score < PACKAGE_CPE_MATCH_THRESHOLD:
+                    add_package_status_to_not_found(cve_id, matching_cpe, name, name_version, debian_version, version_end, extra_cpe) 
+                    add_to_vuln_db_bool = False
+                    matching_cpe = ''
+                    continue
+
             # match found cpe to all previous not found packages
-            match_not_found_cpe(cpes, matching_cpe, name, db_cursor)
+            match_not_found_cpe(cpes, matching_cpe, name, db_cursor)      
+
+        # add eol entry if no nvd entry and only eol infos given or most recent distribution not-affected
+        if version_end == '-2':
+            if not matching_cpe in unique_cpes and \
+                (relevant_statuses[-1][0] == '-1' or all([ver_end[0]=='-2' for ver_end in relevant_statuses])):
+                version_end = str(sys.maxsize)
+            else:
+                continue
+
         # add distribution information to cpe and add to database
         distro_cpe= get_distribution_cpe(debian_version, 'debian', matching_cpe, extra_cpe)
         add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, 'debian', db_cursor)
@@ -297,7 +322,7 @@ async def update_vuln_debian_db(config):
     if not QUIET:
         print('[+] Downloading debian data feeds')
 
-
+    # download data
     try:
         cves_debian = json.loads(requests.get(url=CVE_DEBIAN_API_URL, headers=REQUEST_HEADERS).text)
     except:
@@ -306,6 +331,7 @@ async def update_vuln_debian_db(config):
             rollback_debian()
             return 'An error occured when downloading data from %s' % (CVE_DEBIAN_API_URL)
 
+    # process data
     try:
         process_data(cves_debian, config)
     except:

@@ -61,22 +61,24 @@ def equal_name(name1, name2):
     return name1.replace('-', ' ').replace('_', ' ') == name2.replace('-', ' ').replace('_', ' ')
 
 
-def get_matching_cpe(name, original_package_name, name_version, version, search, cpes):
+def get_matching_cpe(name, original_package_name, version, search, cpes):
     '''Get matching cpe for a given package '''
     unique_cpes = set([get_versionless_cpe(cpe[1]) for cpe in cpes])
     matching_cpe = ''
     # special handling of linux-* packages
     if name.startswith('kernel-source') or name.startswith('linux-source') or name == 'linux':
-        return 'cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*'
+        return ('cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*', True)
+    # do not add entry for every possible kernel version
     elif name.startswith('linux-'):
-        return
+        return (None, True)
     # skip flatpak b/c it gets updates from software vendor and not os vendor
     elif 'flatpak' in name:
-        return
+        return (None, True)
     # hardcoded java cpe
     elif 'java' in original_package_name and 'openjdk' in original_package_name:
-        return 'cpe:2.3:a:oracle:openjdk:*:*:*:*:*:*:*:*'
+        return ('cpe:2.3:a:oracle:openjdk:*:*:*:*:*:*:*:*', True)
     # if only one cpe in given cpes
+    perfect_match = True
     if len(unique_cpes) == 1:
         for name_ in re.findall(r'[a-zA-Z+\.]+', name):
             if name_ in cpes[0][1]:
@@ -87,7 +89,9 @@ def get_matching_cpe(name, original_package_name, name_version, version, search,
         # if only one entry. return this entry
         count_name_matches = 0
         for cpe_ in unique_cpes:
-            if original_package_name in cpe_:
+            cpe_parts_ = get_cpe_parts(cpe_)
+            if cpe_parts_[3].startswith(original_package_name) or cpe_parts_[3].endswith(original_package_name)\
+                or cpe_parts_[4].startswith(original_package_name) or cpe_parts_[4].endswith(original_package_name):
                 matching_cpe = cpe_
                 count_name_matches += 1
         if count_name_matches > 1:
@@ -101,104 +105,105 @@ def get_matching_cpe(name, original_package_name, name_version, version, search,
                 matching_cpe = cpe
                 break
         else:
-            matching_cpe = get_matching_general_cpe(name, original_package_name, version, cpes, unique_cpes, search)
+            matching_cpe, perfect_match = get_matching_general_cpe(name, original_package_name, version, cpes, unique_cpes, search)
             if not matching_cpe:
-                return
+                return (None, True)
+            # add found name to mapping
             if len(unique_cpes) > 1:
                 NAME_CPE_DICT[name] = get_versionless_cpe(matching_cpe)
     
     matching_cpe = get_versionless_cpe(matching_cpe)
-    return matching_cpe
+    return (matching_cpe, perfect_match)
 
 
-def get_matching_general_cpe(name, original_package_name, version, cpes, unique_cpes_set, search):
+def get_matching_general_cpe(package_name, original_package_name, package_version, cpes, unique_cpes_set, search):
     '''Get matching cpe for a given name '''
-    # return hardcoded/ already found cpe for given name
-    for n in [name, original_package_name, name+version]:
-        try:
-            return NAME_CPE_DICT[n]
-        except:
-            pass
+    # First idea: return hardcoded/ already found cpe for given name
+    for n in [package_name, original_package_name, package_name+package_version]:
+        if n in NAME_CPE_DICT.keys():
+            return (NAME_CPE_DICT[n], True)
 
     # stupid way of creating cpes, but it works sometimes
-    custom_cpes = [f'cpe:2.3:a:{name}:{name}:*:*:*:*:*:*:*:*']
-    if len(name.split('-')) > 1:
-        custom_cpes.append(f"cpe:2.3:a:{name.split('-')[0]}:{'_'.join(name.split('-')[1:]).replace(':', '_')}:*:*:*:*:*:*:*:*")
-        custom_cpes.append(f"cpe:2.3:a:{name.split('-')[-1]}:{name.split('-')[-1]}:*:*:*:*:*:*:*:*")
-        custom_cpes.append(f"cpe:2.3:a:{name.split('-')[0]}:{name.split('-')[0]}:*:*:*:*:*:*:*:*")
-    # return custom cpe if in given cpes
+    custom_cpes = [f'cpe:2.3:a:{package_name}:{package_name}:*:*:*:*:*:*:*:*']
+    if len(package_name.split('-')) > 1:
+        custom_cpes.append(f"cpe:2.3:a:{package_name.split('-')[0]}:{'_'.join(package_name.split('-')[1:]).replace(':', '_')}:*:*:*:*:*:*:*:*")
+        custom_cpes.append(f"cpe:2.3:a:{package_name.split('-')[-1]}:{package_name.split('-')[-1]}:*:*:*:*:*:*:*:*")
+        custom_cpes.append(f"cpe:2.3:a:{package_name.split('-')[0]}:{package_name.split('-')[0]}:*:*:*:*:*:*:*:*")
+
+    # Second idea: return custom cpe if in given cpes
     for custom_cpe in custom_cpes:
         if custom_cpe in unique_cpes_set:
-            return custom_cpe
+            return (custom_cpe, True)
     # return custom cpe if already in cpe_dictionary
     for custom_cpe in custom_cpes:
         if custom_cpe in ALL_CPES_NVD:
-            return custom_cpe
+            return (custom_cpe, True)
 
-    # check whether we already queried for the given search string
+    # get results from cpe_search and return if matching one found
     try:
+        # check whether we already queried for the given search string
         matching_cpes = CPE_SEARCH_RESULT_DICT[search]
     except:
-        try:
-            iter_matching_cpes = iter(search_cpes(search, threshold=0.42, count=7, keep_data_in_memory=True).values())
-            matching_cpes = next(iter_matching_cpes)
-            if matching_cpes[0][1] > 0.85:
-                return matching_cpes[0][0]
-            matching_cpes = [get_versionless_cpe(cpe[0]) for cpe in matching_cpes]
-        except:
-            matching_cpes = []
+        iter_matching_cpes = iter(search_cpes(search, threshold=0.42, count=7).values())
+        matching_cpes = next(iter_matching_cpes)
+        if matching_cpes and matching_cpes[0][1] > 0.85:
+            return (matching_cpes[0][0], True)
+        matching_cpes = [get_versionless_cpe(cpe[0]) for cpe in matching_cpes]
         CPE_SEARCH_RESULT_DICT[search] = matching_cpes
 
-    # return cpe from cpe_search if in cpes from nvd or name field matches the one from a nvd cpe
+    # Third idea: return cpe from cpe_search if in cpes from nvd or name field matches the one from a nvd cpe
     for cpe in matching_cpes:
         if  cpe in unique_cpes_set:
-            return cpe
+            return (cpe, True)
         if get_cpe_parts(cpe)[4] == original_package_name:
-            return cpe
+            return (cpe, True)
 
     all_cpes = []
-    # cpe, cpe_version
-    all_cpes += [(cpe[1], cpe[4].split('.')[0]) for cpe in cpes]
+    all_cpes += [(cpe[1], cpe[4].split('.')[0]) for cpe in cpes] # (cpe, cpe_version)
     if matching_cpes:
-        all_cpes += [(cpe,'0', '') for cpe in matching_cpes]
+        all_cpes += [(cpe,'0') for cpe in matching_cpes]
 
     possible_cpes = ['', '', '']
     highest_value = ('', 0)
-    name_parts = TEXT_TO_VECTOR_RE.findall(name)
+    name_parts = TEXT_TO_VECTOR_RE.findall(package_name)
+
+    # Last idea: find best suiting cpe in cpes from cpe_search and given cpes for cve and 
     for cpe_infos in all_cpes:
         cpe, cpe_version = cpe_infos
-        vendor, product = get_cpe_parts(cpe)[3:5]
+        cpe_vendor, cpe_product = get_cpe_parts(cpe)[3:5]
         new_ratio =fuzz.token_set_ratio(cpe, search)/100.0
-        if new_ratio > 0.24 and (cpe_version == version or cpe_version.split('.')[0] == version):
+        if new_ratio > 0.24 and (cpe_version == package_version or cpe_version.split('.')[0] == package_version):
             new_ratio *= 1.4
         # prefer cpes with no os vendor
-        if vendor in ['debian', 'ubuntu', 'redhat', 'gentoo', 'fedora']:
+        if cpe_vendor in ['debian', 'ubuntu', 'redhat', 'gentoo', 'fedora']:
             new_ratio = new_ratio/4
         # prefer unix cpes
         if get_cpe_parts(cpe)[9] == 'windows':
             new_ratio *= 2/3
-        
-        if (name == product or search.split(' ')[-1] == product) and not possible_cpes[0]:
+
+        # same name increase the ratio
+        if (package_name == cpe_product or search.split(' ')[-1] == cpe_product) and not possible_cpes[0]:
             possible_cpes[0] = cpe
             new_ratio *= 1.8
-        elif equal_name(name, product) and not possible_cpes[1]:
+        elif equal_name(package_name, cpe_product) and not possible_cpes[1]:
             possible_cpes[1] = cpe
             new_ratio *= 1.5
-        elif any(name_part == product for name_part in name_parts) and not possible_cpes[2]:
+        elif any(name_part == cpe_product for name_part in name_parts) and not possible_cpes[2]:
             possible_cpes[2] = cpe
             new_ratio *= 1.25
 
         if new_ratio > highest_value[1]:
             highest_value = (cpe, new_ratio)
+
     if highest_value[1] > 0.75 and not possible_cpes[0]:
-        return highest_value[0]
+        return (highest_value[0], False)
     for cpe in possible_cpes:
         if cpe:
-            return cpe
+            return (cpe, False)
     if highest_value[1] > 0.49:
-        return highest_value[0]
+        return (highest_value[0], False)
 
-    return 'cpe:2.3:a:*:*:*:*:*:*:*:*:*:*'
+    return ('cpe:2.3:a:*:*:*:*:*:*:*:*:*:*', False)
 
 
 def is_next_distro_version(version1,version2):
@@ -231,7 +236,7 @@ def is_next_distro_version(version1,version2):
         return False
 
 
-def summarize_statuses_with_version(statuses, dev_distro_name):
+def summarize_statuses_with_version(statuses, summarize_skipping_versions, dev_distro_name):
     '''Summarize statuses with same version to one entry'''
     relevant_statuses = []
 
@@ -257,8 +262,8 @@ def summarize_statuses_with_version(statuses, dev_distro_name):
         elif relevant_statuses and relevant_statuses[-1][1] != dev_distro_name:
             summarizable_status = version_end == relevant_statuses[-1][0]
         # check if current distribution is the next after the last one or if current distro is not affected, undetermined or will not fix, 
-        # b/c these statuses can be summarized no matter if it is the next distro version or not 
-        summarizable_status = summarizable_status and ((last_distro_version and is_next_distro_version(last_distro_version, distro_version)) or version_end in ('-1', str(sys.maxsize), str(sys.maxsize-1)))
+        # b/c these statuses can be summarized no matter if it is the next distro version or not
+        summarizable_status = summarizable_status and ((last_distro_version and is_next_distro_version(last_distro_version, distro_version)) or (version_end in ('-1', str(sys.maxsize), str(sys.maxsize-1)) and summarize_skipping_versions))
         if not summarizable_status:
             # use '<=' not only for one entry
             if possible_min:
@@ -303,6 +308,7 @@ def get_clean_version(version, is_good_version):
         clean_version = clean_version.group(1)
         if ' ' in version:
             return ''
+    # more aggressive splitting if we now that the given version is really a version
     if is_good_version:
         split_values = ['ubuntu', 'dfsg', '+', '~', 'build', 'deb', '.el']
         clean_version = version
@@ -324,7 +330,7 @@ def get_clean_version(version, is_good_version):
 
 
 def get_distribution_cpe(distro_version, source, cpe, extra_cpe=''):
-    '''Transform given cpe to cpe with distribution infos in target_sw and other'''
+    '''Transform given cpe to cpe with distribution infos in it'''
     cpe_parts = get_cpe_parts(cpe)
     # distribution_data in 'other' field of cpe
     cpe_parts[12] = '%s%s_%s' % (extra_cpe, source, distro_version)
@@ -349,50 +355,83 @@ def is_cve_rejected(cve_id, config):
         return False
 
 
-def get_cpe_parts(cpe):
-    return re.split(r'(?<!\\):', cpe)
+def add_basename_to_package_names(relevant_package_infos, package_names):
+    relevant_packages = []
+    for package_name in package_names:
+        # skip all entries with flatpak b/c these packages get updates directly from the maintainer and not from the distribution
+        if 'flatpak' in package_name:
+            continue
+
+        # try to get base package, e.g. openssl for compat-openssl
+        split_package_name, _ = split_name(package_name)
+        base_name_package = split_package_name
+        for name in package_names:
+            split_name_, _ = split_name(name)
+            if split_package_name == split_name_:
+                continue
+            if split_package_name.startswith(split_name_) or split_package_name.endswith(split_name_):
+                if len(base_name_package) > len(split_name_):
+                    base_name_package = split_name_
+
+        # create list of relevant packages for a certain name, list of (version_end, redhat_version, operator) with operator in ('', '<=','>=')
+        relevant_package_info = []
+        for package_info in relevant_package_infos:
+            if package_info[2] == package_name:
+                relevant_package_info.append(((package_info[0], package_info[1], '')))
+        relevant_packages.append((package_name, base_name_package, relevant_package_info))
+    return relevant_packages
 
 
 def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, cpes, source, db_cursor):
     '''Add cve with new cpe to vuln_db'''
-    
+
     version_start = '0'
     is_cpe_version_start_including = False
     version_start_nvd_lt_version_end = None
     start_versions = []
+
+    # remove leading wrong characters
+    matching_cpe = matching_cpe[matching_cpe.find('c'):]
+    distro_cpe = distro_cpe[distro_cpe.find('c'):]
+
+    if name_version == '0':
+        name_version = ''
+
+    # version_end = -2 represent EoL
+    # if eol entry is necessary, version_end should be changed earlier, so skip entry here
+    if version_end == '-2':
+        return
 
     # try to get version_start from matching cpe entries for the given package and cve
     for cpe_ in cpes:
         if get_versionless_cpe(cpe_[1]) == matching_cpe:
             if version_start_nvd_lt_version_end == None:
                 version_start_nvd_lt_version_end = True
-            cpe_version_start, is_cpe_version_start_including_ = cpe_[2:4]
-            cpe_version = get_cpe_parts(cpe_[1])[5]
-            if cpe_version in ('*', '-'):
-                cpe_version = ''
+            cpe_version_start_loop, is_cpe_version_start_including_loop = cpe_[2:4]
+            cpe_version_loop = get_cpe_parts(cpe_[1])[5]
+            if cpe_version_loop in ('*', '-'):
+                cpe_version_loop = ''
             # prefix with zero if necessary
-            if cpe_version and re.match(r'\.\d+[\d\.]*', cpe_version):
-                cpe_version = '0'+cpe_version
+            if cpe_version_loop and re.match(r'\.\d+[\d\.]*', cpe_version_loop):
+                cpe_version_loop = '0'+cpe_version_loop
             # version_end < version_start of nvd
-            if version_start_nvd_lt_version_end and CPEVersion(cpe_version_start) < CPEVersion(version_end) and CPEVersion(cpe_version) < CPEVersion(version_end):
+            if version_start_nvd_lt_version_end and CPEVersion(cpe_version_start_loop) < CPEVersion(version_end) and CPEVersion(cpe_version_loop) < CPEVersion(version_end):
                 version_start_nvd_lt_version_end = False
-            if CPEVersion(cpe_[4]) == CPEVersion(version_end) or CPEVersion(cpe_version) == CPEVersion(version_end):
+            if CPEVersion(cpe_[4]) == CPEVersion(version_end) or CPEVersion(cpe_version_loop) == CPEVersion(version_end):
                 return
-            if is_cpe_version_start_including_: 
-                if CPEVersion(version_end) >= CPEVersion(cpe_version_start) and CPEVersion(cpe_version_start) > CPEVersion(version_start):
-                    version_start = cpe_version_start
+            # find suiting version start entries
+            if is_cpe_version_start_including_loop: 
+                if CPEVersion(version_end) >= CPEVersion(cpe_version_start_loop) and CPEVersion(cpe_version_start_loop) > CPEVersion(version_start):
+                    version_start = cpe_version_start_loop
                     is_cpe_version_start_including = True
             else:
-                if CPEVersion(version_end) > CPEVersion(cpe_version_start) and CPEVersion(cpe_version_start) > CPEVersion(version_start):
-                    version_start = cpe_version_start
+                if CPEVersion(version_end) > CPEVersion(cpe_version_start_loop) and CPEVersion(cpe_version_start_loop) > CPEVersion(version_start):
+                    version_start = cpe_version_start_loop
                     is_cpe_version_start_including = False
-                elif CPEVersion(version_end) > CPEVersion(cpe_version) and (CPEVersion(cpe_version) < CPEVersion(version_start) or version_start == '0'):
-                    version_start = cpe_version
+                elif CPEVersion(version_end) > CPEVersion(cpe_version_loop) and (CPEVersion(cpe_version_loop) < CPEVersion(version_start) or version_start == '0'):
+                    version_start = cpe_version_loop
                     is_cpe_version_start_including = True
             start_versions.append(CPEVersion(version_start))
-
-    if version_start == '0':
-        version_start = ''
 
     # set name_version as version_start, e.g. openssh097 -> version_start = 0.9.7, try to use name_version if close enough to already found version
     if all([name_version, name_version != '-1', all([x in string.digits or x in string.ascii_lowercase or x == '.' for x in name_version]), all([x in string.digits or x == '.' for x in version_start])]):
@@ -420,6 +459,11 @@ def add_to_vuln_db(cve_id, version_end, matching_cpe, distro_cpe, name_version, 
         version_start = str(min(start_versions, default=''))
         is_cpe_version_start_including = False
 
+    # 0 is no valid version start
+    if version_start == '0':
+        version_start = ''
+
+    # write new entry to database
     db_cursor.execute('INSERT OR IGNORE INTO cve_cpe (cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including, source) VALUES (?, ?, ?, ?, ?, ?, ?)', (cve_id, distro_cpe, version_start, is_cpe_version_start_including , version_end, False, source))
     NEW_CPES_INFOS.append(matching_cpe)
 
@@ -447,6 +491,7 @@ def add_not_found_packages(not_found_cpes, distribution, db_cursor):
                 matching_cpe = get_versionless_cpe(matching_cpe)
             except:
                 matching_cpe = ''
+
         # create an own cpe if no cpe could be found
         if not matching_cpe or matching_cpe == 'cpe:2.3:a:*:*:*:*:*:*:*:*:*:*':
             matching_cpe = 'cpe:2.3:a:%s:%s:*:*:*:*:*:*:*:*' % (name, name)

@@ -123,7 +123,7 @@ def full_update(nvd_api_key, config_file):
 
     # fill the mapping dictionary with hardcoded information
     init_manual_mapping()
-    # load all cpes from cpe_search database
+    # load all cpes from cpe_search database in memory
     load_all_cpes(CONFIG)
     # add information from a debian source
     error = initialize_packagename_cpe_mapping()
@@ -148,6 +148,7 @@ def full_update(nvd_api_key, config_file):
     if error:
         print(error)
         sys.exit(1)
+
     # remove backup file on success
     if os.path.isfile(CONFIG['DATABASE_BACKUP_FILE']):
         os.remove(CONFIG['DATABASE_BACKUP_FILE'])
