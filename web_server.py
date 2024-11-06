@@ -223,7 +223,9 @@ def search_vulns():
         VULN_RESULTS_CACHE[url_query_string] = {}
         return {}
     else:
-        VULN_RESULTS_CACHE[url_query_string] = vulns
+        # do not cache vuln ids search
+        if vulns[query]['cpe']:
+            VULN_RESULTS_CACHE[url_query_string] = vulns
         return vulns
 
 

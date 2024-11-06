@@ -13,6 +13,8 @@ Search for known vulnerabilities in software using software titles or a CPE 2.3 
 
 Using the *search_vulns* tool, this local information can be queried, either by providing software titles like 'Apache 2.4.39' or by providing a CPE 2.3 string like ``cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*``.
 
+You can also search for vuln ids like 'CVE-2023-1234' or 'GHSA-xx68-jfcg-xmmf' using a comma-seperated list of these.
+
 *search_vulns* can either be used as a CLI tool or via a web server. It is recommended to use the CLI tool for automated workflows that might be resource-constrained. Otherwise, using the web server is recommended, because it offers more features and flexibility. This includes the ability to achieve more complete results. Also, the presentation of results is clearer and results can be exported for further use.
 
 
