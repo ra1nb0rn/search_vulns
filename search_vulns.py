@@ -32,6 +32,8 @@ CPE_COMPARISON_STOP_CHARS_RE = re.compile(r'[\+\-\_\~]')
 NUMERIC_VERSION_RE = re.compile(r'[\d\.]+')
 NON_ALPHANUMERIC_SPLIT_RE = re.compile(r'[^a-zA-Z]')
 CPE_SEARCH_COUNT = 5
+MATCH_CVE_IDS = re.compile(r'(CVE-[0-9]{4}-[0-9]{4,19})') # Source: https://cveproject.github.io/cve-schema/schema/docs/#oneOf_i0_cveMetadata_cveId
+MATCH_GHSA_IDS = re.compile(r'(GHSA(?:-[23456789cfghjmpqrvwx]{4}){3})') # Source: https://github.com/github/advisory-database
 
 # define ANSI color escape sequences
 # Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
@@ -151,7 +153,13 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
         if source == 'nvd':
             query = 'SELECT edb_ids, description, published, last_modified, cvss_version, base_score, vector, cisa_known_exploited FROM cve WHERE cve_id = ?'
             db_cursor.execute(query, (vuln_id,))
-            edb_ids, descr, publ, last_mod, cvss_ver, score, vector, cisa_known_exploited = db_cursor.fetchone()
+            queried_info = db_cursor.fetchone()
+            if queried_info:
+                edb_ids, descr, publ, last_mod, cvss_ver, score, vector, cisa_known_exploited = queried_info
+            else:
+                edb_ids, publ, last_mod, cvss_ver, vector, cisa_known_exploited = '', '', '', '', '', False
+                score, descr = "-1.0", "NOT FOUND"
+                match_reason = "not_found"
             if cvss_ver:
                 cvss_ver = str(float(cvss_ver))
             detailed_vulns[vuln_id] = {"id": vuln_id, "description": descr, "published": str(publ), "modified": str(last_mod),
@@ -200,7 +208,13 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
         elif source == 'ghsa':
             query = 'SELECT aliases, description, published, last_modified, cvss_version, base_score, vector FROM ghsa WHERE ghsa_id = ?'
             db_cursor.execute(query, (vuln_id,))
-            aliases, descr, publ, last_mod, cvss_ver, score, vector = db_cursor.fetchone()
+            queried_info = db_cursor.fetchone()
+            if queried_info:
+                aliases, descr, publ, last_mod, cvss_ver, score, vector = queried_info
+            else:
+                aliases, publ, last_mod, cvss_ver, vector = '', '', '', '', ''
+                score, descr = "-1.0", "NOT FOUND"
+                match_reason = "not_found"
             if cvss_ver:
                 cvss_ver = str(float(cvss_ver))
             if aliases:
@@ -675,6 +689,22 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
     # the query or create alternative CPEs that could match the query
     query_stripped = query.strip()
     cpe, pot_cpes = query_stripped, []
+
+    # handle search for vuln entries
+    vuln_ids = MATCH_CVE_IDS.findall(query_stripped)
+    vuln_ids += MATCH_GHSA_IDS.findall(query_stripped)
+    if vuln_ids:
+        equivalent_cpes, eol_info = [], ''
+        vuln_infos = []
+        for vuln_id in vuln_ids:
+            if vuln_id.startswith('CVE'):
+                source = 'nvd'
+            else:
+                source = 'ghsa'
+            vuln_infos.append((vuln_id.strip(),'',source))
+        vulns = get_vuln_details(db_cursor, vuln_infos, add_other_exploit_refs)
+        return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes, 'version_status': eol_info}}
+
     if not MATCH_CPE_23_RE.match(query_stripped):
         is_good_cpe = False
         cpe_search_results = search_cpes(query_stripped, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
@@ -794,7 +824,8 @@ def main():
         # if current query is not already a CPE, retrieve a CPE that matches the query
         query = query.strip()
         cpe = query
-        if not MATCH_CPE_23_RE.match(query):
+        vuln_ids_query = query.startswith('CVE') or query.startswith('GHSA')
+        if not MATCH_CPE_23_RE.match(query) and not vuln_ids_query:
             cpe_search_results = search_cpes(query, count=1, threshold=args.cpe_search_threshold, config=config['cpe_search'])
             if cpe_search_results.get('cpes', []):
                 cpe = cpe_search_results['cpes'][0][0]
@@ -835,12 +866,19 @@ def main():
 
         # use the retrieved CPE to search for known vulnerabilities
         vulns[query] = {}
-        equivalent_cpes = get_equivalent_cpes(cpe, config)
+
+        if vuln_ids_query:
+            equivalent_cpes = []
+        else:
+            equivalent_cpes = get_equivalent_cpes(cpe, config)
 
         if args.format.lower() == 'txt':
             if not args.output:
                 print()
-                printit('[+] %s (%s)' % (query, '/'.join(equivalent_cpes)), color=BRIGHT_BLUE)
+                if equivalent_cpes:
+                    printit('[+] %s (%s)' % (query, '/'.join(equivalent_cpes)), color=BRIGHT_BLUE)
+                else:
+                    printit('[+] %s' % (query,), color=BRIGHT_BLUE)
 
         vulns[query] = search_vulns(cpe, db_cursor, args.cpe_search_threshold, False, False, args.ignore_general_cpe_vulns, args.include_single_version_vulns, config)
         if vulns[query]:
@@ -853,7 +891,10 @@ def main():
             if not args.output:
                 print_vulns(vulns[query])
             else:
-                out_string += '\n' + '[+] %s (%s)\n' % (query, cpe)
+                if cpe and not vuln_ids_query:
+                    out_string += '\n' + '[+] %s (%s)\n' % (query, cpe)
+                else:
+                    out_string += '\n' + '[+] %s\n' % (query,)
                 out_string += print_vulns(vulns[query], to_string=True)
         else:
             cpe_vulns = vulns[query]

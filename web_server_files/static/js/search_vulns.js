@@ -121,7 +121,7 @@ function createVulnTableRowHtml(idx, vuln) {
     }
     vuln_id_html = vuln_id_html.slice(0, -4);  // strip trailing "<br>"
 
-    if (vuln.vuln_match_reason == "general_cpe" || vuln.vuln_match_reason == "single_higher_version_cpe" || isVulnUnconfirmed)
+    if (vuln.vuln_match_reason == "general_cpe" || vuln.vuln_match_reason == "single_higher_version_cpe" || vuln.vuln_match_reason == "not_found" || isVulnUnconfirmed)
         vuln_style_class = "uncertain-vuln";
     if (vuln.cisa_known_exploited)
         vuln_style_class += " exploited-vuln";  // overwrites color of uncertain vuln
@@ -597,7 +597,9 @@ function searchVulns(query, url_query, recaptcha_response) {
                 if (cpe != undefined) {
                     curVulnData = vulns['vulns'];
                     cpe = cpe.split('/')
-                    search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)} <span class="nowrap whitespace-nowrap">(${htmlEntities(cpe[0])}`;
+                    search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)}`;
+                    if (cpe[0].length > 0) // show cpe
+                        search_display_html += `<span class="nowrap whitespace-nowrap"> (${htmlEntities(cpe[0])}`;
                     if (cpe.length > 1) {  // query has equivalent CPEs
                         search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div><div class="dropdown-content translate-x-2.5 z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-fit" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent CPEs that were included into your search: <div class="tooltip tooltip-top text-wrap ml-1" data-tip="Sometimes there are multiple CPEs for one product, e.g. because of a rebranding."><i class="fas fa-info-circle text-content"></i></div></h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
                         cpe.shift();  // remove first element, i.e. the primarily matched CPE
@@ -607,7 +609,9 @@ function searchVulns(query, url_query, recaptcha_response) {
                         });
                         search_display_html += '</ul></div></div>';
                     }
-                    search_display_html += `)</span></h5></div></div>`;
+                    if (cpe[0].length > 0) // show cpe
+                        search_display_html += `)</span>`;
+                    search_display_html += `</h5></div></div>`;
                     curEOLData = {'query': query, 'version_status': vulns.version_status};
                     if (vulns.version_status) {
                         if (vulns.version_status.status == 'eol') {
@@ -1036,6 +1040,13 @@ function doneTypingQuery () {
     var query = $('#query').val();
     if (query === undefined)
         query = '';
+
+    // no cpe suggestions for vuln ids search
+    if (query.startsWith('CVE') || query.startsWith('GHSA')){
+        $('#cpeSuggestions').html('');
+        $("#buttonSearchVulns").removeClass("btn-disabled");
+        return;
+    }
 
     var queryEnc = encodeURIComponent(query);
     var url_query = "query=" + queryEnc;
