@@ -57,3 +57,9 @@ jobs:
 
       - name: Test endoflife.date Correctness
         run: python3 ./tests/test_eol_date.py
+
+      - name: Test GHSA Correctness
+        run: python3 ./tests/test_ghsa_completeness.py
+
+      - name: Test Vuln ID Search Correctness
+        run: python3 ./tests/test_vuln_id_search.py

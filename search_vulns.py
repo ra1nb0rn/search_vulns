@@ -18,6 +18,7 @@ from cpe_search.cpe_search import (
 )
 from cpe_search.cpe_search import _load_config as _load_config_cpe_search
 
+# general variables and settings
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 DEFAULT_CONFIG_FILE = os.path.join(PROJECT_DIR, 'config.json')
 MAN_EQUIVALENT_CPES_FILE = os.path.join(PROJECT_DIR, os.path.join('resources', 'man_equiv_cpes.json'))
@@ -26,14 +27,16 @@ VERSION_FILE = os.path.join(PROJECT_DIR, 'version.txt')
 CPE_SEARCH_THRESHOLD_MATCH = 0.72
 EQUIVALENT_CPES = {}
 LOAD_EQUIVALENT_CPES_MUTEX = threading.Lock()
+CPE_SEARCH_COUNT = 5
+
+# various regexes
 DEDUP_LINEBREAKS_RE_1 = re.compile(r'(\r\n)+')
 DEDUP_LINEBREAKS_RE_2 = re.compile(r'\n+')
 CPE_COMPARISON_STOP_CHARS_RE = re.compile(r'[\+\-\_\~]')
 NUMERIC_VERSION_RE = re.compile(r'[\d\.]+')
 NON_ALPHANUMERIC_SPLIT_RE = re.compile(r'[^a-zA-Z]')
-CPE_SEARCH_COUNT = 5
-MATCH_CVE_IDS = re.compile(r'(CVE-[0-9]{4}-[0-9]{4,19})') # Source: https://cveproject.github.io/cve-schema/schema/docs/#oneOf_i0_cveMetadata_cveId
-MATCH_GHSA_IDS = re.compile(r'(GHSA(?:-[23456789cfghjmpqrvwx]{4}){3})') # Source: https://github.com/github/advisory-database
+MATCH_CVE_IDS_RE = re.compile(r'(CVE-[0-9]{4}-[0-9]{4,19})') # Source: https://cveproject.github.io/cve-schema/schema/docs/#oneOf_i0_cveMetadata_cveId
+MATCH_GHSA_IDS_RE = re.compile(r'(GHSA(?:-[23456789cfghjmpqrvwx]{4}){3})') # Source: https://github.com/github/advisory-database#ghsa-ids
 
 # define ANSI color escape sequences
 # Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
@@ -673,50 +676,25 @@ def retrieve_eol_info(cpe, db_cursor):
     return version_status
 
 
-def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD_MATCH, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, include_single_version_vulns=False, config=None):
-    """Search for known vulnerabilities based on the given query"""
-
-    # create DB handle if not given
-    if not config:
-        config = _load_config()
-    close_cursor_after = False
-    if not db_cursor:
-        db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
-        db_cursor = db_conn.cursor()
-        close_cursor_after = True
+def search_vulns_by_product(query, db_cursor, software_match_threshold, add_other_exploit_refs, is_good_cpe, ignore_general_cpe_vulns, include_single_version_vulns, config):
+    """Search for known vulnerabilities based on the given query of product"""
 
     # if given query is not already a CPE, try to retrieve a CPE that matches
     # the query or create alternative CPEs that could match the query
-    query_stripped = query.strip()
-    cpe, pot_cpes = query_stripped, []
+    cpe, pot_cpes = query, []
 
-    # handle search for vuln entries
-    vuln_ids = MATCH_CVE_IDS.findall(query_stripped)
-    vuln_ids += MATCH_GHSA_IDS.findall(query_stripped)
-    if vuln_ids:
-        equivalent_cpes, eol_info = [], ''
-        vuln_infos = []
-        for vuln_id in vuln_ids:
-            if vuln_id.startswith('CVE'):
-                source = 'nvd'
-            else:
-                source = 'ghsa'
-            vuln_infos.append((vuln_id.strip(),'',source))
-        vulns = get_vuln_details(db_cursor, vuln_infos, add_other_exploit_refs)
-        return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes, 'version_status': eol_info}}
-
-    if not MATCH_CPE_23_RE.match(query_stripped):
+    if not MATCH_CPE_23_RE.match(query):
         is_good_cpe = False
-        cpe_search_results = search_cpes(query_stripped, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
+        cpe_search_results = search_cpes(query, count=CPE_SEARCH_COUNT, threshold=software_match_threshold, config=config['cpe_search'])
 
         if not cpe_search_results['cpes']:
-            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': cpe_search_results['pot_cpes'], 'version_status': {}}}
+            return {'cpe': None, 'vulns': {}, 'pot_cpes': cpe_search_results['pot_cpes'], 'version_status': {}}
 
         cpes = cpe_search_results['cpes']
         pot_cpes = cpe_search_results['pot_cpes']
 
         if not cpes:
-            return {query: {'cpe': None, 'vulns': {}, 'pot_cpes': pot_cpes, 'version_status': {}}}
+            return {'cpe': None, 'vulns': {}, 'pot_cpes': pot_cpes, 'version_status': {}}
 
         cpe = cpes[0][0]
 
@@ -754,11 +732,52 @@ def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRE
         if eol_info:
             break
 
+    return {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes, 'version_status': eol_info}
+
+
+def search_vulns_by_ids(query, db_cursor, add_other_exploit_refs):
+    """Search for known vulnerabilities based on the given query of vuln IDs"""
+
+    vuln_ids = MATCH_CVE_IDS_RE.findall(query)
+    vuln_ids += MATCH_GHSA_IDS_RE.findall(query)
+
+    if vuln_ids:
+        vuln_infos = []
+        for vuln_id in vuln_ids:
+            if vuln_id.startswith('CVE'):
+                source = 'nvd'
+            else:
+                source = 'ghsa'
+            vuln_infos.append((vuln_id.strip(), 'vuln_id', source))
+        vulns = get_vuln_details(db_cursor, vuln_infos, add_other_exploit_refs)
+        vulns = deduplicate_vulns(vulns)
+        return {'cpe': '', 'vulns': vulns, 'pot_cpes': [], 'version_status': {}}
+
+
+def search_vulns(query, db_cursor=None, software_match_threshold=CPE_SEARCH_THRESHOLD_MATCH, add_other_exploit_refs=False, is_good_cpe=False, ignore_general_cpe_vulns=False, include_single_version_vulns=False, config=None):
+    """Search for known vulnerabilities based on the given query"""
+
+    # create DB handle if not given
+    if not config:
+        config = _load_config()
+    close_cursor_after = False
+    if not db_cursor:
+        db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
+        db_cursor = db_conn.cursor()
+        close_cursor_after = True
+
+    query_stripped = query.strip()
+    # check if search is performed by vuln IDs or product
+    if query_stripped.startswith('CVE-') or query_stripped.startswith('GHSA-'):
+        results = search_vulns_by_ids(query_stripped, db_cursor, add_other_exploit_refs)
+    else:
+        results = search_vulns_by_product(query_stripped, db_cursor, software_match_threshold, add_other_exploit_refs, is_good_cpe, ignore_general_cpe_vulns, include_single_version_vulns, config)
+
     if close_cursor_after:
         db_cursor.close()
         db_conn.close()
 
-    return {query: {'cpe': '/'.join(equivalent_cpes), 'vulns': vulns, 'pot_cpes': pot_cpes, 'version_status': eol_info}}
+    return {query: results}
 
 
 def parse_args():
@@ -824,8 +843,8 @@ def main():
         # if current query is not already a CPE, retrieve a CPE that matches the query
         query = query.strip()
         cpe = query
-        vuln_ids_query = query.startswith('CVE') or query.startswith('GHSA')
-        if not MATCH_CPE_23_RE.match(query) and not vuln_ids_query:
+        is_vuln_ids_query = query.startswith('CVE-') or query.startswith('GHSA-')
+        if not MATCH_CPE_23_RE.match(query) and not is_vuln_ids_query:
             cpe_search_results = search_cpes(query, count=1, threshold=args.cpe_search_threshold, config=config['cpe_search'])
             if cpe_search_results.get('cpes', []):
                 cpe = cpe_search_results['cpes'][0][0]
@@ -859,7 +878,7 @@ def main():
                 else:
                     vulns[query] = 'Warning: Could not find matching software for query \'%s\'' % query
                 continue
-        else:
+        elif not is_vuln_ids_query:
             matching_cpe = match_cpe23_to_cpe23_from_dict(cpe, config=config['cpe_search'])
             if matching_cpe:
                 cpe = matching_cpe
@@ -867,7 +886,7 @@ def main():
         # use the retrieved CPE to search for known vulnerabilities
         vulns[query] = {}
 
-        if vuln_ids_query:
+        if is_vuln_ids_query:
             equivalent_cpes = []
         else:
             equivalent_cpes = get_equivalent_cpes(cpe, config)
@@ -891,7 +910,7 @@ def main():
             if not args.output:
                 print_vulns(vulns[query])
             else:
-                if cpe and not vuln_ids_query:
+                if cpe and not is_vuln_ids_query:
                     out_string += '\n' + '[+] %s (%s)\n' % (query, cpe)
                 else:
                     out_string += '\n' + '[+] %s\n' % (query,)

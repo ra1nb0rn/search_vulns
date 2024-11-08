@@ -100,20 +100,6 @@ class TestSearches(unittest.TestCase):
                 self.assertEqual(cve_attrs['cvss_vec'], expected_attrs[cve]['cvss_vec'])
                 self.assertEqual(cve_attrs['cisa_known_exploited'], expected_attrs[cve]['cisa_known_exploited'])
 
-    def test_search_cve_ghsa_ids(self):
-        self.maxDiff = None
-        query = 'CVE-2024-27286, GHSA-hfjr-m75m-wmh7, CVE-2024-12345678'
-        result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_attrs = {'CVE-2024-27286': {'published': '2024-03-20 20:15:08', 'cvss_ver': '3.1', 'cvss': '6.5', 'cvss_vec': 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N', 'cisa_known_exploited': False}, 'GHSA-hfjr-m75m-wmh7': {'published': '2022-05-24 16:59:38', 'cvss_ver': '3.1', 'cvss': '7.8', 'cvss_vec': 'CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H', 'cisa_known_exploited': False}, 'CVE-2024-12345678': {'published': '', 'cvss_ver': '', 'cvss': '-1.0', 'cvss_vec': '', 'cisa_known_exploited': False}}
-
-        for cve, cve_attrs in result[query]['vulns'].items():
-            if 'nvd' in cve_attrs['sources']:
-                self.assertIn(cve, expected_attrs)
-                self.assertEqual(cve_attrs['published'], expected_attrs[cve]['published'])
-                self.assertEqual(cve_attrs['cvss_ver'], expected_attrs[cve]['cvss_ver'])
-                self.assertEqual(cve_attrs['cvss'], expected_attrs[cve]['cvss'])
-                self.assertEqual(cve_attrs['cvss_vec'], expected_attrs[cve]['cvss_vec'])
-                self.assertEqual(cve_attrs['cisa_known_exploited'], expected_attrs[cve]['cisa_known_exploited'])
 
 if __name__ == '__main__':
     unittest.main()

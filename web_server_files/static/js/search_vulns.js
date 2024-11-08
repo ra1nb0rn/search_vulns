@@ -598,7 +598,7 @@ function searchVulns(query, url_query, recaptcha_response) {
                     curVulnData = vulns['vulns'];
                     cpe = cpe.split('/')
                     search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)}`;
-                    if (cpe[0].length > 0) // show cpe
+                    if (cpe.length > 0 && cpe[0].length > 0)  // show CPE (when searching for just vuln IDs there is none)
                         search_display_html += `<span class="nowrap whitespace-nowrap"> (${htmlEntities(cpe[0])}`;
                     if (cpe.length > 1) {  // query has equivalent CPEs
                         search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div><div class="dropdown-content translate-x-2.5 z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-fit" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent CPEs that were included into your search: <div class="tooltip tooltip-top text-wrap ml-1" data-tip="Sometimes there are multiple CPEs for one product, e.g. because of a rebranding."><i class="fas fa-info-circle text-content"></i></div></h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
@@ -609,7 +609,7 @@ function searchVulns(query, url_query, recaptcha_response) {
                         });
                         search_display_html += '</ul></div></div>';
                     }
-                    if (cpe[0].length > 0) // show cpe
+                    if (cpe.length > 0 && cpe[0].length > 0)  // if a CPE was shown, add closing parenthesis and <span>
                         search_display_html += `)</span>`;
                     search_display_html += `</h5></div></div>`;
                     curEOLData = {'query': query, 'version_status': vulns.version_status};
@@ -1041,8 +1041,8 @@ function doneTypingQuery () {
     if (query === undefined)
         query = '';
 
-    // no cpe suggestions for vuln ids search
-    if (query.startsWith('CVE') || query.startsWith('GHSA')){
+    // no CPE suggestions for vuln IDs search
+    if (query.trim().startsWith('CVE') || query.trim().startsWith('GHSA')){
         $('#cpeSuggestions').html('');
         $("#buttonSearchVulns").removeClass("btn-disabled");
         return;

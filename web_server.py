@@ -172,6 +172,7 @@ def search_vulns():
     if not query:
         return "No query provided", 400
     query = query.strip()
+    is_vuln_ids_query = query.startswith('CVE-') or query.startswith('GHSA-')
 
     # limit query length in CAPTCHA / API scenario
     if config['RECAPTCHA_AND_API']['ENABLED'] and len(query) > MAX_QUERY_LENGTH:
@@ -204,7 +205,7 @@ def search_vulns():
     db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
     db_cursor = db_conn.cursor()
 
-    if cpe_suggestions:
+    if cpe_suggestions and not is_vuln_ids_query:
         query_cpe = cpe_suggestions[0][0]
         is_good_cpe = False  # query was never issued as CPE --> use CPE deprecations and equivalences
         vulns = search_vulns_call(query_cpe, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
@@ -213,20 +214,20 @@ def search_vulns():
     else:
         vulns = search_vulns_call(query, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
         query_lower = query.lower()
-        if not MATCH_CPE_23_RE.match(query_lower):
+        if (not is_vuln_ids_query) and (not MATCH_CPE_23_RE.match(query_lower)):
             CPE_SUGGESTIONS_CACHE[query_lower] = vulns[query]['pot_cpes']
 
     db_cursor.close()
     db_conn.close()
 
     if vulns is None:
-        VULN_RESULTS_CACHE[url_query_string] = {}
-        return {}
-    else:
-        # do not cache vuln ids search
-        if vulns[query]['cpe']:
-            VULN_RESULTS_CACHE[url_query_string] = vulns
-        return vulns
+        vulns = {}
+
+    # do not cache vuln IDs search
+    if not is_vuln_ids_query:
+        VULN_RESULTS_CACHE[url_query_string] = vulns
+
+    return vulns
 
 
 @app.route("/api/version")
