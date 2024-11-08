@@ -144,6 +144,51 @@ def is_more_specific_cpe_contained(vuln_cpe, cve_cpes):
     return False
 
 
+def retrieve_exploit_references(db_cursor, vuln_id, init_exploits=None, add_init_edbids=True, add_other_exploit_refs=True):
+    """Retrieve exploit references for vuln_id and add to init_exploits"""
+
+    exploit_refs = [] if not init_exploits else init_exploits
+
+    if add_init_edbids and vuln_id.startswith('CVE-'):
+        db_cursor.execute('SELECT edb_ids FROM cve WHERE cve_id = ?', (vuln_id,))
+        edb_ids = db_cursor.fetchone()
+        if edb_ids and edb_ids[0]:
+            edb_ids = edb_ids[0].strip()
+            if edb_ids:
+                for edb_id in edb_ids.split(","):
+                    exploit_refs.append("https://www.exploit-db.com/exploits/%s" % edb_id)
+
+    if add_other_exploit_refs and vuln_id.startswith('CVE-'):
+        # from NVD
+        query = 'SELECT exploit_ref FROM nvd_exploits_refs_view WHERE cve_id = ?'
+        nvd_exploit_refs = ''
+        db_cursor.execute(query, (vuln_id,))
+        if db_cursor:
+            nvd_exploit_refs = db_cursor.fetchall()
+        if nvd_exploit_refs:
+            for nvd_exploit_ref in nvd_exploit_refs:
+                if (nvd_exploit_ref[0] not in exploit_refs and
+                        nvd_exploit_ref[0] + '/' not in exploit_refs and
+                        nvd_exploit_ref[0][:-1] not in exploit_refs):
+                    exploit_refs.append(nvd_exploit_ref[0])
+
+        # from PoC-in-Github
+        query = 'SELECT reference FROM cve_poc_in_github_map WHERE cve_id = ?'
+        poc_in_github_refs = ''
+        db_cursor.execute(query, (vuln_id,))
+        if db_cursor:
+            poc_in_github_refs = db_cursor.fetchall()
+        if poc_in_github_refs:
+            for poc_in_github_ref in poc_in_github_refs:
+                if (poc_in_github_ref[0] not in exploit_refs and
+                        poc_in_github_ref[0] + '/' not in exploit_refs and
+                        poc_in_github_ref[0][:-1] not in exploit_refs and
+                        poc_in_github_ref[0] + '.git' not in exploit_refs):
+                    exploit_refs.append(poc_in_github_ref[0])
+
+    return exploit_refs
+
+
 def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
     '''Collect more detailed information about the given vulns and return it'''
 
@@ -160,7 +205,7 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
             if queried_info:
                 edb_ids, descr, publ, last_mod, cvss_ver, score, vector, cisa_known_exploited = queried_info
             else:
-                edb_ids, publ, last_mod, cvss_ver, vector, cisa_known_exploited = '', '', '', '', '', False
+                publ, last_mod, cvss_ver, vector, cisa_known_exploited = '', '', '', '', False
                 score, descr = "-1.0", "NOT FOUND"
                 match_reason = "not_found"
             if cvss_ver:
@@ -170,44 +215,20 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
                                     "cvss": str(float(score)), "cvss_vec": vector, "vuln_match_reason": match_reason,
                                     "cisa_known_exploited": bool(cisa_known_exploited), "aliases": [], "sources": [source]}
 
+            if not queried_info:
+                continue
+
+            # add exploit references
+            exploit_refs = []
             edb_ids = edb_ids.strip()
             if edb_ids:
-                detailed_vulns[vuln_id]["exploits"] = []
                 for edb_id in edb_ids.split(","):
-                    detailed_vulns[vuln_id]["exploits"].append("https://www.exploit-db.com/exploits/%s" % edb_id)
+                    exploit_refs.append("https://www.exploit-db.com/exploits/%s" % edb_id)
+            exploit_refs = retrieve_exploit_references(db_cursor, vuln_id, exploit_refs, False, add_other_exploit_refs)
 
-            # add other exploit references
-            if add_other_exploit_refs:
-                # from NVD
-                query = 'SELECT exploit_ref FROM nvd_exploits_refs_view WHERE cve_id = ?'
-                nvd_exploit_refs = ''
-                db_cursor.execute(query, (vuln_id,))
-                if db_cursor:
-                    nvd_exploit_refs = db_cursor.fetchall()
-                if nvd_exploit_refs:
-                    if "exploits" not in detailed_vulns[vuln_id]:
-                        detailed_vulns[vuln_id]["exploits"] = []
-                    for nvd_exploit_ref in nvd_exploit_refs:
-                        if (nvd_exploit_ref[0] not in detailed_vulns[vuln_id]["exploits"] and
-                                nvd_exploit_ref[0] + '/' not in detailed_vulns[vuln_id]["exploits"] and
-                                nvd_exploit_ref[0][:-1] not in detailed_vulns[vuln_id]["exploits"]):
-                            detailed_vulns[vuln_id]["exploits"].append(nvd_exploit_ref[0])
+            if exploit_refs:
+                detailed_vulns[vuln_id]["exploits"] = exploit_refs
 
-                # from PoC-in-Github
-                query = 'SELECT reference FROM cve_poc_in_github_map WHERE cve_id = ?'
-                poc_in_github_refs = ''
-                db_cursor.execute(query, (vuln_id,))
-                if db_cursor:
-                    poc_in_github_refs = db_cursor.fetchall()
-                if poc_in_github_refs:
-                    if "exploits" not in detailed_vulns[vuln_id]:
-                        detailed_vulns[vuln_id]["exploits"] = []
-                    for poc_in_github_ref in poc_in_github_refs:
-                        if (poc_in_github_ref[0] not in detailed_vulns[vuln_id]["exploits"] and
-                                poc_in_github_ref[0] + '/' not in detailed_vulns[vuln_id]["exploits"] and
-                                poc_in_github_ref[0][:-1] not in detailed_vulns[vuln_id]["exploits"] and
-                                poc_in_github_ref[0] + '.git' not in detailed_vulns[vuln_id]["exploits"]):
-                            detailed_vulns[vuln_id]["exploits"].append(poc_in_github_ref[0])
         elif source == 'ghsa':
             query = 'SELECT aliases, description, published, last_modified, cvss_version, base_score, vector FROM ghsa WHERE ghsa_id = ?'
             db_cursor.execute(query, (vuln_id,))
@@ -228,6 +249,14 @@ def get_vuln_details(db_cursor, vulns, add_other_exploit_refs):
                                        "href": "https://github.com/advisories/%s" % vuln_id, "cvss_ver": cvss_ver,
                                        "cvss": str(float(score)), "cvss_vec": vector, "vuln_match_reason": match_reason,
                                        "aliases": aliases, "sources": [source]}
+
+            # add exploit references
+            exploit_refs = []
+            for alias_vuln_id in aliases:
+                exploit_refs = retrieve_exploit_references(db_cursor, alias_vuln_id, exploit_refs, True, add_other_exploit_refs)
+
+            if exploit_refs:
+                detailed_vulns[vuln_id]['exploits'] = exploit_refs
 
     return detailed_vulns
 
