@@ -32,6 +32,9 @@ CPE_SUGGESTIONS_COUNT = 10
 MAX_QUERY_LENGTH = 256
 VULN_RESULTS_CACHE, CPE_SUGGESTIONS_CACHE = {}, {}
 RECAPTCHA_THRESHOLD = 0.7
+with open(os.path.join(PROJECT_DIR, 'version.txt')) as f:
+    SEARCH_VULNS_VERSION = f.read()
+
 
 app = Flask(__name__, static_folder=STATIC_FOLDER, template_folder=TEMPLATE_FOLDER)
 config = _load_config(CONFIG_FILE)
@@ -255,7 +258,7 @@ def index():
 
     recaptcha_settings = {'recaptcha_site_key': config['RECAPTCHA_AND_API']['SITE_KEY_V3'],
                           'show_captcha': show_captcha}
-    return render_template("index.html", **recaptcha_settings)
+    return render_template("index.html", sv_version=SEARCH_VULNS_VERSION, **recaptcha_settings)
 
 
 def style_converted_html(markdown_html, center_captions=False):
@@ -285,14 +288,14 @@ def about():
         markdown_content = f.read()
     license_html = style_converted_html(markdown.markdown(markdown_content), True)
 
-    return render_template("about.html", about_html=about_html, license_html=license_html)
+    return render_template("about.html", sv_version=SEARCH_VULNS_VERSION, about_html=about_html, license_html=license_html)
 
 
 @app.route("/api/setup")
 def api_setup():
     recaptcha_settings = {'recaptcha_site_key': config['RECAPTCHA_AND_API']['SITE_KEY_V2'],
                           'show_captcha': config['RECAPTCHA_AND_API']['ENABLED']}
-    return render_template("api-setup.html", **recaptcha_settings)
+    return render_template("api-setup.html", sv_version=SEARCH_VULNS_VERSION, **recaptcha_settings)
 
 
 @app.route("/api/generate-key", methods=['POST'])
@@ -361,7 +364,7 @@ def news():
 
     changelog_html = style_converted_html(markdown.markdown(markdown_content), False)
     changelog_html = changelog_html.replace('<h1 class="', '<h1 class="text-center ')
-    return render_template("news.html", news_html=changelog_html)
+    return render_template("news.html", sv_version=SEARCH_VULNS_VERSION, news_html=changelog_html)
 
 
 def setup_api_db():
