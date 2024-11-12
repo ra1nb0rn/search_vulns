@@ -1,6 +1,17 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.6.3 - 2024-11-12
+### Added
+- Added ability to search via vulnerability IDs (CVE and GHSA) (thanks @pommfresser).
+- Added badge with current version to web server.
+
+### Fixed
+- Fixed bug to add exploits to GHSA-only vulns.
+- Updated test cases.
+- Updated node packages.
+
+
 ## v0.6.2 - 2024-10-24
 ### Fixed
 - Updated test cases.
