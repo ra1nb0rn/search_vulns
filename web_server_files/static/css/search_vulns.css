@@ -152,6 +152,12 @@ tr.exploited-vuln td {
 /* misc */
 .text-smxs {
     font-size: 0.825rem;
+    line-height: 1.125rem;
+}
+
+.text-version-badge {
+    font-size: 0.825rem;
+    line-height: 1.5rem;
 }
 
 .dont-break-out {  /* from https://stackoverflow.com/a/50777367 */
