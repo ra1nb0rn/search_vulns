@@ -91,6 +91,7 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     json metrics_entry, metrics_type_entry, references_entry;
     std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity;
     std::string cvss_version, ref_url, op;
+    std::string source = "nvd";
     std::unordered_map<std::string, int> nvd_exploits_refs;
     std::unordered_map<std::string, std::unordered_set<int>> cveid_exploits_map;
     std::size_t datetime_dot_pos;
@@ -269,6 +270,9 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
                         cve_cpe_query->bind(6, true);
                     else
                         cve_cpe_query->bind(6, false);
+
+                    // add data source
+                    cve_cpe_query->bind(7, source);
 
                     try {
                         cve_cpe_query->execute();

@@ -5,8 +5,8 @@
             "mariadb": "CREATE OR REPLACE TABLE cve (cve_id VARCHAR(25) CHARACTER SET ascii, description TEXT, edb_ids TEXT CHARACTER SET ascii, published DATETIME, last_modified DATETIME, cvss_version CHAR(3) CHARACTER SET ascii, base_score CHAR(4) CHARACTER SET ascii, vector VARCHAR(60) CHARACTER SET ascii, severity VARCHAR(15) CHARACTER SET ascii, cisa_known_exploited BOOL, PRIMARY KEY(cve_id));"
         },
         "CVE_CPE": {
-            "sqlite": "DROP TABLE IF EXISTS cve_cpe; CREATE TABLE cve_cpe (cve_id VARCHAR(25), cpe VARCHAR(255), cpe_version_start VARCHAR(255), is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(255), is_cpe_version_end_including BOOL, PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including))",
-            "mariadb": "CREATE OR REPLACE TABLE cve_cpe (cve_id VARCHAR(25) CHARACTER SET ascii, cpe VARCHAR(255) CHARACTER SET utf8, cpe_version_start VARCHAR(255)  CHARACTER SET utf8, is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(255)  CHARACTER SET utf8, is_cpe_version_end_including BOOL, PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including), INDEX(cpe) USING BTREE);"
+            "sqlite": "DROP TABLE IF EXISTS cve_cpe; CREATE TABLE cve_cpe (cve_id VARCHAR(25), cpe VARCHAR(255), cpe_version_start VARCHAR(255), is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(255), is_cpe_version_end_including BOOL, source VARCHAR(6), PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including))",
+            "mariadb": "CREATE OR REPLACE TABLE cve_cpe (cve_id VARCHAR(25) CHARACTER SET ascii, cpe VARCHAR(255) CHARACTER SET utf8, cpe_version_start VARCHAR(255)  CHARACTER SET utf8, is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(255)  CHARACTER SET utf8, is_cpe_version_end_including BOOL, source VARCHAR(6), PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including), INDEX(cpe) USING BTREE);"
         },
         "CVE_NVD_EXPLOITS_REFS": {
             "sqlite": "DROP TABLE IF EXISTS cve_nvd_exploits_refs; CREATE TABLE cve_nvd_exploits_refs (cve_id VARCHAR(25), ref_id INTEGER, PRIMARY KEY (cve_id, ref_id))",
@@ -19,6 +19,10 @@
         "NVD_EXPLOITS_REFS": {
             "sqlite": "DROP TABLE IF EXISTS nvd_exploits_refs; CREATE TABLE nvd_exploits_refs (ref_id INTEGER, exploit_ref text, PRIMARY KEY (ref_id))",
             "mariadb": "CREATE OR REPLACE TABLE nvd_exploits_refs (ref_id INTEGER, exploit_ref TEXT CHARACTER SET ascii, PRIMARY KEY (ref_id));"
+        },
+        "DISTRIBUTION_VERSION_CODENAME_MAPPING": {
+            "sqlite": "DROP TABLE IF EXISTS distribution_codename_version_mapping; CREATE TABLE distribution_codename_version_mapping (source CHAR(6), version VARCHAR(23), codename VARCHAR(23), support_expires DATETIME, esm_lts_expires DATETIME, PRIMARY KEY(source, version, codename));",
+            "mariadb": "CREATE OR REPLACE TABLE distribution_codename_version_mapping (source CHAR(6) CHARACTER SET ascii, version VARCHAR(15) CHARACTER SET ascii, codename VARCHAR(15) CHARACTER SET ascii, support_expires DATETIME, esm_lts_expires DATETIME, PRIMARY KEY(source, version, codename));"
         },
         "EOL_DATE": {
             "sqlite": "DROP TABLE IF EXISTS eol_date_data; CREATE TABLE eol_date_data (cpe_prefix VARCHAR(255), release_id INTEGER, eold_id VARCHAR(255), eold_title VARCHAR(255), version_start VARCHAR(100), version_latest VARCHAR(100), eol_info VARCHAR(25), PRIMARY KEY (cpe_prefix, release_id));",

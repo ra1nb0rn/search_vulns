@@ -6,3 +6,5 @@ aiohttp
 aiolimiter
 ujson
 markdown
+thefuzz
+beautifulsoup4

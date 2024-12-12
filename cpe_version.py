@@ -8,6 +8,7 @@ UPDATE_VERSION_FORMAT_RE = re.compile(r'((update(\d+))|(u(\d+)))')
 MULTIPLE_ZEROES_RE = re.compile(r'[^\d]0(\.?0)+([^\da-zA-Z\.]+)')
 PREPEND_SEP_ZERO_RE = re.compile(r'([^\da-zA-Z\.])')
 ONLY_ZEROES_STR_RE = re.compile(r'^0*$')
+CONSIDER_SUBVERSION_VERSION_RE = re.compile(r'^.*-[0-9]+$')
 
 class CPEVersion:
 
@@ -171,3 +172,26 @@ class CPEVersion:
             return self
 
         return CPEVersion(str(self) + str(other))
+
+    def considered_equal(self, other):
+        '''
+        Evaluate if a version from the distro is considered equal to a version from the database
+        consider e.g. 1.1.1 and 1.1.1-5 as equal, b/c you mean with 1.1.1 the highest 
+        subversion of 1.1.1 and this subversion is <= 1.1.1-5
+        But 1.1.1 and 1.1 are not considered equal, b/c you probably meant 1.1.0 with 1.1
+        '''
+
+        parts = VERSION_PART_SEP_RE.split(self.version_str)
+        other_parts = VERSION_PART_SEP_RE.split(other.version_str)
+
+        # do not consider emtpy string and version as equal
+        if len(parts) == 0 or len(other_parts) == 0:
+            return False
+ 
+        if len(other_parts) == len(parts) +1 and \
+            CONSIDER_SUBVERSION_VERSION_RE.match(other.version_str):
+            return other_parts[:len(parts)] == parts
+        elif len(parts) == len(other_parts) +1 and \
+            CONSIDER_SUBVERSION_VERSION_RE.match(self.version_str):
+            return parts[:len(other_parts)] == other_parts
+        return self == other

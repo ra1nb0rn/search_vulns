@@ -93,7 +93,7 @@
                         class="fa-solid fa-gear"></i></div>
                 <div tabindex="0" class="dropdown-content z-[1] p-2 shadow-2xl bg-base-200 rounded-box w-64 mt-2">
                     <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
+                        <label class="label cursor-pointer gap-4" style="text-align: left;">
                             <span class="label-text">Ignore general vulns &nbsp;<div class="tooltip"
                                     data-tip="Some vulnerabilities in the used data set do not contain information about the affected version. These are often False Positives and showing them can be disabled here.">
                                     <i class="fas fa-info-circle text-content"></i>
@@ -103,7 +103,17 @@
                         </label>
                     </div>
                     <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
+                        <label class="label cursor-pointer gap-4" style="text-align: left;">
+                            <span class="label-text">Ignore general distributions vulns &nbsp;<div class="tooltip"
+                                    data-tip="Some vulnerabilities in the used data set neither have information from the NVD nor have a matching distribution entry. These could be False Positives and showing them can be disabled here.">
+                                    <i class="fas fa-info-circle text-content"></i>
+                                </div></span>
+                            <input id="generalDistributionsVulnsConfig" type="checkbox" class="checkbox"
+                                onclick="changeSearchConfig(this)" />
+                        </label>
+                    </div>
+                    <div class="form-control">
+                        <label class="label cursor-pointer gap-4" style="text-align: left;">
                             <span class="label-text">Only EDB exploits &nbsp;<div class="tooltip"
                                     data-tip="Only show references to exploits from the official Exploit-DB. Exploit code from the EDB is usually advanced and readily usable.">
                                     <i class="fas fa-info-circle text-content"></i>
@@ -113,7 +123,7 @@
                         </label>
                     </div>
                     <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
+                        <label class="label cursor-pointer gap-4" style="text-align: left;">
                             <span class="label-text">Show single version vulns &nbsp;<div class="tooltip"
                                     data-tip="Some vulnerabilities only seem to affect a specific version of a product. This could be an error in the data set and returning vulnerabilities for lower versions can be enabled here.">
                                     <i class="fas fa-info-circle text-content"></i>
@@ -123,7 +133,7 @@
                         </label>
                     </div>
                     <div class="form-control">
-                        <label class="label cursor-pointer gap-4">
+                        <label class="label cursor-pointer gap-4" style="text-align: left;">
                             <span class="label-text">Display table filtering &nbsp;<div class="tooltip tooltip-bottom"
                                     data-tip="Choose whether the filtering of CVEs and table columns should be displayed or only affect the export.">
                                     <i class="fas fa-info-circle text-content"></i>

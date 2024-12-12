@@ -12,14 +12,20 @@ import uuid
 from flask import Flask, request
 from flask import render_template, jsonify
 from cpe_search.database_wrapper_functions import get_database_connection, get_connection_pools
-from search_vulns import (
+from search_vulns_modules.search_vulns_functions import (
     _load_config,
     search_vulns as search_vulns_call,
     CPE_SEARCH_THRESHOLD_MATCH,
     MATCH_CPE_23_RE,
     VERSION_FILE
 )
+from search_vulns_modules.process_distribution_matches import (
+    is_possible_distro_query,
+    seperate_distribution_information_from_query,
+    add_distribution_infos_to_cpe
+)
 from cpe_search.cpe_search import search_cpes
+from search_vulns_modules.config import _load_config
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))
@@ -126,9 +132,20 @@ def cpe_suggestions():
             return auth_error
 
     query = request.args.get('query')
+    query = query.strip()
     if not query:
         return "No query provided", 400
-    query = query.strip()
+
+    # handle distribution info
+    if is_possible_distro_query(query):
+        db_conn = get_database_connection(config['DATABASE'], config['DATABASE_NAME'])
+        db_cursor = db_conn.cursor()
+        distribution, query = seperate_distribution_information_from_query(query, db_cursor)
+        db_cursor.close()
+        db_conn.close()
+    else:
+        distribution = None
+
     query_lower = query.lower()
 
     # limit query length in CAPTCHA / API scenario
@@ -139,7 +156,12 @@ def cpe_suggestions():
         return [(query_lower, -1)]
 
     if query_lower in CPE_SUGGESTIONS_CACHE:
-        return jsonify(CPE_SUGGESTIONS_CACHE[query_lower])
+        cpe_suggestions = CPE_SUGGESTIONS_CACHE[query_lower]
+        # add distribution data only only in ui, save suggestions without distribution info
+        if distribution:
+            for i, suggestion in enumerate(cpe_suggestions):
+                cpe_suggestions[i] = (add_distribution_infos_to_cpe(cpe_suggestions[i][0], distribution), cpe_suggestions[i][1])
+        return jsonify(cpe_suggestions)
 
     cpe_suggestions = search_cpes(query, threshold=CPE_SEARCH_THRESHOLD_MATCH, count=CPE_SUGGESTIONS_COUNT, config=config['cpe_search'])
     cpe_suggestions = cpe_suggestions['pot_cpes']
@@ -153,6 +175,11 @@ def cpe_suggestions():
         return jsonify([])
     else:
         CPE_SUGGESTIONS_CACHE[query_lower] = cpe_suggestions
+
+        # add distribution data only only in ui, save suggestions without distribution info
+        if distribution:
+            for i, suggestion in enumerate(cpe_suggestions):
+                cpe_suggestions[i] = (add_distribution_infos_to_cpe(cpe_suggestions[i][0], distribution), cpe_suggestions[i][1])
         return jsonify(cpe_suggestions)
 
 
@@ -189,6 +216,12 @@ def search_vulns():
         include_single_version_vulns = True
     else:
         include_single_version_vulns = False
+    
+    ignore_general_distro_vulns = request.args.get('ignore-general-distribution-vulns')
+    if ignore_general_distro_vulns and ignore_general_distro_vulns.lower() == 'true':
+        ignore_general_distro_vulns = True
+    else:
+        ignore_general_distro_vulns = False
 
     is_good_cpe = request.args.get('is-good-cpe')
     if is_good_cpe and is_good_cpe.lower() == 'false':
@@ -204,11 +237,11 @@ def search_vulns():
     if cpe_suggestions:
         query_cpe = cpe_suggestions[0][0]
         is_good_cpe = False  # query was never issued as CPE --> use CPE deprecations and equivalences
-        vulns = search_vulns_call(query_cpe, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
+        vulns,_ = search_vulns_call(query_cpe, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, ignore_general_distribution_vulns=ignore_general_distro_vulns, is_good_cpe=is_good_cpe, config=config)
         vulns = {query: vulns[query_cpe]}
         vulns[query]['pot_cpes'] = cpe_suggestions
     else:
-        vulns = search_vulns_call(query, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, is_good_cpe=is_good_cpe, config=config)
+        vulns,_ = search_vulns_call(query, db_cursor=db_cursor, add_other_exploit_refs=True, ignore_general_cpe_vulns=ignore_general_cpe_vulns, include_single_version_vulns=include_single_version_vulns, ignore_general_distribution_vulns=ignore_general_distro_vulns, is_good_cpe=is_good_cpe, config=config)
         query_lower = query.lower()
         if not MATCH_CPE_23_RE.match(query_lower):
             CPE_SUGGESTIONS_CACHE[query_lower] = vulns[query]['pot_cpes']
