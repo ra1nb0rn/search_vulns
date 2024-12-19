@@ -841,6 +841,15 @@ def add_ghsa_data_to_db():
                         if 'last_affected' in event and not fixed:
                             fixed = event['last_affected']
                             is_version_end_incl = True
+                    if not fixed:
+                        db_specific_fixed = pkg.get('database_specific', {}).get('last_known_affected_version_range', '')
+                        if db_specific_fixed.startswith('<='):
+                            fixed = db_specific_fixed[2:].strip()
+                            is_version_end_incl = True
+                        elif db_specific_fixed.startswith('<'):
+                            fixed = db_specific_fixed[1:].strip()
+                            is_version_end_incl = False
+
                     affected_ranges.append((pname, ecosystem, introduced, fixed, is_version_end_incl))
                 for version in pkg.get('versions', []):  # usually just one entry or omitted
                     if version == introduced:  # just a single version is affected
