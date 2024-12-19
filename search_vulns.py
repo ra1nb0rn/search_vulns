@@ -377,7 +377,7 @@ def _is_version_start_end_matching(cpe_parts, version_start, version_start_incl,
             cpe_version = CPEVersion(cpe_parts[5])
     else:
         # set a max version if end is not given explicitly
-        version_end = CPEVersion('~' * 256)
+        version_end = CPEVersion('z' * 256)
 
     # check if version start or end matches exactly, otherwise return if in range
     if version_start_incl and cpe_version == version_start:
