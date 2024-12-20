@@ -1,6 +1,19 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.6.4 - 2024-12-20
+### Added
+- Added equivalent CPE for inet clear reports.
+- Use GHSA DB specific information for last affected version.
+
+### Changed
+- Slightly modified behavior of browsing CPE dropdown in web app.
+
+### Fixed
+- Retrieval of GHSA vulnerabilities without a patched version.
+- Updated test cases.
+
+
 ## v0.6.3 - 2024-11-12
 ### Added
 - Added ability to search via vulnerability IDs (CVE and GHSA) (thanks @pommfresser).
