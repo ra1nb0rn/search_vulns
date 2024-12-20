@@ -1126,10 +1126,10 @@ function moveCPESuggestionUpDown(event) {
         curSelectedCPESuggestion++;
 
     // wrap around if moving below available suggestions or above them
-    if (curSelectedCPESuggestion < 0)
+    if (curSelectedCPESuggestion < -1)
         curSelectedCPESuggestion = $("#cpeSuggestions").find('ul').children('li').length - 1;
     else if (curSelectedCPESuggestion > $("#cpeSuggestions").find('ul').children('li').length - 1)
-        curSelectedCPESuggestion = 0;
+        curSelectedCPESuggestion = -1;
 
     if (curSelectedCPESuggestion > -1) {
         const suggestionElement = $('#cpe-suggestion-' + curSelectedCPESuggestion);
