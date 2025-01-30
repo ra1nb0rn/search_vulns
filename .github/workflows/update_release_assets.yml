@@ -21,18 +21,21 @@ jobs:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
           VULNCHECK_API_KEY: ${{ secrets.VULNCHECK_API_KEY }}
         run: NVD_API_KEY=$NVD_API_KEY VULNCHECK_API_KEY=$VULNCHECK_API_KEY ./install.sh --full
-      - name: Test CVE Completeness
-        run: python3 ./tests/test_cve_completeness.py
-      - name: Test CVE Attribute Completeness
-        run: python3 ./tests/test_cve_attr_completeness.py
-      - name: Test Exploit Completeness
-        run: python3 ./tests/test_exploit_completeness.py
-      - name: Test Version Comparison Correctness
-        run: python3 ./tests/test_version_comparison.py
+      - name: Test everything is working
+        run: python3 ./search_vulns.py -q 'jquery 2.1.3' | grep 'CVE-2020-11022'
+      # Do not perform actual tests here, since they become outdated rather quickly
+      # - name: Test CVE Completeness
+      #   run: python3 ./tests/test_cve_completeness.py
+      # - name: Test CVE Attribute Completeness
+      #   run: python3 ./tests/test_cve_attr_completeness.py
+      # - name: Test Exploit Completeness
+      #   run: python3 ./tests/test_exploit_completeness.py
+      # - name: Test Version Comparison Correctness
+      #   run: python3 ./tests/test_version_comparison.py
       # - name: Test endoflife.date Correctness
       #   run: python3 ./tests/test_eol_date.py
-      - name: Test GHSA Correctness
-        run: python3 ./tests/test_ghsa_completeness.py
+      # - name: Test GHSA Correctness
+      #   run: python3 ./tests/test_ghsa_completeness.py
       # - name: Test Vuln ID Search Correctness
       #   run: python3 ./tests/test_vuln_id_search.py
       - name: Get latest release tag
