@@ -38,7 +38,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:thingsboard:thingsboard:3.4.0:*:*:*:*:*:*:*'
         result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True, include_single_version_vulns=True)
-        expected_cves = ['CVE-2022-40004', 'CVE-2022-45608', 'CVE-2022-48341', 'CVE-2023-26462', 'CVE-2023-45303', 'CVE-2024-3270']
+        expected_cves = ['CVE-2022-40004', 'CVE-2022-45608', 'CVE-2022-48341', 'CVE-2023-26462', 'CVE-2023-45303', 'CVE-2024-9358']
         result_cves = [vuln_id for vuln_id in result[query]['vulns'].keys() if vuln_id.startswith('CVE-')]
         self.assertEqual(set(expected_cves), set(result_cves))
 
@@ -46,7 +46,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:redis:redis:3.2.3:*:*:*:*:*:*:*'
         result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2021-32626', 'CVE-2022-3647', 'CVE-2022-24735', 'CVE-2023-28856', 'CVE-2022-0543', 'CVE-2021-32672', 'CVE-2022-24736', 'CVE-2022-3734', 'CVE-2022-24834', 'CVE-2022-36021', 'CVE-2023-25155', 'CVE-2021-31294', 'CVE-2023-45145', 'CVE-2024-31449', 'CVE-2024-31228']
+        expected_cves = ['CVE-2021-32626', 'CVE-2022-3647', 'CVE-2022-24735', 'CVE-2023-28856', 'CVE-2022-0543', 'CVE-2021-32672', 'CVE-2022-24736', 'CVE-2022-3734', 'CVE-2022-24834', 'CVE-2022-36021', 'CVE-2023-25155', 'CVE-2021-31294', 'CVE-2023-45145', 'CVE-2024-31449', 'CVE-2024-31228', 'CVE-2024-46981']
         result_cves = [vuln_id for vuln_id in result[query]['vulns'].keys() if vuln_id.startswith('CVE-')]
         self.assertEqual(set(expected_cves), set(result_cves))
 
@@ -78,7 +78,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = 'cpe:2.3:a:zulip:zulip_server:*:*:*:*:*:*:*:*'
         result = search_vulns.search_vulns(query=query, add_other_exploit_refs=True, is_good_cpe=True)
-        expected_cves = ['CVE-2022-41914', 'CVE-2023-33186', 'CVE-2020-12759', 'CVE-2021-30479', 'CVE-2020-9444', 'CVE-2019-16216', 'CVE-2021-30487', 'CVE-2019-19775', 'CVE-2020-14194', 'CVE-2017-0896', 'CVE-2020-14215', 'CVE-2018-9990', 'CVE-2023-22735', 'CVE-2020-10935', 'CVE-2022-31134', 'CVE-2019-18933', 'CVE-2018-9987', 'CVE-2018-9986', 'CVE-2020-9445', 'CVE-2017-0910', 'CVE-2017-0881', 'CVE-2019-16215', 'CVE-2022-23656', 'CVE-2022-21706', 'CVE-2021-30478', 'CVE-2023-32678', 'CVE-2020-15070', 'CVE-2018-9999', 'CVE-2021-30477', 'CVE-2023-47642', 'CVE-2024-21630', 'CVE-2024-27286', 'CVE-2024-36612']
+        expected_cves = ['CVE-2022-41914', 'CVE-2023-33186', 'CVE-2020-12759', 'CVE-2021-30479', 'CVE-2020-9444', 'CVE-2019-16216', 'CVE-2021-30487', 'CVE-2019-19775', 'CVE-2020-14194', 'CVE-2017-0896', 'CVE-2020-14215', 'CVE-2018-9990', 'CVE-2023-22735', 'CVE-2020-10935', 'CVE-2022-31134', 'CVE-2019-18933', 'CVE-2018-9987', 'CVE-2018-9986', 'CVE-2020-9445', 'CVE-2017-0910', 'CVE-2017-0881', 'CVE-2019-16215', 'CVE-2022-23656', 'CVE-2022-21706', 'CVE-2021-30478', 'CVE-2023-32678', 'CVE-2020-15070', 'CVE-2018-9999', 'CVE-2021-30477', 'CVE-2023-47642', 'CVE-2024-21630', 'CVE-2024-27286', 'CVE-2024-36612', 'CVE-2024-56136']
         result_cves = [vuln_id for vuln_id in result[query]['vulns'].keys() if vuln_id.startswith('CVE-')]
         self.assertEqual(set(expected_cves), set(result_cves))
 
