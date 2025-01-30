@@ -1,6 +1,16 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.6.5 - 2025-01-30
+### Changed
+- Do not run tests when updating resources in latest GitHub release.
+
+### Fixed
+- Fixed small bugs in cpe_search submodule.
+- Updated test cases.
+- Updated license years.
+
+
 ## v0.6.4 - 2024-12-20
 ### Added
 - Added equivalent CPE for inet clear reports.
