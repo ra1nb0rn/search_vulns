@@ -882,6 +882,7 @@ def add_ghsa_data_to_db():
 
                 if pname in ghsa_hardcoded_matches:
                     pname_cpe_map[pname] = (ghsa_hardcoded_matches[pname], 1)
+                    add_cpes_to_db(ghsa_hardcoded_matches[pname], CONFIG['cpe_search'], check_duplicates=True)
                 elif len(advisory_affected_pnames) == 1 and len(all_cve_cpes) == 1:
                     pname_cpe_map[pname] = (next(iter(all_cve_cpes)), 1)
                 else:

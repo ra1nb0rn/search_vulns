@@ -6,5 +6,7 @@
     "Microsoft.AspNetCore.App.Runtime.win-x86": "cpe:2.3:a:microsoft:asp.net_core:*:*:*:*:*:*:*:*",
     "jquery-mobile": "",
     "electron-native-notify": "",
-    "axios-http": ""
+    "axios-http": "",
+    "pdfjs-dist": "cpe:2.3:a:mozilla:pdf.js:*:*:*:*:*:*:*:*",
+    "react-pdf": ""
 }
