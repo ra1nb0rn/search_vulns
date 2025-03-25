@@ -113,9 +113,12 @@ async def vulncheck_worker(cveids, headers):
 
     affects_statements = []
     retry_limit = 3
-    retry_interval = 1
+    retry_interval = 10
     async with aiohttp.ClientSession() as session:
         for cveid in cveids:
+            if NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS:
+                return []
+
             # get extra data from vulncheck API
             vulncheck_data = None
             for _ in range(retry_limit + 1):
@@ -135,8 +138,8 @@ async def vulncheck_worker(cveids, headers):
             if vulncheck_data is None:
                 if NVD_UPDATE_SUCCESS is None:
                     communicate_warning('Could not get vulncheck data for: %s' % str(cveid))
-                NVD_UPDATE_SUCCESS = False
-                return None
+                # NVD_UPDATE_SUCCESS = False  # do not cancel update for now
+                return []
 
             # extract CPE configurations data from vulncheck's extra data
             if vulncheck_data.get('data', []):
@@ -166,7 +169,7 @@ async def vulncheck_worker(cveids, headers):
                                                       cpe_version_end, is_cpe_version_end_incl))
 
     if NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS:
-        return None
+        return []
 
     return affects_statements
 
@@ -238,13 +241,13 @@ async def update_vuln_db(nvd_api_key=None):
     except:
             NVD_UPDATE_SUCCESS = False
             communicate_warning('An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0')
-            rollback()
             build_eold_data_thread.join()
+            rollback()
             return 'An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0'
     if cve_api_initial_response.status_code != requests.codes.ok:
         NVD_UPDATE_SUCCESS = False
-        rollback()
         build_eold_data_thread.join()
+        rollback()
         return 'An error occured when making initial request for parameter setting to https://services.nvd.nist.gov/rest/json/cves/2.0; received a non-ok response code.'
 
     numTotalResults = cve_api_initial_response.json().get('totalResults')
@@ -267,8 +270,8 @@ async def update_vuln_db(nvd_api_key=None):
     if (not len(os.listdir(NVD_DATAFEED_DIR))) or (NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS):
         NVD_UPDATE_SUCCESS = False
         communicate_warning('Could not download vuln data from https://services.nvd.nist.gov/rest/json/cves/2.0')
-        rollback()
         build_eold_data_thread.join()
+        rollback()
         return 'Could not download vuln data from https://services.nvd.nist.gov/rest/json/cves/2.0'
 
     # build local NVD copy with downloaded data feeds
@@ -280,8 +283,8 @@ async def update_vuln_db(nvd_api_key=None):
     if return_code != 0:
         NVD_UPDATE_SUCCESS = False
         communicate_warning('Building NVD database failed')
-        rollback()
         build_eold_data_thread.join()
+        rollback()
         return f"Building NVD database failed with status code {return_code}."
 
     shutil.rmtree(NVD_DATAFEED_DIR)
@@ -297,7 +300,7 @@ async def update_vuln_db(nvd_api_key=None):
         db_cursor = db_conn.cursor()
         db_cursor.execute('SELECT cve_id from cve where cve_id not in (SELECT DISTINCT cve_id FROM cve_cpe);')
         cves_no_cpe = [result[0] for result in db_cursor.fetchall()]
-        offset, batchsize = 0, 100
+        offset, batchsize = 0, 200
         headers = {'Authorization': 'Bearer %s' % vulncheck_api_key}
         tasks = []
 
@@ -315,8 +318,8 @@ async def update_vuln_db(nvd_api_key=None):
 
         if NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS:
             communicate_warning('Retrieving data from VulnCheck failed')
-            rollback()
             build_eold_data_thread.join()
+            rollback()
             return f"Retrieving data from VulnCheck failed."
 
         insert_cve_cpe_query = 'INSERT INTO cve_cpe VALUES(?, ?, ?, ?, ?, ?);'
@@ -329,6 +332,8 @@ async def update_vuln_db(nvd_api_key=None):
         for task in done:
             affects_statements = task.result()
             for stmt in affects_statements:
+                if not stmt:
+                    continue
                 try:
                     db_cursor.execute(insert_cve_cpe_query, stmt)
                 except sql_integrity_error:
