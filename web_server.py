@@ -71,41 +71,54 @@ def search_has_valid_auth(request):
         db_conn = get_database_connection(config['DATABASE'], config['RECAPTCHA_AND_API']['DATABASE_NAME'])
         db_cursor = db_conn.cursor()
 
-        # first check if number of requests for key exceeds limit
-        poll_time = datetime.datetime.now() - datetime.timedelta(seconds=config['RECAPTCHA_AND_API']['API_REQUESTS_RATE_LIMIT_WINDOW'])
-        poll_time = poll_time.strftime('%Y-%m-%d %H:%M:%S.%f')
+        # first check if key is valid
+        db_cursor.execute('SELECT api_key, status FROM api_keys WHERE api_key = ?', (api_key,))
+        api_keys = db_cursor.fetchall()
+        if not api_keys:
+            auth_error = ('API key is unknown', 400)
+            is_auth_request = False
+        elif api_keys[0][1].lower() != 'valid':
+            auth_error = ('API key is invalid, key status: ' + str(api_keys[0][1]), 400)
+            is_auth_request = False
 
-        db_cursor.execute('SELECT COUNT(time) FROM recent_api_requests WHERE api_key = ? and time > ?', (api_key, poll_time))
-        request_count = db_cursor.fetchall()
-        if not request_count:
-            auth_error = ('Could not get count of recent API requests for provided API key', 403)
-        request_count = request_count[0]
-        if not auth_error and not request_count:
-            auth_error = ('Could not get count of recent API requests for provided API key', 403)
-        request_count = request_count[0]
-        if not auth_error and request_count + 1 > config['RECAPTCHA_AND_API']['API_REQUESTS_RATE_LIMIT_COUNT']:
-            auth_error = ('Too many requests with this API key. Try again in a couple of minutes.', 403)
-
-        # then insert the current request into the DB and issue valid auth response
+        # then check if number of requests for key exceeds limit
         if not auth_error:
-            success = False
-            for _ in range(3):
-                try:
-                    datetime_now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-                    db_cursor.execute('INSERT INTO recent_api_requests VALUES(?, ?)', (api_key, datetime_now))
-                    success = True
-                    break
-                except Exception as e:
-                    if 'integrity' in str(e).lower() or 'duplicate' in str(e).lower():
-                        continue
-                    else:
-                        raise e
-            db_conn.commit()
-            db_cursor.close()
-            db_conn.close()
-            if not success:
-                auth_error = ('Could not insert API request into DB due to an integrity error.', 500)
-            is_auth_request = True
+            poll_time = datetime.datetime.now() - datetime.timedelta(seconds=config['RECAPTCHA_AND_API']['API_REQUESTS_RATE_LIMIT_WINDOW'])
+            poll_time = poll_time.strftime('%Y-%m-%d %H:%M:%S.%f')
+
+            db_cursor.execute('SELECT COUNT(time) FROM recent_api_requests WHERE api_key = ? and time > ?', (api_key, poll_time))
+            request_count = db_cursor.fetchall()
+            if not request_count:
+                auth_error = ('Could not get count of recent API requests for provided API key', 403)
+            request_count = request_count[0]
+            if not auth_error and not request_count:
+                auth_error = ('Could not get count of recent API requests for provided API key', 403)
+            request_count = request_count[0]
+            if not auth_error and request_count + 1 > config['RECAPTCHA_AND_API']['API_REQUESTS_RATE_LIMIT_COUNT']:
+                auth_error = ('Too many requests with this API key. Try again in a couple of minutes.', 403)
+
+            # then insert the current request into the DB and issue valid auth response
+            if not auth_error:
+                success = False
+                for _ in range(3):
+                    try:
+                        datetime_now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+                        db_cursor.execute('INSERT INTO recent_api_requests VALUES(?, ?)', (api_key, datetime_now))
+                        success = True
+                        break
+                    except Exception as e:
+                        if 'integrity' in str(e).lower() or 'duplicate' in str(e).lower():
+                            continue
+                        else:
+                            raise e
+                db_conn.commit()
+                if not success:
+                    auth_error = ('Could not insert API request into DB due to an integrity error.', 500)
+                is_auth_request = True
+
+        # close DB resources either way
+        db_cursor.close()
+        db_conn.close()
 
     # check auth via reCAPTCHA
     if not is_auth_request and 'Recaptcha-Response' in request.headers:
