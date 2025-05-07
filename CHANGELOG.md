@@ -1,6 +1,18 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.6.6 - 2025-05-08
+### Added
+- Added a few more hardcoded product <-> CPE matches.
+
+### Fixed
+- Close DB connections when checking API keys.
+- Properly check validity of API keys.
+- Increased backoff period and retry count for VulnCheck API.
+- Fix adding new CPEs from GHSA integration to DB.
+- Updated test cases.
+
+
 ## v0.6.5 - 2025-01-30
 ### Changed
 - Do not run tests when updating resources in latest GitHub release.

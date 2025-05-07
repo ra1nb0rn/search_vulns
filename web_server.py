@@ -75,10 +75,10 @@ def search_has_valid_auth(request):
         db_cursor.execute('SELECT api_key, status FROM api_keys WHERE api_key = ?', (api_key,))
         api_keys = db_cursor.fetchall()
         if not api_keys:
-            auth_error = ('API key is unknown', 400)
+            auth_error = ('API key is unknown', 403)
             is_auth_request = False
         elif api_keys[0][1].lower() != 'valid':
-            auth_error = ('API key is invalid, key status: ' + str(api_keys[0][1]), 400)
+            auth_error = ('API key is invalid, key status: ' + str(api_keys[0][1]), 403)
             is_auth_request = False
 
         # then check if number of requests for key exceeds limit
