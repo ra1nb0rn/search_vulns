@@ -1,8 +1,8 @@
 
 var curVulnData = {}, curEOLData = {}, onlyShowTheseVulns = null;
 var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
-var ignoreGeneralCpeVulns = false, onlyShowEDBExploits = false, showGHSAVulns = false;
-var showSingleVersionVulns = false, isGoodCpe = true, showTableFiltering = false;
+var ignoreGeneralProductVulns = false, onlyShowEDBExploits = false, showGHSAVulns = false;
+var showSingleVersionVulns = false, isGoodProductID = true, showTableFiltering = false;
 var noVulnsFoundHtml = '<div class="w-full text-center"><h5 class="text-success">No known vulnerabilities could be found.</h5></div>';
 var filterVulnDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="filterVulnsAll" onclick="changeFilterVulns(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="filterVulnsNone" onclick="changeFilterVulns(this)">None</button></div>`;
 var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
@@ -12,7 +12,7 @@ var exportIcon = `<i class="fa-solid fa-clipboard"></i>`, exportIconSuccess = `<
 var curSortColIdx = 1, curSortColAsc = false, searchIgnoreNextKeyup = false;
 var doneTypingQueryTimer, queryInput = $('#query'), doneTypingQueryInterval = 600;  //time in ms
 let arrowKeyUpDownInterval = null, arrowKeyUpDownIntervalTime = 100, arrowKeyUpDownHoldDetectionTimer = null, arrowKeyUpDownHoldDetectionTime = 150;
-var curSelectedCPESuggestion = -1, suggestedQueriesJustOpened = false;
+var curSelectedProductIDSuggestion = -1, suggestedQueriesJustOpened = false;
 
 
 function htmlEntities(text) {
@@ -105,7 +105,7 @@ function getCurrentVulnsSorted() {
 function createVulnTableRowHtml(idx, vuln) {
     var vuln_row_html = '', vuln_style_class = '', vuln_flag_html = '', vuln_id_html = '';
     var exploits, cvss, cvss_badge_css, exploit_url_show;
-    var vuln_id_ref_map = getVulnReferences(vuln);
+    var vuln_id_ref_map = vuln.aliases;
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
     var isVulnUnconfirmed = false;
 
@@ -116,12 +116,12 @@ function createVulnTableRowHtml(idx, vuln) {
         if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
             continue
         vuln_id_html += `<a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a><br>`;
-        if (showGHSAVulns && vuln_id.startsWith('GHSA-') && vuln.id.startsWith('CVE-') && !vuln.sources.includes('ghsa'))
+        if (showGHSAVulns && vuln_id.startsWith('GHSA-') && vuln.id.startsWith('CVE-') && !vuln.match_sources.includes('ghsa'))
             isVulnUnconfirmed = true;
     }
     vuln_id_html = vuln_id_html.slice(0, -4);  // strip trailing "<br>"
 
-    if (vuln.vuln_match_reason == "general_cpe" || vuln.vuln_match_reason == "single_higher_version_cpe" || vuln.vuln_match_reason == "not_found" || isVulnUnconfirmed)
+    if (vuln.match_reason == "general_product_uncertain" || vuln.match_reason == "single_higher_version" || vuln.match_reason == "n_a" || isVulnUnconfirmed)
         vuln_style_class = "uncertain-vuln";
     if (vuln.cisa_known_exploited)
         vuln_style_class += " exploited-vuln";  // overwrites color of uncertain vuln
@@ -130,10 +130,9 @@ function createVulnTableRowHtml(idx, vuln) {
 
     if (selectedColumns.includes('cve')) {
         vuln_row_html += `<td class="text-nowrap whitespace-nowrap pr-2 relative">` + vuln_id_html;
-
-        if (vuln.vuln_match_reason == "general_cpe")
+        if (vuln.match_reason == "general_product_uncertain")
             vuln_flag_html += `<br><center><span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects the queried software in general and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
-        if (vuln.vuln_match_reason == "single_higher_version_cpe") {
+        if (vuln.match_reason == "single_higher_version") {
             if (!vuln_flag_html)
                 vuln_flag_html += `<br><center><span class="vuln-flag-icon" `;
             else
@@ -273,9 +272,9 @@ function renderSearchResults(reloadFilterDropdown) {
     var filter_vulns_html = filterVulnDropdownButtonHtml, has_vulns = false;
     for (var i = 0; i < vulns.length; i++) {
         // create row in table
-        if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
+        if (ignoreGeneralProductVulns && vulns[i].match_reason == "general_product_uncertain")
             continue;
-         if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+         if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
@@ -316,9 +315,9 @@ function createVulnsMarkDownTable() {
     for (var i = 0; i < vulns.length; i++) {
         if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
             continue;
-        if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
+        if (ignoreGeneralProductVulns && vulns[i].match_reason == "general_product_uncertain")
             continue;
-        if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+        if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
@@ -367,9 +366,9 @@ function createVulnsMarkDownTable() {
     for (var i = 0; i < vulns.length; i++) {
         if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
             continue;
-        if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
+        if (ignoreGeneralProductVulns && vulns[i].match_reason == "general_product_uncertain")
             continue;
-        if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+        if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
@@ -377,7 +376,7 @@ function createVulnsMarkDownTable() {
         cur_vuln_has_exploits = false;
         vulns_md += '|';
         if (selectedColumns.length < 1 || selectedColumns.includes("cve")) {
-            vuln_id_ref_map = getVulnReferences(vulns[i]);
+            vuln_id_ref_map = vulns[i].aliases;
             for (const vuln_id in vuln_id_ref_map) {
                 if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
                     continue
@@ -444,9 +443,9 @@ function createVulnsCSV() {
     for (var i = 0; i < vulns.length; i++) {
         if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
             continue;
-        if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
+        if (ignoreGeneralProductVulns && vulns[i].match_reason == "general_product_uncertain")
             continue;
-        if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+        if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
@@ -482,15 +481,15 @@ function createVulnsCSV() {
     for (var i = 0; i < vulns.length; i++) {
         if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
             continue;
-        if (ignoreGeneralCpeVulns && vulns[i].vuln_match_reason == "general_cpe")
+        if (ignoreGeneralProductVulns && vulns[i].match_reason == "general_product_uncertain")
             continue;
-        if (!showSingleVersionVulns && vulns[i].vuln_match_reason == "single_higher_version_cpe")
+        if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
 
         if (selectedColumns.length < 1 || selectedColumns.includes('cve')) {
-            vuln_id_ref_map = getVulnReferences(vulns[i]);
+            vuln_id_ref_map = vulns[i].aliases;
             vuln_ids = [];
             for (const vuln_id in vuln_id_ref_map) {
                 if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
@@ -585,46 +584,46 @@ function searchVulns(query, url_query, recaptcha_response) {
         url: "/api/search-vulns",
         headers: headers,
         data: url_query,
-        success: function (vulns) {
+        success: function (search_results) {
             var search_display_html = "", related_queries_html = '', queryError = false;
-            if (typeof Object.values(vulns)[0] !== "object") {
+            var productIDs = search_results.product_ids;
+            productIDs = Object.values(productIDs).flatMap(pids => pids);
+
+            if (typeof Object.values(search_results)[0] !== "object" || productIDs.length == 0) {
                 search_display_html = `<h5 class="text-error text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
                 queryError = true;
             }
             else {
-                vulns = Object.values(vulns)[0]
-                var cpe = vulns['cpe'];
-                if (cpe != undefined) {
-                    curVulnData = vulns['vulns'];
-                    cpe = cpe.split('/')
+                if (productIDs != undefined && productIDs.length != 0 || search_results.vulns.length != 0) {
+                    curVulnData = search_results.vulns;
                     search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)}`;
-                    if (cpe.length > 0 && cpe[0].length > 0)  // show CPE (when searching for just vuln IDs there is none)
-                        search_display_html += `<span class="nowrap whitespace-nowrap"> (${htmlEntities(cpe[0])}`;
-                    if (cpe.length > 1) {  // query has equivalent CPEs
-                        search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div><div class="dropdown-content translate-x-2.5 z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-fit" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent CPEs that were included into your search: <div class="tooltip tooltip-top text-wrap ml-1" data-tip="Sometimes there are multiple CPEs for one product, e.g. because of a rebranding."><i class="fas fa-info-circle text-content"></i></div></h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
-                        cpe.shift();  // remove first element, i.e. the primarily matched CPE
-                        cpe = cpe.sort();
-                        cpe.forEach(function (curCpe) {
-                            search_display_html += `<li class="mt-1">${htmlEntities(curCpe)}</li>`;
+                    if (productIDs.length > 0 && productIDs[0].length > 0)  // show product ID (when searching for just vuln IDs there is none)
+                        search_display_html += `<span class="nowrap whitespace-nowrap"> (${htmlEntities(productIDs[0])}`;
+                    if (productIDs.length > 1) {  // query has equivalent product IDs
+                        search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div><div class="dropdown-content translate-x-2.5 z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-fit" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent product IDs that were included into your search: <div class="tooltip tooltip-top text-wrap ml-1" data-tip="Sometimes there are multiple IDs for one product, e.g. because of a rebranding."><i class="fas fa-info-circle text-content"></i></div></h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
+                        productIDs.shift();  // remove first element, i.e. the primarily matched product ID
+                        productIDs = productIDs.sort();
+                        productIDs.forEach(function (curProductID) {
+                            search_display_html += `<li class="mt-1">${htmlEntities(curProductID)}</li>`;
                         });
                         search_display_html += '</ul></div></div>';
                     }
-                    if (cpe.length > 0 && cpe[0].length > 0)  // if a CPE was shown, add closing parenthesis and <span>
+                    if (productIDs.length > 0 && productIDs[0].length > 0)  // if a product ID was shown, add closing parenthesis and <span>
                         search_display_html += `)</span>`;
                     search_display_html += `</h5></div></div>`;
-                    curEOLData = {'query': query, 'version_status': vulns.version_status};
-                    if (vulns.version_status) {
-                        if (vulns.version_status.status == 'eol') {
-                            search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is end of life. The latest version is ${htmlEntities(vulns.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(vulns.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
+                    curEOLData = {'query': query, 'version_status': search_results.version_status};
+                    if (search_results.version_status) {
+                        if (search_results.version_status.status == 'eol') {
+                            search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is end of life. The latest version is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
                         }
-                        else if (vulns.version_status.status == 'outdated') {
-                            search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is out of date. The latest version is ${htmlEntities(vulns.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(vulns.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
+                        else if (search_results.version_status.status == 'outdated') {
+                            search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is out of date. The latest version is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
                         }
-                        else if (vulns.version_status.status == 'current') {
-                            search_display_html += `<div class="row mt-1 mb-3 text-success text-smxs font-light">${htmlEntities(query)} is up to date (see <a class="link" target="_blank" href="${htmlEntities(vulns.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle"><i class="fa-brands fa-markdown" onclick="copyToClipboardEOLProof(this)"></i></button></span></div>`;
+                        else if (search_results.version_status.status == 'current') {
+                            search_display_html += `<div class="row mt-1 mb-3 text-success text-smxs font-light">${htmlEntities(query)} is up to date (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle"><i class="fa-brands fa-markdown" onclick="copyToClipboardEOLProof(this)"></i></button></span></div>`;
                         }
-                        else if (vulns.version_status.status == 'N/A') {
-                            search_display_html += `<div class="row mt-1 mb-3 text-base-content text-smxs font-light">The latest version of ${htmlEntities(query)} is ${htmlEntities(vulns.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(vulns.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
+                        else if (search_results.version_status.status == 'N/A') {
+                            search_display_html += `<div class="row mt-1 mb-3 text-base-content text-smxs font-light">The latest version of ${htmlEntities(query)} is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
                         }
                     }
                 }
@@ -633,19 +632,22 @@ function searchVulns(query, url_query, recaptcha_response) {
                     queryError = true;
                 }
 
-                if (vulns.hasOwnProperty('pot_cpes') && vulns["pot_cpes"].length > 0) {
-                    var related_queries_html_li = "";
-                    for (var i = 0; i < vulns["pot_cpes"].length; i++) {
-                        if (cpe == null || !cpe.includes(vulns["pot_cpes"][i][0]))
-                            related_queries_html_li += `<li><a href="${window.location.pathname}?query=${encodeURIComponent(htmlEntities(vulns["pot_cpes"][i][0]))}&is-good-cpe=false">${htmlEntities(vulns["pot_cpes"][i][0])} &nbsp; &nbsp;(${htmlEntities(buildTextualReprFromCPE(vulns["pot_cpes"][i][0]))})</a></li>`
-                    }
+                if (search_results.hasOwnProperty('pot_product_ids')) {
+                    var allProductIDs = formatProductIDSuggestions(search_results.pot_product_ids);
+                    if (allProductIDs.length != 0) {
+                        var related_queries_html_li = "";
+                        for (var i = 0; i < allProductIDs.length; i++) {
+                            if (productIDs == null || !productIDs.includes(allProductIDs[i]))
+                                related_queries_html_li += `<li><a href="${window.location.pathname}?query=${encodeURIComponent(htmlEntities(allProductIDs[i]))}&is-good-product-id=false">${htmlEntities(allProductIDs[i])} &nbsp; &nbsp;(${htmlEntities(buildTextualReprFromCPE(allProductIDs[i]))})</a></li>`
+                        }
 
-                    if (related_queries_html_li != "") {
-                        related_queries_html = `<div class="divider divider-info text-lg">Related Queries</div>`;
-                        related_queries_html += `<div class="grid place-items-center">`;
-                        related_queries_html += `<ul class="list-disc text-left pl-6">`;
-                        related_queries_html += related_queries_html_li;
-                        related_queries_html += `</ul></div>`;
+                        if (related_queries_html_li != "") {
+                            related_queries_html = `<div class="divider divider-info text-lg">Related Queries</div>`;
+                            related_queries_html += `<div class="grid place-items-center">`;
+                            related_queries_html += `<ul class="list-disc text-left pl-6">`;
+                            related_queries_html += related_queries_html_li;
+                            related_queries_html += `</ul></div>`;
+                        }
                     }
                 }
             }
@@ -695,9 +697,9 @@ function searchVulnsAction(actionElement) {
     if (query === undefined)
         query = '';
 
-    if (actionElement.id.startsWith('cpe-suggestion')) {
+    if (actionElement.id.startsWith('product-id-suggestion')) {
         queryEnc = encodeURIComponent($(actionElement).html());
-        isGoodCpe = false;
+        isGoodProductID = false;
     }
     else {
         queryEnc = encodeURIComponent(query);
@@ -706,15 +708,15 @@ function searchVulnsAction(actionElement) {
     url_query = "query=" + queryEnc;
     new_url = window.location.pathname + '?query=' + queryEnc;
 
-    if (!isGoodCpe) {
-        url_query += "&is-good-cpe=false";
-        new_url += '&is-good-cpe=false';
+    if (!isGoodProductID) {
+        url_query += "&is-good-product-id=false";
+        new_url += '&is-good-product-id=false';
     }
 
     // false is default in backend and filtering is done in frontend
     url_query += "&include-single-version-vulns=true";
 
-    isGoodCpe = true;  // reset for subsequent query that wasn't initiated via URL
+    isGoodProductID = true;  // reset for subsequent query that wasn't initiated via URL
 
     history.pushState({}, null, new_url);  // update URL
     $("#buttonSearchVulns").html('<span class="loading loading-spinner"></span> Searching');
@@ -722,9 +724,9 @@ function searchVulnsAction(actionElement) {
     $("#buttonFilterVulns").addClass("btn-disabled");
     $("#buttonManageColumns").addClass("btn-disabled");
     $("#buttonExportResults").addClass("btn-disabled");
-    $('#cpeSuggestions').addClass("hidden");
-    $('#cpeSuggestions').html();
-    curSelectedCPESuggestion = -1;
+    $('#productIDSuggestions').addClass("hidden");
+    $('#productIDSuggestions').html();
+    curSelectedProductIDSuggestion = -1;
     searchIgnoreNextKeyup = true;
 
     $("#search-display").html("");
@@ -808,8 +810,8 @@ function changeSearchConfig(configElement) {
     }
 
     if (configElement.id == "generalVulnsConfig") {
-        ignoreGeneralCpeVulns = settingEnabled;
-        localStorage.setItem("ignoreGeneralCpeVulns", settingEnabledStr);
+        ignoreGeneralProductVulns = settingEnabled;
+        localStorage.setItem("ignoreGeneralProductVulns", settingEnabledStr);
     }
     else if (configElement.id == "onlyEdbExploitsConfig") {
         onlyShowEDBExploits = settingEnabled;
@@ -894,8 +896,8 @@ function changeFilterVulns(filterVulnsButton) {
 }
 
 function setupConfigFromLocalstorage() {
-    if (localStorage.getItem('ignoreGeneralCpeVulns') === null) {
-        localStorage.setItem('ignoreGeneralCpeVulns', 'false');
+    if (localStorage.getItem('ignoreGeneralProductVulns') === null) {
+        localStorage.setItem('ignoreGeneralProductVulns', 'false');
     }
     if (localStorage.getItem('onlyShowEDBExploits') === null) {
         localStorage.setItem('onlyShowEDBExploits', 'false');
@@ -910,8 +912,8 @@ function setupConfigFromLocalstorage() {
         localStorage.setItem('showTableFiltering', 'true');
     }
     
-    if (localStorage.getItem('ignoreGeneralCpeVulns') == 'true') {
-        ignoreGeneralCpeVulns = true;
+    if (localStorage.getItem('ignoreGeneralProductVulns') == 'true') {
+        ignoreGeneralProductVulns = true;
         document.getElementById("generalVulnsConfig").checked = true;
     }
     if (localStorage.getItem('onlyShowEDBExploits') == 'true') {
@@ -955,9 +957,9 @@ function initQuery() {
         if (init_query !== null)
             $('#query').val(htmlEntities(init_query));
 
-        var is_good_cpe = params.get('is-good-cpe');
-        if (String(is_good_cpe).toLowerCase() === "false")
-            isGoodCpe = false;
+        var is_good_product_id = params.get('is-good-product-id');
+        if (String(is_good_product_id).toLowerCase() === "false")
+            isGoodProductID = false;
 
         if (init_query !== null)
             $("#buttonSearchVulns").click();
@@ -974,7 +976,33 @@ function fixDropdownClicking() {
     });
 }
 
-function retrieveCPESuggestions(url_query, recaptcha_response) {
+function formatProductIDSuggestions(productIDInfos) {
+    var allProductIDs = [];
+
+    // flatten dict into list of product IDs
+    for (const productIDType in productIDInfos) {
+        for (const [productID, score] of productIDInfos[productIDType]) {
+            allProductIDs.push([productID, score]);
+        }
+    }
+
+    // sort list of product IDs with score by score (keep created IDs atop, which is marked by negative score)
+    allProductIDs.sort((p1, p2) => {
+        const absP1 = Math.abs(p1[1]);
+        const absP2 = Math.abs(p2[1]);
+
+        if (absP1 !== absP2) {
+            return absP2 - absP1;
+        } else {
+            return p1[1] - p2[1]; // negative comes before positive if equal
+        }
+    });
+
+    // remap list to only the product IDs
+    return allProductIDs.map(([str]) => str);
+}
+
+function retrieveProductIDSuggestions(url_query, recaptcha_response) {
     var headers = {}
     if (recaptcha_response !== undefined)
         headers['Recaptcha-Response'] = recaptcha_response
@@ -984,26 +1012,29 @@ function retrieveCPESuggestions(url_query, recaptcha_response) {
         headers['API-Key'] = apiKey
 
     $.get({
-        url: "/api/cpe-suggestions",
+        url: "/api/product-id-suggestions",
         data: url_query,
         headers: headers,
-        success: function (cpeInfos) {
-            if (!Array.isArray(cpeInfos)) {
-                console.log(cpeInfos)
-                $('#cpeSuggestions').html('<span class="text-error">An error occured, see console</span>');
-            }
-            else if (cpeInfos.length > 0) {
-                var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box">';
-                for (var i = 0; i < cpeInfos.length; i++) {
-                    dropdownContent += `<li tabindex="0"><a class="text-nowrap whitespace-nowrap" id="cpe-suggestion-${i}" onclick="searchVulnsAction(this)">${htmlEntities(cpeInfos[i][0])}</a></li>`;
-                }
-                dropdownContent += '</ul>';
-                $('#cpeSuggestions').html(dropdownContent);
+        success: function (productIDInfos) {
+            if (productIDInfos === null || typeof productIDInfos !== 'object' || Array.isArray(productIDInfos)) {
+                console.log(productIDInfos)
+                $('#productIDSuggestions').html('<span class="text-error">An error occured, see console</span>');
             }
             else {
-                $('#cpeSuggestions').html("No results found");
+                var allProductIDs = formatProductIDSuggestions(productIDInfos);
+                if (allProductIDs.length != 0) {
+                    var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box">';
+                    for (var i = 0; i < allProductIDs.length; i++) {
+                        dropdownContent += `<li tabindex="0"><a class="text-nowrap whitespace-nowrap" id="product-id-suggestion-${i}" onclick="searchVulnsAction(this)">${htmlEntities(allProductIDs[i])}</a></li>`;
+                    }
+                    dropdownContent += '</ul>';
+                    $('#productIDSuggestions').html(dropdownContent);
+                }
+                else {
+                    $('#productIDSuggestions').html("No results found");
+                }
             }
-            curSelectedCPESuggestion = -1
+            curSelectedProductIDSuggestion = -1
             suggestedQueriesJustOpened = true;
             setTimeout(function () {
                 suggestedQueriesJustOpened = false;
@@ -1020,10 +1051,10 @@ function retrieveCPESuggestions(url_query, recaptcha_response) {
             console.log(errorMsg);
 
             if (jXHR["status"] == 403 && errorMsg.toLowerCase().includes("captcha")) {
-                    $('#cpeSuggestions').html('<span class="text-error">No valid API key / CAPTCHA provided. Set up a key <a class="link" onmousedown="location.href = \'/api/setup\'">here<a>.');
+                    $('#productIDSuggestions').html('<span class="text-error">No valid API key / CAPTCHA provided. Set up a key <a class="link" onmousedown="location.href = \'/api/setup\'">here<a>.');
             }
             else {
-                $('#cpeSuggestions').html('<span class="text-error">' + htmlEntities(errorMsg) + '</span>');
+                $('#productIDSuggestions').html('<span class="text-error">' + htmlEntities(errorMsg) + '</span>');
             }
 
             $("#buttonSearchVulns").removeClass("btn-disabled");
@@ -1032,18 +1063,18 @@ function retrieveCPESuggestions(url_query, recaptcha_response) {
 }
 
 function doneTypingQuery () {
-    // user paused or finished typing query --> retrieve and show CPE suggestions
-    $('#cpeSuggestions').html('<div class="loading loading-spinner"></div>');
-    $('#cpeSuggestions').removeClass('hidden');
+    // user paused or finished typing query --> retrieve and show product ID suggestions
+    $('#productIDSuggestions').html('<div class="loading loading-spinner"></div>');
+    $('#productIDSuggestions').removeClass('hidden');
     $("#buttonSearchVulns").addClass("btn-disabled");
 
     var query = $('#query').val();
     if (query === undefined)
         query = '';
 
-    // no CPE suggestions for vuln IDs search
+    // no product ID suggestions for vuln IDs search
     if (query.trim().startsWith('CVE') || query.trim().startsWith('GHSA')){
-        $('#cpeSuggestions').html('');
+        $('#productIDSuggestions').html('');
         $("#buttonSearchVulns").removeClass("btn-disabled");
         return;
     }
@@ -1054,25 +1085,25 @@ function doneTypingQuery () {
     if (typeof grecaptcha !== 'undefined') {
         grecaptcha.ready(function() {
             grecaptcha.execute().then(function(recaptcha_response) {
-                retrieveCPESuggestions(url_query, recaptcha_response);
+                retrieveProductIDSuggestions(url_query, recaptcha_response);
             });
         });
     }
     else {
-        retrieveCPESuggestions(url_query);
+        retrieveProductIDSuggestions(url_query);
     }
 }
 
-function closeCPESuggestions(event) {
+function closeProductIDSuggestions(event) {
     // Check that new focused element lies without the queryInputConstruct / dropdown
     var newFocusedElement = event.relatedTarget;
     if (newFocusedElement === null || newFocusedElement.closest('#queryInputConstruct') === null) {
-        $('#cpeSuggestions').addClass('hidden');
+        $('#productIDSuggestions').addClass('hidden');
     }
 }
 
 function ensureSuggestionVisible(suggestionElement) {
-    const dropdownMenu = $('#cpeSuggestions')[0];
+    const dropdownMenu = $('#productIDSuggestions')[0];
     const suggestionElementRect = suggestionElement.getBoundingClientRect();
     const dropdownRect = dropdownMenu.getBoundingClientRect();
 
@@ -1083,18 +1114,6 @@ function ensureSuggestionVisible(suggestionElement) {
     }
 }
 
-function getVulnReferences(vuln) {
-    var references = {};
-    references[vuln.id] = vuln.href;
-    for (var i = 0; i < vuln.aliases.length; i++) {
-        if (vuln.aliases[i].startsWith('CVE-'))
-            references[vuln.aliases[i]] = 'https://nvd.nist.gov/vuln/detail/' + vuln.aliases[i];
-        else if (vuln.aliases[i].startsWith('GHSA-'))
-            references[vuln.aliases[i]] = 'https://github.com/advisories/' + vuln.aliases[i];
-    }
-    return references;
-}
-
 
 /* init */
 
@@ -1102,37 +1121,37 @@ function getVulnReferences(vuln) {
 $("#query").keypress(function (event) {
     var keycode = (event.keyCode ? event.keyCode : event.which);
     if (keycode == "13") {
-        if (!$("#cpeSuggestions").hasClass("hidden") || !$("#buttonSearchVulns").hasClass("btn-disabled")) {
-            var highlightedCPESuggestion = null;
-            if ($("#cpeSuggestions").find('ul') != null) {
-                highlightedCPESuggestion = $("#cpeSuggestions").find('.my-menu-item-hover');
+        if (!$("#productIDSuggestions").hasClass("hidden") || !$("#buttonSearchVulns").hasClass("btn-disabled")) {
+            var highlightedProductIDSuggestion = null;
+            if ($("#productIDSuggestions").find('ul') != null) {
+                highlightedProductIDSuggestion = $("#productIDSuggestions").find('.my-menu-item-hover');
             }
-            if (!highlightedCPESuggestion || curSelectedCPESuggestion == -1)
+            if (!highlightedProductIDSuggestion || curSelectedProductIDSuggestion == -1)
                 $("#buttonSearchVulns").click();
             else
-                document.getElementById('cpe-suggestion-' + curSelectedCPESuggestion).click();
+                document.getElementById('product-id-suggestion-' + curSelectedProductIDSuggestion).click();
         }
     }
 });
 
-function moveCPESuggestionUpDown(event) {
-    // move currently selected CPE suggestion up or down depending on event
-    if (curSelectedCPESuggestion > -1)
-        $('#cpe-suggestion-' + curSelectedCPESuggestion).removeClass('my-menu-item-hover');
+function moveProductIDSuggestionUpDown(event) {
+    // move currently selected product ID suggestion up or down depending on event
+    if (curSelectedProductIDSuggestion > -1)
+        $('#product-id-suggestion-' + curSelectedProductIDSuggestion).removeClass('my-menu-item-hover');
 
     if (event.keyCode == 38)
-        curSelectedCPESuggestion--;
+        curSelectedProductIDSuggestion--;
     else if (event.keyCode == 40)
-        curSelectedCPESuggestion++;
+        curSelectedProductIDSuggestion++;
 
     // wrap around if moving below available suggestions or above them
-    if (curSelectedCPESuggestion < -1)
-        curSelectedCPESuggestion = $("#cpeSuggestions").find('ul').children('li').length - 1;
-    else if (curSelectedCPESuggestion > $("#cpeSuggestions").find('ul').children('li').length - 1)
-        curSelectedCPESuggestion = -1;
+    if (curSelectedProductIDSuggestion < -1)
+        curSelectedProductIDSuggestion = $("#productIDSuggestions").find('ul').children('li').length - 1;
+    else if (curSelectedProductIDSuggestion > $("#productIDSuggestions").find('ul').children('li').length - 1)
+        curSelectedProductIDSuggestion = -1;
 
-    if (curSelectedCPESuggestion > -1) {
-        const suggestionElement = $('#cpe-suggestion-' + curSelectedCPESuggestion);
+    if (curSelectedProductIDSuggestion > -1) {
+        const suggestionElement = $('#product-id-suggestion-' + curSelectedProductIDSuggestion);
         suggestionElement.addClass('my-menu-item-hover');
         ensureSuggestionVisible(suggestionElement[0]);
     }
@@ -1157,7 +1176,7 @@ initQuery();
 queryInput.on('keyup', function (event) {
     if (event.keyCode !== undefined) {
         // arrows (up: 38 ; down: 40)
-        if ([38, 40].includes(event.keyCode) && !$('#cpeSuggestions').hasClass('hidden') && $("#cpeSuggestions").find('ul') != null) {
+        if ([38, 40].includes(event.keyCode) && !$('#productIDSuggestions').hasClass('hidden') && $("#productIDSuggestions").find('ul') != null) {
             if (arrowKeyUpDownInterval !== null) {
                 clearInterval(arrowKeyUpDownInterval);
                 arrowKeyUpDownInterval = null;
@@ -1181,18 +1200,18 @@ queryInput.on('keyup', function (event) {
 // on keydown, clear the typing countdown and hide dropdown
 queryInput.on('keydown', function (event) {
     if (event.keyCode !== undefined) {
-        if ([38, 40].includes(event.keyCode) && !$('#cpeSuggestions').hasClass('hidden') && $("#cpeSuggestions").find('ul') != null) {
+        if ([38, 40].includes(event.keyCode) && !$('#productIDSuggestions').hasClass('hidden') && $("#productIDSuggestions").find('ul') != null) {
             event.preventDefault();  // prevent jumping of cursor to start or end
 
             // register key press only if no interval is running or about to run
             if (arrowKeyUpDownInterval === null && arrowKeyUpDownHoldDetectionTimer == null) {
                 // immediately trigger once
-                moveCPESuggestionUpDown(event);
+                moveProductIDSuggestionUpDown(event);
 
                 // set a timer to detect held down key and initiate a repeated interval
                 arrowKeyUpDownHoldDetectionTimer = setTimeout(() => {
                     arrowKeyUpDownInterval = setInterval(() => {
-                        moveCPESuggestionUpDown(event);
+                        moveProductIDSuggestionUpDown(event);
                     }, arrowKeyUpDownIntervalTime);
                 }, arrowKeyUpDownHoldDetectionTime);
             }
@@ -1200,8 +1219,8 @@ queryInput.on('keydown', function (event) {
         // any key except CTRL, OPTION, CMD/SUPER/Windows
         else if(![13, 17, 18, 37, 39, 91, 229].includes(event.keyCode)) {
             clearTimeout(doneTypingQueryTimer);
-            $('#cpeSuggestions').addClass("hidden");
-            $('#cpeSuggestions').html();
+            $('#productIDSuggestions').addClass("hidden");
+            $('#productIDSuggestions').html();
         }
     }
 });

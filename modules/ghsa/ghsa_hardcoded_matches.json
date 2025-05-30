@@ -8,5 +8,6 @@
     "electron-native-notify": "",
     "axios-http": "",
     "pdfjs-dist": "cpe:2.3:a:mozilla:pdf.js:*:*:*:*:*:*:*:*",
-    "react-pdf": ""
+    "react-pdf": "",
+    "org.springframework:spring-context": "cpe:2.3:a:vmware:spring_framework:"
 }

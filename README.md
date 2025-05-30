@@ -11,6 +11,8 @@ Search for known vulnerabilities in software using software titles or a CPE 2.3 
 * Vulnerability information from the [GitHub Security Advisory Database](https://github.com/github/advisory-database)
 * Software currency information from [endoflife.date](https://github.com/endoflife-date/endoflife.date)
 
+Since search_vulns is designed in a modular fashion, new data sources and extensions can be integrated easily.
+
 Using the *search_vulns* tool, this local information can be queried, either by providing software titles like 'Apache 2.4.39' or by providing a CPE 2.3 string like ``cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*``. You can also search for vulnerabilities like ``CVE-2023-1234`` or ``GHSA-xx68-jfcg-xmmf`` directly by using a comma-separated list of IDs.
 
 *search_vulns* can either be used as a CLI tool or via a web server. It is recommended to use the CLI tool for automated workflows that might be resource-constrained. Otherwise, using the web server is recommended, because it offers more features and flexibility. This includes the ability to achieve more complete results. Also, the presentation of results is clearer and results can be exported for further use.
@@ -52,10 +54,10 @@ Note that here you have to update the host and port accordingly in the ``app.run
 ## Usage
 *search_vulns*'s usage information is shown in the following:
 ```
-usage: search_vulns.py [-h] [-u] [--full-update] [-k API_KEY] [-f {json,txt}] [-o OUTPUT]
-                       [-q QUERY] [-c CONFIG] [-V] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
-                       [--ignore-general-cpe-vulns] [--include-single-version-vulns]
-                       [--use-created-cpes]
+usage: search_vulns.py [-h] [-u] [--full-update] [-a] [-f {json,txt}] [-o OUTPUT] [-q QUERY]
+                       [-c CONFIG] [-V] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
+                       [--ignore-general-product-vulns] [--include-single-version-vulns]
+                       [--use-created-product-ids]
 
 Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)
 
@@ -64,28 +66,28 @@ options:
   -u, --update          Download the latest version of the the local vulnerability and software
                         database
   --full-update         Fully (re)build the local vulnerability and software database
-  -k API_KEY, --api-key API_KEY
-                        NVD API key to use for updating the local vulnerability and software
-                        database
+  -a, --artifacts       Print JSON list of artifacts created during full update
   -f {json,txt}, --format {json,txt}
                         Output format, either 'txt' or 'json' (default: 'txt')
   -o OUTPUT, --output OUTPUT
                         File to write found vulnerabilities to
   -q QUERY, --query QUERY
-                        A query, either software title like 'Apache 2.4.39' or a CPE 2.3 string
+                        A query, either software title like 'Apache 2.4.39' or a product ID string
+                        (e.g. CPE 2.3)
   -c CONFIG, --config CONFIG
                         A config file to use (default: config.json)
   -V, --version         Print the version of search_vulns
   --cpe-search-threshold CPE_SEARCH_THRESHOLD
                         Similarity threshold used for retrieving a CPE via the cpe_search tool
-  --ignore-general-cpe-vulns
-                        Ignore vulnerabilities that only affect a general CPE (i.e. without
+  --ignore-general-product-vulns
+                        Ignore vulnerabilities that only affect a general product (i.e. without
                         version)
   --include-single-version-vulns
-                        Include vulnerabilities that only affect one specific version of a product
-                        when querying a lower version
-  --use-created-cpes    If no matching CPE exists in the software database, automatically use a
-                        matching CPE created by search_vulns
+                        Include vulnerabilities that only affect one specific version of a product when
+                        querying a lower version
+  --use-created-product-ids
+                        If no matching product ID exists in the software database, automatically use
+                        matching ones created by search_vulns
 ```
 Note that when querying software with ``-q`` you have to put the software information in quotes if it contains any spaces. Also, you can use ``-q`` multiple times to make multiple queries at once. For one, a query can be a software name / title like 'Apache 2.4.39' or 'Wordpress 5.7.2'. Furthermore, a query can also be a [CPE 2.3](https://csrc.nist.gov/projects/security-content-automation-protocol/specifications/cpe) string.
 
@@ -94,9 +96,10 @@ Here are some examples:
   ```bash
   $ ./search_vulns.py -q 'Sudo 1.8.2'
 
-  [+] Sudo 1.8.2 (cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*)
+  [+] Sudo 1.8.2 (cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*/cpe:2.3:a:todd_miller:sudo:1.8.2:*:*:*:*:*:*:*)
   CVE-2019-14287 (CVSSv3.1/8.8): In Sudo before 1.8.28, an attacker with access to a Runas ALL sudoer account can bypass certain policy blacklists and session PAM modules, and can cause incorrect logging, by invoking sudo with a crafted user ID. For example, this allows bypass of !root configuration, and USER= logging, for a "sudo -u \#$((0xffffffff))" command.
   Exploits:  https://www.exploit-db.com/exploits/47502
+             [...]
   Reference: https://nvd.nist.gov/vuln/detail/CVE-2019-14287, 2019-10-17
   CVE-2017-1000368 (CVSSv3.0/8.2): Todd Miller's sudo version 1.8.20p1 and earlier is vulnerable to an input validation (embedded newlines) in the get_process_ttyname() function resulting in information disclosure and command execution.
   Reference: https://nvd.nist.gov/vuln/detail/CVE-2017-1000368, 2017-06-05
@@ -106,7 +109,7 @@ Here are some examples:
   ```bash
   $ ./search_vulns.py -q 'Moodle 3.4.0'
 
-  [+] Moodle 3.4.0 (cpe:2.3:a:moodle:moodle:3.4.0:-:*:*:*:*:*:*)
+  [+] Moodle 3.4.0 (cpe:2.3:a:moodle:moodle:3.4.0:*:*:*:*:*:*:*)
   CVE-2018-14630 (CVSSv3.0/8.8): moodle before versions 3.5.2, 3.4.5, 3.3.8, 3.1.14 is vulnerable to an XML import of ddwtos could lead to intentional remote code execution. When importing legacy 'drag and drop into text' (ddwtos) type quiz questions, it was possible to inject and execute PHP code from within the imported questions, either intentionally or by importing questions from an untrusted source.
   Reference: https://nvd.nist.gov/vuln/detail/CVE-2018-14630, 2018-09-17
   CVE-2018-1133 (CVSSv3.0/8.8): An issue was discovered in Moodle 3.x. A Teacher creating a Calculated question can intentionally cause remote code execution on the server, aka eval injection.
@@ -114,7 +117,13 @@ Here are some examples:
   Reference: https://nvd.nist.gov/vuln/detail/CVE-2018-1133, 2018-05-25
   [...]
   ```
-Again, note that when *search_vulns* is initially installed, it takes quite some time to set up the local vulnerability and software database.
+
+
+## Modularity
+search_vulns' search engine is designed in a modular manner. Therefore, new databases can be integrated easily. For example, modules can help in finding product IDs, vulnerabilities, extra information about vulnerabilities and extra information about the queried product. Examples for the latter two are CVSS scores or software recency information. Furthermore, modules can classify identified vulnerabilities as patched if they manage special information related to the query, for example.
+
+Have a look at the template module to get started writing your own modules: [``modules/template/search_vulns_template.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/modules/template/search_vulns_template.py).
+
 
 ## Running a Web Server
 It is also possible to run a web server that provides this tool's functionality to clients over the network. ``web_server.py`` contains a working example using Flask. Depending on your environment, you may want to modify the server IP and port at the end of this file. To run a simple Flask web server, just run:
@@ -132,6 +141,7 @@ Finally, you can also use Nginx as a reverse proxy. A sample configuration file 
 gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind 'unix:/tmp/gunicorn.sock' wsgi:app
 ```
 
+
 ## MariaDB as Alternative Database Option
 search_vulns can be configured to use *MariaDB* as an alternative to the preconfigured *SQLite* mechanism. A sample configuration file for MariaDB is provided in [``config_mariadb.json``](https://github.com/ra1nb0rn/search_vulns/blob/master/config_mariadb.json).
 
@@ -148,6 +158,7 @@ innodb_buffer_pool_size = 8G
 thread_handling = pool-of-threads
 ```
 ``innodb_buffer_pool_size`` should be set to approximately 80% of available memory (see [MariaDB's official documentation](https://mariadb.com/kb/en/innodb-system-variables/#innodb_buffer_pool_size)).
+
 
 ## License
 *search_vulns* is licensed under the MIT license, see [here](https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE).

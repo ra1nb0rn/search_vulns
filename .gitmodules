@@ -1,10 +1,9 @@
 [submodule "cpe_search"]
-	path = cpe_search
+	path = modules/cpe_search/cpe_search
 	url = https://github.com/ra1nb0rn/cpe_search.git
-[submodule "db_creation_src/SQLiteCpp"]
-	path = db_build/core/build_source_cpp/SQLiteCpp
+[submodule "modules/nvd/create_db_source/SQLiteCpp"]
+	path = modules/nvd/create_db_source/SQLiteCpp
 	url = https://github.com/SRombauts/SQLiteCpp.git
-[submodule "db_creation_src/mariadb-connector-cpp"]
-	path = db_build/core/build_source_cpp/mariadb-connector-cpp
-	url = https://github.com/mariadb-corporation/mariadb-connector-cpp
-	ignore = dirty
+[submodule "modules/nvd/create_db_source/mariadb-connector-cpp"]
+	path = modules/nvd/create_db_source/mariadb-connector-cpp
+	url = https://github.com/mariadb-corporation/mariadb-connector-cpp/

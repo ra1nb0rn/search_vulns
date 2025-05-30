@@ -4,10 +4,13 @@ QUIET=0
 FULL_RESOURCE_INSTALL=0
 SKIP_RESOURCE_INSTALL=0
 LINUX_PACKAGE_MANAGER="apt-get"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SEARCH_VULNS_PATH="$SCRIPT_DIR/search_vulns.py"
+
 
 install_linux_packages() {
     # Install required packages
-    PACKAGES="python3 python3-pip wget curl sqlite3 libsqlite3-dev cmake gcc libmariadb-dev mariadb-client jq"
+    PACKAGES="git python3 python3-pip wget curl sqlite3 libsqlite3-dev libmariadb-dev jq"
     which ${LINUX_PACKAGE_MANAGER} &> /dev/null
     if [ $? != 0 ]; then
         printf "${RED}Could not find ${LINUX_PACKAGE_MANAGER} command.\\nPlease specify your package manager at the start of the script.\\n${SANE}"
@@ -45,88 +48,44 @@ install_linux_packages() {
     fi
 }
 
-setup_create_db() {
-    ## configure submodules of SQLiteCpp for create_db
-    cd "db_build/core/build_source_cpp/SQLiteCpp"
-    if [ $QUIET != 1 ]; then
-        git submodule init
-        git submodule update
-    else
-        git submodule --quiet init
-        git submodule --quiet update
-    fi
-    cd ".."
+run_module_installs() {
+    # find all modules and run their 'install' function
+    WORKING_DIR=$(pwd)
+    find modules -type f -name 'search_vulns_*.py' | while read -r MODULE_FILE; do
+        MODULE_SCRIPT_DIR=$(dirname "$MODULE_FILE")
+        MODULE_SCRIPT_NAME=$(basename "$MODULE_FILE")
+        python3 - <<EOF
+import os
+import runpy
+import sys
 
-    ## configure submodules of mariadb-connector-cpp for create_db
-    cd "mariadb-connector-cpp"
-    if [ $QUIET != 1 ]; then
-        git submodule init
-        git submodule update
-    else
-        git submodule --quiet init
-        git submodule --quiet update
-    fi
-    cd ".."
+try:
+    globals_dict = runpy.run_path("${MODULE_FILE}")
+    os.chdir("${MODULE_SCRIPT_DIR}")
+    if 'install' in globals_dict and callable(globals_dict['install']):
+        print('${BLUE}[+] Installing module at ${MODULE_FILE}${SANE}')
+        globals_dict['install']()
+except Exception as e:
+    print(f"Error in ${MODULE_SCRIPT_NAME}: {e}", file=sys.stderr)
+EOF
 
-    ## get C++ JSON parser from https://github.com/nlohmann/json for create_db
-    mkdir -p "json/single_include/nlohmann"
-    cd json/single_include/nlohmann
-    if [ $QUIET != 1 ]; then
-        wget https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp -O json.hpp
-    else
-        wget https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp -q -O json.hpp
-    fi
-    cd "../../../"
-
-    ## build create_db
-    rm -rf build
-    mkdir -p build
-    cd "build"
-    if [ $QUIET != 1 ]; then
-        cmake ..
-        make
-    else
-        cmake --quiet ..
-        make --quiet
-    fi
-    cp create_db ../../
-    cd "../../../../"
+        cd $WORKING_DIR
+    done
 }
 
-create_vuln_and_software_db() {
-    if [ -f resources/vulndb.db3 ]; then
-        rm resources/vulndb.db3
-    fi
-
+create_local_databases() {
     if [ $FULL_RESOURCE_INSTALL != 0 ]; then
-        ./search_vulns.py --full-update
+        "${SEARCH_VULNS_PATH}" --full-update
     else
-        ./search_vulns.py -u
+        "${SEARCH_VULNS_PATH}" -u
     fi
 
     if [ $? != 0 ]; then
-        echo -e "${RED}Could not create vulnerability database"
+        echo -e "${RED}Could not create local databases.${SANE}"
         exit 1
     fi
 }
 
-setup_cpe_search() {
-    cd "cpe_search"
-    if [ $QUIET != 1 ]; then
-        git submodule init
-        git submodule update
-    else
-        git submodule --quiet init
-        git submodule --quiet update
-    fi
-
-    pip3 install -r requirements.txt
-    if [ $? != 0 ]; then
-        pip3 install -r requirements.txt --break-system-packages
-    fi
-
-    cd ..
-}
 
 #################################
 ########## Entry point ##########
@@ -152,19 +111,23 @@ if [ $# -gt 0 ]; then
     done
 fi
 
+
 # run script
-printf "${GREEN}[+] Installing ${LINUX_PACKAGE_MANAGER} packages\\n${SANE}"
+printf "${GREEN}[+] Installing core ${LINUX_PACKAGE_MANAGER} & Python packages\\n${SANE}"
 install_linux_packages
-printf "${GREEN}[+] Setting up cpe_search tool\\n${SANE}"
-setup_cpe_search
-printf "${GREEN}[+] Setting up vulnerability database creation tool\\n${SANE}"
-setup_create_db
+
+printf "${GREEN}[+] Setting up git submodules\\n${SANE}"
+git submodule init
+git submodule update
+
+printf "${GREEN}[+] Running installation scripts of modules ...\\n${SANE}"
+run_module_installs
+
 if [ $SKIP_RESOURCE_INSTALL == 0 ]; then
-    printf "${GREEN}[+] Creating vulnerability and software database (this may take some time)\\n${SANE}"
-    create_vuln_and_software_db
+    printf "${GREEN}[+] Creating local databases (this may take some time)\\n${SANE}"
+    create_local_databases
 else
     printf "${GREEN}[-] Skipping install of vulnerability and software database\\n${SANE}"
 fi
-
 
 sudo ln -sf "$(pwd -P)/search_vulns.py" /usr/local/bin/search_vulns

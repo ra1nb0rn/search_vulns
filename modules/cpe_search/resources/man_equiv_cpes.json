@@ -71,10 +71,12 @@
     "cpe:2.3:a:ghostscript:ghostscript:": ["cpe:2.3:a:artifex:ghostscript:"],
     "cpe:2.3:a:owncloud:owncloud:": ["cpe:2.3:a:owncloud:graph_api:"],
     "cpe:2.3:a:nats:nats_server:": ["cpe:2.3:a:linuxfoundation:nats-server:"],
-    "cpe:2.3:a:keycloak:keycloak:": ["cpe:2.3:a:redhat:keycloak:"],
+    "cpe:2.3:a:keycloak:keycloak:": ["cpe:2.3:a:redhat:keycloak:", "cpe:2.3:a:redhat:build_of_keycloak:"],
     "cpe:2.3:a:f5:nginx_open_source:": ["cpe:2.3:a:f5:nginx:"],
     "cpe:2.3:a:cisco:asa:": ["cpe:2.3:a:cisco:adaptive_security_appliance:"],
     "cpe:2.3:a:microsoft:asp.net:": ["cpe:2.3:a:microsoft:asp.net_core:", "cpe:2.3:a:microsoft:.net:"],
     "cpe:2.3:a:wagtail:wagtail:": ["cpe:2.3:a:torchbox:wagtail:"],
-    "cpe:2.3:a:inetsoftware:clear_reports:": ["cpe:2.3:a:inetsoftware:i-net_clear_reports:"]
+    "cpe:2.3:a:inetsoftware:clear_reports:": ["cpe:2.3:a:inetsoftware:i-net_clear_reports:"],
+    "cpe:2.3:a:atom:electron:": ["cpe:2.3:a:electronjs:electron:"],
+    "cpe:2.3:a:rosariosis:student_information_system:": ["cpe:2.3:a:rosariosis:rosariosis:"]
 }

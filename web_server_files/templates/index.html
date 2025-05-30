@@ -5,7 +5,7 @@
 <div class="md:max-w-8xl lg:max-w-6.5xl 2xl:max-w-8xl mx-auto text-center mt-4 w-full">
     <div class="flex flex-row rounded-box items-center w-full mx-auto p-3 bg-base-300">
         <div class="dropdown dropdown-open sm:mr-1 md:mr-2 w-full" id="queryInputConstruct"
-            onfocusout="closeCPESuggestions(event)">
+            onfocusout="closeProductIDSuggestions(event)">
             <label class="input input-bordered flex w-full items-center gap-5 sm:mr-1 md:mr-2">
                 <i class="fa-solid fa-database"></i>
                 <input type="text" class="w-full" autofocus placeholder="Enter Software or Vulnerability IDs" name="query" id="query" />
@@ -13,7 +13,7 @@
             </label>
             <div tabindex="0"
                 class="dropdown-content hidden z-[10] max-h-90 overflow-y-auto overflow-x-hidden w-fit min-w-full shadow-2xl bg-base-300 rounded-box mt-2"
-                id="cpeSuggestions">
+                id="productIDSuggestions">
             </div>
         </div>
         <button type="submit"

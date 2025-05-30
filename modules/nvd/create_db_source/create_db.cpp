@@ -80,8 +80,8 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     // get prepared statements
     PreparedStatement* cve_query = db->get_cve_query();
     PreparedStatement* cve_cpe_query = db->get_cve_cpe_query();
-    PreparedStatement* add_exploit_ref_query = db->get_add_exploit_ref_query();
-    PreparedStatement* add_cveid_exploit_ref_query = db->get_add_cveid_exploit_ref_query(); 
+    PreparedStatement* add_nvd_exploits_ref_query = db->get_add_nvd_exploits_ref_query();
+    PreparedStatement* add_nvd_exploits_ref_indirect_query = db->get_add_nvd_exploits_ref_indirect_query(); 
 
     // read a JSON file
     std::ifstream input_file(filepath);
@@ -89,7 +89,7 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     input_file >> vulns_json;
 
     json metrics_entry, references_entry;
-    std::string cve_id, description, edb_ids, published, last_modified, vector_string, severity;
+    std::string cve_id, description, published, last_modified, vector_string, severity;
     std::string cvss_version, ref_url, op;
     std::unordered_map<std::string, int> nvd_exploits_refs;
     std::unordered_map<std::string, std::unordered_set<int>> cveid_exploits_map;
@@ -103,7 +103,6 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     // iterate the array
     for (auto &cve_entry : vulns_json["vulnerabilities"]) {
         cve_id = cve_entry["cve"]["id"];
-        edb_ids = "";
         base_score = -1;
         cvss_version = "";
         vector_string = "";
@@ -182,8 +181,8 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
                             nvd_exploit_ref_id++;
                         }
                         if (cveid_exploits_map.find(cve_id) == cveid_exploits_map.end()) {
-                            std::unordered_set<int> exploit_refs;
-                            cveid_exploits_map[cve_id] = exploit_refs;
+                            std::unordered_set<int> exploits_refs;
+                            cveid_exploits_map[cve_id] = exploits_refs;
                         }
                         cveid_exploits_map[cve_id].emplace(nvd_exploits_refs[ref_url]);
                     }
@@ -197,16 +196,15 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
         // bind found cve info to prepared statement
         cve_query->bind(1, cve_id);
         cve_query->bind(2, description);
-        cve_query->bind(3, edb_ids);
-        cve_query->bind(4, published);
-        cve_query->bind(5, last_modified);
+        cve_query->bind(3, published);
+        cve_query->bind(4, last_modified);
         
         // Assumption: every entry has at least a cvssV2 score
-        cve_query->bind(6, cvss_version);
-        cve_query->bind(7, base_score);
-        cve_query->bind(8, vector_string);
-        cve_query->bind(9, severity);
-        cve_query->bind(10, cisa_known_exploited);
+        cve_query->bind(5, cvss_version);
+        cve_query->bind(6, base_score);
+        cve_query->bind(7, vector_string);
+        cve_query->bind(8, severity);
+        cve_query->bind(9, cisa_known_exploited);
         cve_query->execute();
 
         // Next, retrieve CPE data and put into DB  
@@ -293,17 +291,17 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
 
     // Put exploit references into DB
     for (auto &exploit : nvd_exploits_refs) {
-        add_exploit_ref_query->bind(1, exploit.second);
-        add_exploit_ref_query->bind(2, exploit.first);
-        add_exploit_ref_query->execute();
+        add_nvd_exploits_ref_query->bind(1, exploit.second);
+        add_nvd_exploits_ref_query->bind(2, exploit.first);
+        add_nvd_exploits_ref_query->execute();
     }
 
     // Put CVEs to NVD exploit refs into DB
     for (auto &mapping_entry : cveid_exploits_map) {
         for (auto &ref_id : mapping_entry.second) {
-            add_cveid_exploit_ref_query->bind(1, mapping_entry.first);
-            add_cveid_exploit_ref_query->bind(2, ref_id);
-            add_cveid_exploit_ref_query->execute();
+            add_nvd_exploits_ref_indirect_query->bind(1, mapping_entry.first);
+            add_nvd_exploits_ref_indirect_query->bind(2, ref_id);
+            add_nvd_exploits_ref_indirect_query->execute();
         }
     }
 
@@ -318,20 +316,28 @@ bool ends_with(const std::string& str, const std::string& suffix) {
 
 int main(int argc, char *argv[]) {
 
-    if (argc != 5) {
+    if (argc != 3) {
         std::cerr << "Wrong argument count." << std::endl;
-        std::cerr << "Usage: ./create_db cve_folder path_to_config outfile create_sql_statements_file" << std::endl;
+        std::cerr << "Usage: ./create_db cve_folder create_sql_statements_file" << std::endl;
         return EXIT_FAILURE;
     }
 
+    // parse args and recover DB config
     std::string cve_folder = argv[1];
-    std::ifstream config_file(argv[2]);
-    json config = json::parse(config_file);
-    std::string outfile = argv[3];
-    std::ifstream create_sql_statements_file(argv[4]);
+    std::ifstream create_sql_statements_file(argv[2]);
     json create_sql_statements = json::parse(create_sql_statements_file);
-    std::string database_type = config["DATABASE"]["TYPE"];
-    std::string filename;
+
+    json db_config;
+    db_config["DATABASE_TYPE"] = std::getenv("DATABASE_TYPE") ?: "";
+    db_config["DATABASE_NAME"] = std::getenv("DATABASE_NAME") ?: "";
+    db_config["DATABASE_HOST"] = std::getenv("DATABASE_HOST") ?: "";
+    db_config["DATABASE_PORT"] = std::getenv("DATABASE_PORT") ?: "";
+    db_config["DATABASE_USER"] = std::getenv("DATABASE_USER") ?: "";
+    db_config["DATABASE_PASSWORD"] = std::getenv("DATABASE_PASSWORD") ?: "";
+    db_config["OVERWRITE_DB"] = std::getenv("OVERWRITE_DB") ?: "";
+
+    std::string database_type = db_config["DATABASE_TYPE"];
+    std::string datafeed_filename;
     std::vector<std::string> cve_files;
 
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -339,7 +345,7 @@ int main(int argc, char *argv[]) {
     std::unique_ptr<DatabaseWrapper> db;
 
     // validate given database name
-    if (database_type != "sqlite" && !is_safe_database_name(config["DATABASE_NAME"])) {
+    if (database_type != "sqlite" && !is_safe_database_name(db_config["DATABASE_NAME"])) {
         std::cout << "Potentially malicious database name detected. Abort creation of database" << std::endl;
         return EXIT_FAILURE;
     }
@@ -347,25 +353,25 @@ int main(int argc, char *argv[]) {
     try{
         // create database connection
         if (database_type == "sqlite")
-            db = std::make_unique<SQLiteDB>(outfile);
+            db = std::make_unique<SQLiteDB>(db_config["DATABASE_NAME"]);
         else{
-            db = std::make_unique<MariaDB>(config);
+            db = std::make_unique<MariaDB>(db_config);
         } 
 
         // create tables and prepared statements
-        db->execute_query(create_sql_statements["TABLES"]["CVE"][database_type]);
-        db->execute_query(create_sql_statements["TABLES"]["CVE_CPE"][database_type]);
-        db->execute_query(create_sql_statements["TABLES"]["CVE_NVD_EXPLOITS_REFS"][database_type]);
+        db->execute_query(create_sql_statements["TABLES"]["NVD"][database_type]);
+        db->execute_query(create_sql_statements["TABLES"]["NVD_CPE"][database_type]);
         db->execute_query(create_sql_statements["TABLES"]["NVD_EXPLOITS_REFS"][database_type]);
+        db->execute_query(create_sql_statements["TABLES"]["NVD_EXPLOITS_REFS_INDIRECT"][database_type]);
         db->create_prepared_statements();
 
         DIR *dir;
         struct dirent *ent;
         if ((dir = opendir(cve_folder.c_str())) != NULL) {
             while ((ent = readdir(dir)) != NULL) {
-                filename = ent->d_name;
-                if (ends_with(filename, ".json"))
-                    cve_files.push_back(cve_folder + "/" + filename);  // only on unix platforms
+                datafeed_filename = ent->d_name;
+                if (ends_with(datafeed_filename, ".json"))
+                    cve_files.push_back(cve_folder + "/" + datafeed_filename);  // only on unix platforms
             }
             closedir(dir);
         }
@@ -375,12 +381,12 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
         
-        std::cout << "Creating local copy of NVD as " << outfile << " ..." << std::endl;
+        std::cout << "Creating local copy of NVD as " << db_config["DATABASE_NAME"] << " ..." << std::endl;
         for (const auto &file : cve_files) {
             add_to_db(db.get(), file);
         }
 
-        // create view for nvd_exploits_refs
+        // create view for nvd_exploit_srefs
         db->execute_query(create_sql_statements["VIEWS"]["NVD_EXPLOITS_REFS_VIEW"][database_type]);
     }
     catch (std::exception& e) {
@@ -394,11 +400,14 @@ int main(int argc, char *argv[]) {
     // print duration of building process
     auto time = std::chrono::high_resolution_clock::now() - start_time;
 
-    char *db_abs_path = realpath(outfile.c_str(), NULL);
     std::cout << "Database creation took " <<
     (float) (std::chrono::duration_cast<std::chrono::microseconds>(time).count()) / (1e6) << "s .\n";
-    std::cout << "Local copy of NVD created as " << db_abs_path << " ." << std::endl;
-    free(db_abs_path);
+    if (database_type == "sqlite") {
+        char *db_abs_path = realpath(db_config["DATABASE_NAME"].get<std::string>().c_str(), NULL);
+        std::cout << "Local copy of NVD created as " << db_abs_path << " ." << std::endl;
+        free(db_abs_path);
+    }
+    else
+        std::cout << "Local copy of NVD created as " << db_config["DATABASE_NAME"] << " ." << std::endl;
     return EXIT_SUCCESS;
-
 }

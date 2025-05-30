@@ -9,12 +9,12 @@ PreparedStatement* DatabaseWrapper::get_cve_cpe_query() {
     return cve_cpe_query.get();
 }
 
-PreparedStatement* DatabaseWrapper::get_add_exploit_ref_query() {
-    return add_exploit_ref_query.get();
+PreparedStatement* DatabaseWrapper::get_add_nvd_exploits_ref_query() {
+    return add_nvd_exploits_ref_query.get();
 }
 
-PreparedStatement* DatabaseWrapper::get_add_cveid_exploit_ref_query() {
-    return add_cveid_exploit_ref_query.get();
+PreparedStatement* DatabaseWrapper::get_add_nvd_exploits_ref_indirect_query() {
+    return add_nvd_exploits_ref_indirect_query.get();
 }
 
 
@@ -33,8 +33,8 @@ void SQLiteDB::create_prepared_statements() {
     // init prepared statements
     cve_query = std::make_unique<SQLitePreparedStatement>(*db, CVE_QUERY_FRAGMENT);
     cve_cpe_query = std::make_unique<SQLitePreparedStatement>(*db, CVE_CPE_QUERY_FRAGMENT);
-    add_exploit_ref_query = std::make_unique<SQLitePreparedStatement>(*db, NVD_EXPLOIT_REFS_FRAGMENT);
-    add_cveid_exploit_ref_query = std::make_unique<SQLitePreparedStatement>(*db, CVE_NVD_EXPLOITS_REFS_FRAGMENT);
+    add_nvd_exploits_ref_query = std::make_unique<SQLitePreparedStatement>(*db, NVD_EXPLOITS_REFS_FRAGMENT);
+    add_nvd_exploits_ref_indirect_query = std::make_unique<SQLitePreparedStatement>(*db, NVD_EXPLOITS_REFS_INDIRECT_FRAGMENT);
 }
 
 void SQLiteDB::commit() {
@@ -54,20 +54,22 @@ MariaDB::MariaDB(nlohmann::json config) {
     sql::Driver* driver = sql::mariadb::get_driver_instance();
 
     // Configure Connection
-    std::string host = config["DATABASE"]["HOST"];
-    int port = config["DATABASE"]["PORT"];
-    std::string user = config["DATABASE"]["USER"];
-    std::string password = config["DATABASE"]["PASSWORD"];
+    std::string host = config["DATABASE_HOST"];
+    std::string port = config["DATABASE_PORT"];
+    std::string user = config["DATABASE_USER"];
+    std::string password = config["DATABASE_PASSWORD"];
     std::string database = config["DATABASE_NAME"];
-    sql::SQLString url("jdbc:mariadb://" + host + ':' + std::to_string(port));
+    sql::SQLString url("jdbc:mariadb://" + host + ':' + port);
     sql::Properties properties({{"user", user}, {"password", password}});
 
     conn = std::unique_ptr<sql::Connection>(driver->connect(url, properties));
 
     // set up database
-    std::string create_db_query = "CREATE OR REPLACE DATABASE "+database+";";
     std::unique_ptr<sql::Statement> stmnt(conn->createStatement());
-    stmnt->executeQuery(create_db_query);
+    if (config["OVERWRITE_DB"] == "TRUE") {
+        std::string create_db_query = "CREATE OR REPLACE DATABASE "+database+";";
+        stmnt->executeQuery(create_db_query);
+    }
     stmnt->executeQuery("use "+database+";");
 }
 
@@ -80,8 +82,8 @@ void MariaDB::create_prepared_statements() {
     // init prepared statements
     cve_query = std::make_unique<MariaDBPreparedStatement>(conn, CVE_QUERY_FRAGMENT);
     cve_cpe_query = std::make_unique<MariaDBPreparedStatement>(conn, CVE_CPE_QUERY_FRAGMENT);
-    add_exploit_ref_query = std::make_unique<MariaDBPreparedStatement>(conn, NVD_EXPLOIT_REFS_FRAGMENT);
-    add_cveid_exploit_ref_query = std::make_unique<MariaDBPreparedStatement>(conn, CVE_NVD_EXPLOITS_REFS_FRAGMENT);
+    add_nvd_exploits_ref_query = std::make_unique<MariaDBPreparedStatement>(conn, NVD_EXPLOITS_REFS_FRAGMENT);
+    add_nvd_exploits_ref_indirect_query = std::make_unique<MariaDBPreparedStatement>(conn, NVD_EXPLOITS_REFS_INDIRECT_FRAGMENT);
 }
 
 void MariaDB::commit() {

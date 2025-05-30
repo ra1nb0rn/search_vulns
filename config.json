@@ -1,8 +1,13 @@
 {
-    "DATABASE_NAME": "resources/vulndb.db3",
-    "CVE_EDB_MAP_FILE": "resources/cveid_to_edbid.json",
-    "NVD_API_KEY": "",
-    "VULNCHECK_API_KEY": "",
+    "DATABASE_CONNECTION": {
+        "TYPE": "sqlite"
+    },
+    "VULN_DATABASE": {
+        "NAME": "resources/vulndb.db3"
+    },
+    "PRODUCT_DATABASE": {
+        "NAME": "resources/productdb.db3"
+    },
     "RECAPTCHA_AND_API": {
         "ENABLED": false,
         "SITE_KEY_V3": "<YOUR_SITE_KEY_V3>",
@@ -13,11 +18,21 @@
         "API_REQUESTS_RATE_LIMIT_COUNT": 60,
         "DATABASE_NAME": "resources/search_vulns_api.db3"
     },
-    "cpe_search": {
-        "DATABASE_NAME": "resources/cpe-search-dictionary.db3",
-        "DEPRECATED_CPES_FILE": "resources/deprecated-cpes.json"
+    "MODULES": {
+        "cpe_search.search_vulns_cpe_search": {
+            "NVD_API_KEY": "",
+            "CPE_SEARCH_COUNT": 10,
+            "CPE_SEARCH_THRESHOLD": 0.72
+        },
+        "nvd.search_vulns_nvd": {
+            "NVD_API_KEY": ""
+        },
+        "vulncheck.search_vulns_nvdpp": {
+            "VULNCHECK_API_KEY": ""
+        }
     },
-    "DATABASE": {
-        "TYPE": "sqlite"
-    }
+    "MODULES_DATA_PREFERENCE": [
+        "nvd.search_vulns_nvd",
+        "vulncheck.search_vulns_nvdpp"
+    ]
 }

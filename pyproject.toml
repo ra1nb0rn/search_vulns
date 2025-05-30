@@ -1,0 +1,23 @@
+[tool.black]
+line-length = 96
+target-version = ['py311']
+exclude = '''
+(modules/nvd/create_db_source/.*|modules/cpe_search/cpe_search/test_cpe_suggestions.py|modules/template/.*)
+'''
+
+[tool.isort]
+profile = "black"
+skip = ["modules/nvd/create_db_source/"]
+
+[tool.ruff]
+line-length = 96
+target-version = "py311"
+select = ["ALL"]
+ignore = ["S104", "S201", "T201", "TRY201", "COM812", "E501", "TRY003", "EM101"]
+exclude = ["modules/nvd/create_db_source"]
+
+[tool.pylint.MASTER]
+ignore-paths = "modules/nvd/create_db_source/.*"
+
+[tool.pylint."FORMAT"]
+max-line-length = 96
