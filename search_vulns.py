@@ -227,9 +227,10 @@ def _search_vulns(
     query,
     product_ids,
     vuln_db_cursor,
+    config,
+    extra_params,
     ignore_general_product_vulns,
     include_single_version_vulns,
-    config,
 ):
     """Search for known vulnerabilities based on the given query of product"""
 
@@ -238,7 +239,9 @@ def _search_vulns(
     for mid, module in search_vulns_modules.items():
         if hasattr(module, "search_vulns") and callable(module.search_vulns):
             m_config = config["MODULES"].get(mid, {})
-            module_vulns = module.search_vulns(query, product_ids, vuln_db_cursor, m_config)
+            module_vulns = module.search_vulns(
+                query, product_ids, vuln_db_cursor, m_config, extra_params
+            )
             all_module_vulns[mid] = module_vulns
 
     # merge / deduplicate vulns (reason: different data sources, equivalent prodcut IDs and more)
@@ -261,8 +264,25 @@ def _search_vulns(
     return vulns
 
 
-def _search_product_ids(
+def search_product_ids(
     query, product_db_cursor, is_product_id_query, config, known_product_ids={}
+):
+    search_vulns_result = search_vulns(
+        query,
+        known_product_ids,
+        None,
+        product_db_cursor,
+        is_product_id_query,
+        False,
+        False,
+        config,
+        True,
+    )
+    return search_vulns_result["product_ids"], search_vulns_result["pot_product_ids"]
+
+
+def _search_product_ids(
+    query, product_db_cursor, is_product_id_query, config, known_product_ids={}, extra_params={}
 ):
     """Search for product IDs matching the query"""
 
@@ -275,7 +295,12 @@ def _search_product_ids(
         if hasattr(module, "search_product_ids") and callable(module.search_product_ids):
             m_config = config["MODULES"].get(mid, {})
             new_ids, new_pot_ids = module.search_product_ids(
-                query, product_db_cursor, product_ids, is_product_id_query, m_config
+                query,
+                product_db_cursor,
+                product_ids,
+                is_product_id_query,
+                m_config,
+                extra_params,
             )
             for key, value in new_ids.items():
                 if key not in product_ids:
@@ -292,13 +317,14 @@ def _search_product_ids(
 
 def search_vulns(
     query,
-    product_ids=None,
+    known_product_ids=None,
     vuln_db_cursor=None,
     product_db_cursor=None,
     is_product_id_query=False,
     ignore_general_product_vulns=False,
     include_single_version_vulns=False,
     config=None,
+    skip_vuln_search=False,
 ):
     """Search for known vulnerabilities based on the given query"""
 
@@ -307,7 +333,7 @@ def search_vulns(
         config = _load_config()
 
     close_vuln_db_after, close_product_db_after = False, False
-    if not vuln_db_cursor:
+    if not skip_vuln_search and not vuln_db_cursor:
         vuln_db_conn = get_database_connection(config["VULN_DATABASE"])
         vuln_db_cursor = vuln_db_conn.cursor()
         close_vuln_db_after = True
@@ -316,54 +342,69 @@ def search_vulns(
         product_db_cursor = product_db_conn.cursor()
         close_product_db_after = True
 
-    query_stripped = query.strip()
+    query_processed = query.strip()
     search_vulns_modules = get_modules()
+
+    # preprocess query
+    extra_params = {}
+    for mid, module in search_vulns_modules.items():
+        if hasattr(module, "preprocess_query") and callable(module.preprocess_query):
+            m_config = config["MODULES"].get(mid, {})
+            new_query, mod_extra_params = module.preprocess_query(
+                query_processed, known_product_ids, vuln_db_cursor, product_db_cursor, m_config
+            )
+            if new_query:
+                query_processed = new_query
+            for key, val in mod_extra_params.items():
+                extra_params[key] = val
 
     # search for product IDs
     product_ids, pot_product_ids = _search_product_ids(
-        query, product_db_cursor, is_product_id_query, config, product_ids
-    )
-
-    # search for vulnerabilities
-    vulns = _search_vulns(
-        query_stripped,
-        product_ids,
-        vuln_db_cursor,
-        ignore_general_product_vulns,
-        include_single_version_vulns,
+        query_processed,
+        product_db_cursor,
+        is_product_id_query,
         config,
+        known_product_ids,
+        extra_params,
     )
 
-    if not vulns:
-        return {"product_ids": product_ids, "vulns": {}, "pot_product_ids": pot_product_ids}
+    # search for vulnerabilities or skip this step
+    if not skip_vuln_search:
+        vulns = _search_vulns(
+            query_processed,
+            product_ids,
+            vuln_db_cursor,
+            config,
+            extra_params,
+            ignore_general_product_vulns,
+            include_single_version_vulns,
+        )
 
-    # add extra information to identified vulnerabilities, like exploits or tracking information
-    for mid, module in search_vulns_modules.items():
-        if hasattr(module, "add_extra_vuln_info") and callable(module.add_extra_vuln_info):
-            m_config = config["MODULES"].get(mid, {})
-            module.add_extra_vuln_info(vulns, vuln_db_cursor, m_config)
+        # add extra information to identified vulnerabilities, like exploits or tracking information
+        for mid, module in search_vulns_modules.items():
+            if hasattr(module, "add_extra_vuln_info") and callable(module.add_extra_vuln_info):
+                m_config = config["MODULES"].get(mid, {})
+                module.add_extra_vuln_info(vulns, vuln_db_cursor, m_config, extra_params)
+    else:
+        vulns = {}
 
-    # create results and add non-vulnerability extra information related to query
+    # create results and post process results, e.g. to add non-vulnerability related information
     results = {}
     results["product_ids"] = product_ids
     results["vulns"] = vulns
     results["pot_product_ids"] = pot_product_ids
 
     for mid, module in search_vulns_modules.items():
-        if hasattr(module, "add_extra_result_info") and callable(module.add_extra_result_info):
+        if hasattr(module, "postprocess_results") and callable(module.postprocess_results):
             m_config = config["MODULES"].get(mid, {})
-            module_extra_results = module.add_extra_result_info(
-                query, product_ids, vuln_db_cursor, m_config
+            module.postprocess_results(
+                results,
+                query_processed,
+                vuln_db_cursor,
+                product_db_cursor,
+                m_config,
+                extra_params,
             )
-            for key, value in module_extra_results.items():
-                if key not in results:
-                    results[key] = value
-                else:
-                    for i in range(1, 10):
-                        new_key = key + "_" + str(i)
-                        if new_key not in results:
-                            results[new_key] = value
-                            break
 
     if close_vuln_db_after:
         vuln_db_cursor.close()

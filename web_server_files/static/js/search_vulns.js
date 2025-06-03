@@ -1031,7 +1031,7 @@ function retrieveProductIDSuggestions(url_query, recaptcha_response) {
                     $('#productIDSuggestions').html(dropdownContent);
                 }
                 else {
-                    $('#productIDSuggestions').html("No results found");
+                    $('#productIDSuggestions').html("No possible product IDs found");
                 }
             }
             curSelectedProductIDSuggestion = -1

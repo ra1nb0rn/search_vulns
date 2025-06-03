@@ -3,7 +3,7 @@ from modules.utils import search_vulns_by_cpes_simple
 from modules.vulncheck.build import REQUIRES_BUILT_MODULES, full_update
 
 
-def search_vulns(query, product_ids, vuln_db_cursor, config, **misc):
+def search_vulns(query, product_ids, vuln_db_cursor, config, extra_params):
 
     if product_ids.get("cpe", []):
         # first, get vulns via CPE matching

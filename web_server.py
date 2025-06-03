@@ -15,7 +15,7 @@ from modules.cpe_search.cpe_search.database_wrapper_functions import (
     get_connection_pools,
 )
 from modules.utils import get_database_connection
-from search_vulns import VERSION_FILE, _load_config, _search_product_ids
+from search_vulns import VERSION_FILE, _load_config, search_product_ids
 from search_vulns import search_vulns as search_vulns_call
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -165,7 +165,7 @@ def search_has_valid_auth(request):
 
 
 @app.route("/api/product-id-suggestions")
-def productid_suggestions():
+def product_id_suggestions():
     # check auth if CAPTCHA or API key is required
     if config["RECAPTCHA_AND_API"]["ENABLED"]:
         has_valid_auth, auth_error = search_has_valid_auth(request)
@@ -186,12 +186,7 @@ def productid_suggestions():
     if query_lower in PRODUCTID_SEARCH_CACHE and PRODUCTID_SEARCH_CACHE[query_lower][1]:
         return jsonify(PRODUCTID_SEARCH_CACHE[query_lower][1])
 
-    db_conn = get_database_connection(config["PRODUCT_DATABASE"])
-    db_cursor = db_conn.cursor()
-
-    product_ids, productid_suggestions = _search_product_ids(
-        query, db_cursor, False, config, {}
-    )
+    product_ids, productid_suggestions = search_product_ids(query, None, False, config, {})
 
     if not productid_suggestions:
         PRODUCTID_SEARCH_CACHE[query_lower] = {}, {}
@@ -243,13 +238,11 @@ def search_vulns():
 
     # search for vulns either via previous cpe_search results or user's query
     productids = PRODUCTID_SEARCH_CACHE.get(query.lower(), ({}, {}))[0]
-    db_conn = get_database_connection(config["VULN_DATABASE"])
-    db_cursor = db_conn.cursor()
 
     vulns = search_vulns_call(
         query,
         productids,
-        db_cursor,
+        None,
         None,
         is_good_product_id,
         ignore_general_product_vulns,
@@ -258,9 +251,6 @@ def search_vulns():
     )
     query_lower = query.lower()
     PRODUCTID_SEARCH_CACHE[query_lower] = vulns["product_ids"], vulns["pot_product_ids"]
-
-    db_cursor.close()
-    db_conn.close()
 
     if vulns is None:
         vulns = {}
@@ -521,12 +511,9 @@ def setup_api_db():
 if __name__ == "__main__":
     print("[+] Loading resources")
 
-# init test call and set up DB
-db_conn = get_database_connection(config["VULN_DATABASE"])
-db_cursor = db_conn.cursor()
-search_vulns_call("Sudo 1.8.2", vuln_db_cursor=db_cursor, config=config)
-db_cursor.close()
-db_conn.close()
+
+# init test call
+search_vulns_call("Sudo 1.8.2", config=config)
 
 if config["RECAPTCHA_AND_API"]["ENABLED"]:
     setup_success = setup_api_db()

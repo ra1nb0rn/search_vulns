@@ -52,7 +52,17 @@ def get_detailed_vulns(vulns, vuln_db_cursor):
     return detailed_vulns
 
 
-def search_vulns(query, product_ids, vuln_db_cursor, config, **misc):
+def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, config):
+    # extract CVE-IDs from query and save them for later
+    vuln_ids = MATCH_CVE_IDS_RE.findall(query)
+    new_query = query
+    for vuln_id in vuln_ids:
+        new_query = new_query.replace(vuln_id, "")
+    vuln_ids = list(vuln_ids) if vuln_ids else []
+    return new_query.strip(), {"cve_ids": vuln_ids}
+
+
+def search_vulns(query, product_ids, vuln_db_cursor, config, extra_params):
 
     vulns = []
     if product_ids.get("cpe", []):
@@ -104,10 +114,10 @@ def search_vulns(query, product_ids, vuln_db_cursor, config, **misc):
                         if cpe_version < CPEVersion(version):
                             vulns.append((cve_id, MatchReason.DESCRIPTION_MATCH))
 
-    # also get all vulns whose IDs are directly contained in the query
-    vuln_ids = MATCH_CVE_IDS_RE.findall(query)
-    for vuln_id in vuln_ids:
-        vulns.append((vuln_id.strip(), MatchReason.VULN_ID))
+    # also get all vulns whose IDs were directly included in the user's query originally
+    if "cve_ids" in extra_params:
+        for vuln_id in extra_params["cve_ids"]:
+            vulns.append((vuln_id.strip(), MatchReason.VULN_ID))
 
     # retrieve details for vulns, like description, cvss and more
     if vulns:
@@ -116,7 +126,7 @@ def search_vulns(query, product_ids, vuln_db_cursor, config, **misc):
     return {}
 
 
-def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, **misc):
+def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, extra_params):
     for vuln_id, vuln in vulns.items():
         vuln_cve_ids = set()
         if vuln_id.startswith("CVE-"):
@@ -134,5 +144,8 @@ def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, **mi
             vuln.add_exploits([exploit[0] for exploit in nvd_exploit_refs])
 
 
-def extend_vuln_tracking(vulns, vuln_db_cursor, config, **misc):
-    pass
+def postprocess_results(
+    results, query, vuln_db_cursor, product_db_cursor, config, extra_params
+):
+    if "cve_ids" in extra_params and extra_params["cve_ids"]:
+        results["pot_product_ids"] = []

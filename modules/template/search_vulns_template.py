@@ -74,9 +74,28 @@
 #     return True, []
 
 
+### PREPROCESS QUERIES ###
+# def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, config):
+#     """
+#     Preprocess queries to extract other information and "clean up" query for other modules.
+#     Args:
+#         query (str): The search string provided by the user or calling process.
+#         product_ids (dict): Product IDs already retrieved known or provided, indexed by type.
+#         vuln_db_cursor (sqlite or mariadb cursor): Database cursor to query global vulnerability database.
+#         product_db_cursor (sqlite3 or mariadb cursor): Cursor for accessing the global product database.
+#         config (dict): This module's configuration from the global configuration file.
+
+#     Returns:
+#         tuple[str, dict]: A tuple containing a processed query, e.g. having some keywords removed, and
+#         a dict containing extra parameters to store for later usage by this or other modules.
+#     """
+
+#     return query, {}
+
+
 ### RETRIEVAL OF PRODUCT IDS ###
 # def search_product_ids(
-#     query, product_db_cursor, current_product_ids, is_product_id_query, config, **misc
+#     query, product_db_cursor, current_product_ids, is_product_id_query, config, extra_params
 # ):
 #     """
 #     Searches for product IDs based on the given query, provided product IDs and configuration.
@@ -87,7 +106,7 @@
 #         current_product_ids (dict): Product IDs already retrieved for the query by other modules, indexed by type.
 #         is_product_id_query (bool): Whether the query is supposed to already be a concrete product ID.
 #         config (dict): This module's configuration from the global configuration file.
-#         **misc: Additional optional parameters that may influence the search logic.
+#         extra_params (dict): Additional optional parameters that may influence the search logic.
 
 #     Returns:
 #         tuple[dict, dict]: A tuple containing a dict of matched product IDs of a given type and a dict
@@ -102,7 +121,7 @@
 
 
 ### SEARCHING FOR VULNERABILITIES ###
-# def search_vulns(query, product_ids, vuln_db_cursor, config, **misc):
+# def search_vulns(query, product_ids, vuln_db_cursor, config, extra_params):
 #     """
 #     Search for vulnerabilities with this module's logic / engine.
 
@@ -111,7 +130,7 @@
 #         product_ids (dict): Collection of product IDs search for vulnerabilities, indexed by type.
 #         vuln_db_cursor (sqlite or mariadb cursor): Database cursor to query global vulnerability database.
 #         config (dict): This module's configuration from the global configuration file.
-#         **misc: Additional optional parameters that can modify the search logic or results.
+#         extra_params (dict): Additional optional parameters that can modify the search logic or results.
 
 #     Returns:
 #         dict[str, Vulnerability]: A dict containing vulnerabilities, indexed by vulnerability ID.
@@ -125,7 +144,7 @@
 
 
 ### ADDING FURTHER INFORMATION ABOUT VULNERABILITIES ###
-# def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, **misc):
+# def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, extra_params):
 #     """
 #     Add extra information for vulnerabilities. Can be used to add exploit information,
 #     tracking information, scores and more. The provided vulnerabilities should be modified
@@ -135,7 +154,7 @@
 #         vulns (list[Vulnerability]): A list of vulnerabilities to which information can be appended.
 #         vuln_db_cursor (sqlite or mariadb cursor): Database cursor to query global vulnerability database.
 #         config (dict): This module's configuration from the global configuration file.
-#         **misc: Optional parameters that can modify how further information is provided.
+#         extra_params (dict): Optional parameters that can modify how further information is provided.
 #     """
 
 #     # This function allows the module to add further details about the identified vulnerabilities.
@@ -143,17 +162,18 @@
 
 
 ### ADDING FURTHER RESULT DATA APART FROM VULNERABILITIES ###
-# def add_extra_result_info(query, product_ids, vuln_db_cursor, config, **misc):
+# def postprocess_results(results, query, vuln_db_cursor, product_db_cursor, config, extra_params):
 #     """
 #     Add additional results, which are not vulnerabilities, based on the query or
 #     retrieved product IDs.
 
 #     Args:
+#         results (dict): The search_vulns results before becoming final.
 #         query (str): The search string or criteria to find relevant vulnerabilities.
-#         product_ids (dict): Collection of product IDs search for vulnerabilities, indexed by type.
 #         vuln_db_cursor (sqlite or mariadb cursor): Database cursor to query global vulnerability database.
+#         product_db_cursor (sqlite3 or mariadb cursor): Cursor for accessing the global product database.
 #         config (dict): This module's configuration from the global configuration file.
-#         **misc: Additional optional parameters that can modify the search logic or results.
+#         extra_params (dict): Additional optional parameters that can modify the search logic or results.
 
 #     Returns:
 #         dict: A dict containing retrieved extra information, indexed by a key speciyfing what kind of

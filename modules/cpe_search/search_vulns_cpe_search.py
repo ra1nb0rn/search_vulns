@@ -11,7 +11,6 @@ from cpe_version import CPEVersion
 from modules.cpe_search.build import full_update, install, update
 from modules.cpe_search.cpe_search.cpe_search import MATCH_CPE_23_RE, search_cpes
 from modules.cpe_search.cpe_search.database_wrapper_functions import *
-from modules.utils import find_vuln_ids_in_query
 
 MODULE_RESOURCE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources")
 DEBIAN_EQUIV_CPES_FILE = os.path.join(MODULE_RESOURCE_DIR, "debian_equiv_cpes.json")
@@ -149,15 +148,11 @@ def get_equivalent_cpes(cpe):
 
 
 def search_product_ids(
-    query, product_db_cursor, current_product_ids, is_product_id_query, config, **misc
+    query, product_db_cursor, current_product_ids, is_product_id_query, config, extra_params
 ):
     # if given query is not already a CPE, try to retrieve a CPE that matches
     # the query or create alternative CPEs that could match the query
 
-    # filter out vuln IDs from query
-    vuln_ids_in_query = find_vuln_ids_in_query(query)
-    for vuln_id in vuln_ids_in_query:
-        query = query.replace(vuln_id, "")
     query = query.strip()
     if not query:
         return {"cpe": []}, {"cpe": []}

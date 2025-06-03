@@ -4,11 +4,17 @@ from cpe_version import CPEVersion
 from modules.end_of_life_date.build import REQUIRES_BUILT_MODULES, full_update
 
 
-def add_extra_result_info(query, product_ids, vuln_db_cursor, config, **misc):
+def postprocess_results(
+    results, query, vuln_db_cursor, product_db_cursor, config, extra_params
+):
     """Retrieve information from endoflife.date whether the provided version is eol or outdated"""
 
-    if not product_ids:
-        return {}
+    product_ids = results.get("product_ids")
+    if not product_ids or not vuln_db_cursor:
+        return
+    # skip if another module has already provided a version status
+    if "version_status" in results:
+        return
 
     version_status = {}
     for cpe in product_ids["cpe"]:
@@ -78,4 +84,4 @@ def add_extra_result_info(query, product_ids, vuln_db_cursor, config, **misc):
             if version_status:
                 break
 
-    return {"version_status": version_status}
+    results["version_status"] = version_status

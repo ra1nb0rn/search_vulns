@@ -18,10 +18,6 @@ SQLITE_TIMEOUT = 300
 VULN_ID_RE = re.compile(r"((?:(?<=^)|(?<=\s))([A-Za-z]+(?:[-_]\w+){2,})(?=\s|$))")
 
 
-def find_vuln_ids_in_query(query):
-    return [match[0] for match in VULN_ID_RE.findall(query)]
-
-
 def _is_cpe_version_start_end_matching(
     cpe_parts, version_start, version_start_incl, version_end, version_end_incl
 ):

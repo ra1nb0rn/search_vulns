@@ -67,7 +67,17 @@ def get_detailed_vulns(vulns, vuln_db_cursor):
     return detailed_vulns
 
 
-def search_vulns(query, product_ids, vuln_db_cursor, config, **misc):
+def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, config):
+    # extract GHSA-IDs from query and save them for later
+    vuln_ids = MATCH_GHSA_IDS_RE.findall(query)
+    new_query = query
+    for vuln_id in vuln_ids:
+        new_query = new_query.replace(vuln_id, "")
+    vuln_ids = list(vuln_ids) if vuln_ids else []
+    return new_query.strip(), {"ghsa_ids": vuln_ids}
+
+
+def search_vulns(query, product_ids, vuln_db_cursor, config, extra_params):
     vulns = []
     if product_ids.get("cpe", []):
         # first, get vulns via CPE matching
@@ -75,10 +85,10 @@ def search_vulns(query, product_ids, vuln_db_cursor, config, **misc):
             product_ids["cpe"], vuln_db_cursor, "ghsa_id", "ghsa_cpe"
         )
 
-    # also get all vulns whose IDs are directly contained in the query
-    vuln_ids = MATCH_GHSA_IDS_RE.findall(query)
-    for vuln_id in vuln_ids:
-        vulns.append((vuln_id.strip(), MatchReason.VULN_ID))
+    # also get all vulns whose IDs were directly included in the user's query originally
+    if "ghsa_ids" in extra_params:
+        for vuln_id in extra_params["ghsa_ids"]:
+            vulns.append((vuln_id.strip(), MatchReason.VULN_ID))
 
     # retrieve details for vulns, like description, cvss and more
     if vulns:
@@ -87,7 +97,7 @@ def search_vulns(query, product_ids, vuln_db_cursor, config, **misc):
     return {}
 
 
-def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, **misc):
+def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, extra_params):
     # Add GHSA aliases to vulnerabilities having CVE identifiers
     for vuln_id, vuln in vulns.items():
         if vuln_id.startswith("CVE-") and not any("GHSA-" in alias for alias in vuln.aliases):
@@ -100,3 +110,10 @@ def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, **mi
                 href = "https://github.com/advisories/" + alias
                 if alias not in vuln.aliases:
                     vuln.add_alias(alias, href, "ghsa")
+
+
+def postprocess_results(
+    results, query, vuln_db_cursor, product_db_cursor, config, extra_params
+):
+    if "ghsa_ids" in extra_params and extra_params["ghsa_ids"]:
+        results["pot_product_ids"] = []

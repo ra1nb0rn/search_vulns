@@ -4,7 +4,7 @@ from modules.poc_in_github.build import full_update
 from vulnerability import Vulnerability
 
 
-def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, **misc):
+def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, extra_params):
     for vuln_id, vuln in vulns.items():
         vuln_cve_ids = set()
         if vuln_id.startswith("CVE-"):
