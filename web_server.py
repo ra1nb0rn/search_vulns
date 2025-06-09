@@ -17,6 +17,7 @@ from modules.cpe_search.cpe_search.database_wrapper_functions import (
 from modules.utils import get_database_connection
 from search_vulns import VERSION_FILE, _load_config, search_product_ids
 from search_vulns import search_vulns as search_vulns_call
+from search_vulns import serialize_vulns_in_result
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))
@@ -236,6 +237,12 @@ def search_vulns():
     else:
         is_good_product_id = True
 
+    include_patched = request.args.get("include-patched")
+    if include_patched and include_patched.lower() == "true":
+        include_patched = True
+    else:
+        include_patched = False
+
     # search for vulns either via previous cpe_search results or user's query
     productids = PRODUCTID_SEARCH_CACHE.get(query.lower(), ({}, {}))[0]
 
@@ -247,6 +254,7 @@ def search_vulns():
         is_good_product_id,
         ignore_general_product_vulns,
         include_single_version_vulns,
+        include_patched,
         config,
     )
     query_lower = query.lower()
@@ -256,10 +264,7 @@ def search_vulns():
         vulns = {}
     else:
         # serialize vulns for response
-        serial_vulns = {}
-        for vuln_id, vuln in vulns["vulns"].items():
-            serial_vulns[vuln_id] = vuln.to_dict()
-        vulns["vulns"] = serial_vulns
+        serialize_vulns_in_result(vulns)
 
     VULN_RESULTS_CACHE[url_query_string] = vulns
 

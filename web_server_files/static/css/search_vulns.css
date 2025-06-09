@@ -30,9 +30,16 @@ tr.uncertain-vuln td {
 tr.exploited-vuln td {
     background-color: var(--fallback-color-expl,oklch(var(--color-expl)/0.15));
 }
+tr.patched-vuln td {
+    color: var(--fallback-bc,oklch(var(--bc)/0.75));
+    background-color: var(--fallback-color-patched,oklch(var(--in)/0.25));
+}
 .text-exploited {
     --tw-text-opacity: 1;
     color: var(--fallback-color-expl,oklch(var(--color-expl)/var(--tw-text-opacity)));
+}
+.patched-vuln {
+    --tw-text-opacity: 1;
 }
 .vuln-flag-icon {
     font-size: 0.95rem;
@@ -104,7 +111,7 @@ tr.exploited-vuln td {
 
 
 /* Overwrite Tailwind striping for styled-vuln table row */
-.my-table-zebra tbody tr:nth-child(even):not(.uncertain-vuln):not(.exploited-vuln) td {
+.my-table-zebra tbody tr:nth-child(even):not(.uncertain-vuln):not(.exploited-vuln):not(.patched-vuln) td {
   --tw-bg-opacity: 1;
   background-color: var(--fallback-b2,oklch(var(--b2)/var(--tw-bg-opacity)));
 }

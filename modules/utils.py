@@ -305,3 +305,23 @@ def compute_cosine_similarity(text_1: str, text_2: str, text_vector_regex=r"[a-z
     if not normalization_factor:  # avoid divison by 0
         return 0.0
     return float(inner_product) / float(normalization_factor)
+
+
+def get_versionless_cpes_of_nvd_cves(cve_ids, vulndb_cursor):
+    """Return all CPEs affected by the given cve_ids with their version removed"""
+    if not isinstance(cve_ids, list):
+        cve_ids = [cve_ids]
+
+    all_nvd_cpes = set()
+    for cve_id in cve_ids:
+        vulndb_cursor.execute("SELECT cpe FROM nvd_cpe WHERE cve_id = ?", (cve_id,))
+        nvd_cpes = vulndb_cursor.fetchall()
+        if nvd_cpes:  # MariaDB returns None and SQLite an empty list
+            for cpe in nvd_cpes:
+                cpe_split = cpe[0].split(":")
+                cpe_version_wildcarded = (
+                    ":".join(cpe_split[:5]) + ":*:*:" + ":".join(cpe_split[7:])
+                )
+                all_nvd_cpes.add(cpe_version_wildcarded)
+
+    return list(all_nvd_cpes)

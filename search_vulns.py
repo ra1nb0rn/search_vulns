@@ -275,6 +275,7 @@ def search_product_ids(
         is_product_id_query,
         False,
         False,
+        False,
         config,
         True,
     )
@@ -323,6 +324,7 @@ def search_vulns(
     is_product_id_query=False,
     ignore_general_product_vulns=False,
     include_single_version_vulns=False,
+    include_patched=False,
     config=None,
     skip_vuln_search=False,
 ):
@@ -406,6 +408,15 @@ def search_vulns(
                 extra_params,
             )
 
+    # remove patched vulns from results
+    if not include_patched:
+        del_vuln_ids = []
+        for vuln_id, vuln in results["vulns"].items():
+            if vuln.is_patched():
+                del_vuln_ids.append(vuln_id)
+        for vuln_id in del_vuln_ids:
+            del results["vulns"][vuln_id]
+
     if close_vuln_db_after:
         vuln_db_cursor.close()
         vuln_db_conn.close()
@@ -416,8 +427,13 @@ def search_vulns(
     return results
 
 
-def serialize_vulns(vulns):
-    """Serialize the provided vulnerabilities."""
+def serialize_vulns_in_result(result):
+    """Serialize the vulnerabilities in the provided result."""
+
+    serial_vulns = {}
+    for vuln_id, vuln in result["vulns"].items():
+        serial_vulns[vuln_id] = vuln.to_dict()
+    result["vulns"] = serial_vulns
 
 
 def parse_args():
@@ -493,6 +509,11 @@ def parse_args():
         action="store_true",
         help="If no matching product ID exists in the software database, automatically use matching ones created by search_vulns",
     )
+    parser.add_argument(
+        "--include-patched",
+        action="store_true",
+        help="Include vulnerabilities reported as (back)patched, e.g. by Debian Security Tracker, in results",
+    )
 
     args = parser.parse_args()
     if not args.update and not args.queries and not args.full_update and not args.version:
@@ -560,6 +581,7 @@ def main():
             False,
             args.ignore_general_product_vulns,
             args.include_single_version_vulns,
+            args.include_patched,
             config,
         )
 
@@ -602,6 +624,7 @@ def main():
                     False,
                     args.ignore_general_product_vulns,
                     args.include_single_version_vulns,
+                    args.include_patched,
                     config,
                 )
                 all_product_ids = []
@@ -648,10 +671,7 @@ def main():
                 out_string += print_vulns(sv_result["vulns"], to_string=True)
         else:
             # serialize vulns for json output
-            serial_vulns = {}
-            for vuln_id, vuln in sv_result["vulns"].items():
-                serial_vulns[vuln_id] = vuln.to_dict()
-            sv_result["vulns"] = serial_vulns
+            serialize_vulns_in_result(sv_result)
 
         all_vulns[query] = sv_result
 

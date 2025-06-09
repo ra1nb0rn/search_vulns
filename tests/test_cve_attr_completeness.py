@@ -824,8 +824,8 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-3891": {
                 "published": "2025-04-29 12:15:32",
                 "cvss_ver": "3.1",
-                "cvss": "5.3",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                "cvss": "7.5",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
                 "cisa_known_exploited": False,
             },
         }

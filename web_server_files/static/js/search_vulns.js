@@ -2,7 +2,7 @@
 var curVulnData = {}, curEOLData = {}, onlyShowTheseVulns = null;
 var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
 var ignoreGeneralProductVulns = false, onlyShowEDBExploits = false, showGHSAVulns = false;
-var showSingleVersionVulns = false, isGoodProductID = true, showTableFiltering = false;
+var showSingleVersionVulns = false, isGoodProductID = true, showPatchedVulns = true, showTableFiltering = false;
 var noVulnsFoundHtml = '<div class="w-full text-center"><h5 class="text-success">No known vulnerabilities could be found.</h5></div>';
 var filterVulnDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="filterVulnsAll" onclick="changeFilterVulns(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="filterVulnsNone" onclick="changeFilterVulns(this)">None</button></div>`;
 var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
@@ -139,6 +139,8 @@ function createVulnTableRowHtml(idx, vuln) {
         vuln_style_class = "uncertain-vuln";
     if (vuln.cisa_known_exploited)
         vuln_style_class += " exploited-vuln";  // overwrites color of uncertain vuln
+    if (vuln.reported_patched_by.length > 0)
+        vuln_style_class += " patched-vuln";  // overwrites color of previous
 
     vuln_row_html += `<tr class="${vuln_style_class} border-none">`;
 
@@ -167,6 +169,13 @@ function createVulnTableRowHtml(idx, vuln) {
             else
                 vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
             vuln_flag_html += `data-tooltip-target="tooltip-exploit-${idx}" data-tooltip-placement="bottom"><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${vuln["id"]}&field_date_added_wrapper=all&sort_by=field_date_added&items_per_page=20" target="_blank"><i class="fa-solid fa-skull text-exploited"></i></a></span><div id="tooltip-exploit-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability has been exploited in the wild according to CISA.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+        }
+        if (vuln.reported_patched_by.length > 0) {
+            if (!vuln_flag_html)
+                vuln_flag_html += `<br><center><span class="vuln-flag-icon" `;
+            else
+                vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
+            vuln_flag_html += `data-tooltip-target="tooltip-patched-${idx}" data-tooltip-placement="bottom"><i class="fa-solid fa-shield text-info"></i></span><div id="tooltip-patched-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability was reported (back)patched for the queried version and environment.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
         }
 
         if (vuln_flag_html)
@@ -320,9 +329,11 @@ function renderSearchResults(reloadFilterDropdown) {
         // create row in table
         if (ignoreGeneralProductVulns && vulns[i].match_reason == "general_product_uncertain")
             continue;
-         if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
+        if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
+            continue;
+        if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
 
         has_vulns = true;
@@ -366,6 +377,8 @@ function createVulnsMarkDownTable() {
         if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
+            continue;
+        if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
@@ -421,6 +434,8 @@ function createVulnsMarkDownTable() {
         if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
+            continue;
+        if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
 
         cur_vuln_has_exploits = false;
@@ -501,6 +516,8 @@ function createVulnsCSV() {
             continue;
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
+        if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
+            continue;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
@@ -540,6 +557,8 @@ function createVulnsCSV() {
         if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
+            continue;
+        if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
 
         if (selectedColumns.length < 1 || selectedColumns.includes('cve')) {
@@ -771,6 +790,7 @@ function searchVulnsAction(actionElement) {
 
     // false is default in backend and filtering is done in frontend
     url_query += "&include-single-version-vulns=true";
+    url_query += "&include-patched=true";
 
     isGoodProductID = true;  // reset for subsequent query that wasn't initiated via URL
 
@@ -881,6 +901,10 @@ function changeSearchConfig(configElement) {
         showGHSAVulns = settingEnabled;
         localStorage.setItem("showGHSAVulns", settingEnabledStr);
     }
+    else if (configElement.id == "showPatchedVulnsConfig") {
+        showPatchedVulns = settingEnabled;
+        localStorage.setItem("showPatchedVulns", settingEnabledStr);
+    }
     else if (configElement.id == "showTableFilteringConfig") {
         showTableFiltering = settingEnabled;
         localStorage.setItem("showTableFiltering", settingEnabledStr);
@@ -966,6 +990,9 @@ function setupConfigFromLocalstorage() {
     if (localStorage.getItem('showGHSAVulns') === null) {
         localStorage.setItem('showGHSAVulns', 'true');
     }
+    if (localStorage.getItem('showPatchedVulns') === null) {
+        localStorage.setItem('showPatchedVulns', 'true');
+    }
     if (localStorage.getItem('showTableFiltering') === null) {
         localStorage.setItem('showTableFiltering', 'true');
     }
@@ -985,6 +1012,10 @@ function setupConfigFromLocalstorage() {
     if (localStorage.getItem('showGHSAVulns') == 'true') {
         showGHSAVulns = true;
         document.getElementById("showGHSAVulnsConfig").checked = true;
+    }
+    if (localStorage.getItem('showPatchedVulns') == 'true') {
+        showPatchedVulns = true;
+        document.getElementById("showPatchedVulnsConfig").checked = true;
     }
     if (localStorage.getItem('showTableFiltering') == 'true') {
         showTableFiltering = true;

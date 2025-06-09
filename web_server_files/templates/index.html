@@ -67,6 +67,16 @@
                 </div>
                 <div class="form-control">
                     <label class="label cursor-pointer gap-4">
+                        <span class="label-text">Show Patched &nbsp;<span class="text-warning">beta <i class="fa-solid fa-flask"></i></i></i></span> &nbsp;<div class="tooltip"
+                                data-tip="Show vulnerabilities considered (back)patched when additional environment information is provided.">
+                                <i class="fas fa-info-circle text-content"></i>
+                            </div></span>
+                        <input id="showPatchedVulnsConfig" type="checkbox" class="checkbox"
+                            onclick="changeSearchConfig(this)" />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-4">
                         <span class="label-text">Display table filtering &nbsp;<div class="tooltip tooltip-bottom"
                                 data-tip="Choose whether the filtering of vulnerabilities and table columns should be displayed or only affect the export.">
                                 <i class="fas fa-info-circle text-content"></i>
