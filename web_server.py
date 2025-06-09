@@ -15,7 +15,12 @@ from modules.cpe_search.cpe_search.database_wrapper_functions import (
     get_connection_pools,
 )
 from modules.utils import get_database_connection
-from search_vulns import VERSION_FILE, _load_config, search_product_ids
+from search_vulns import (
+    VERSION_FILE,
+    _load_config,
+    check_and_try_sv_rerun_with_created_cpes,
+    search_product_ids,
+)
 from search_vulns import search_vulns as search_vulns_call
 from search_vulns import serialize_vulns_in_result
 
@@ -243,6 +248,12 @@ def search_vulns():
     else:
         include_patched = False
 
+    use_created_product_ids = request.args.get("use-created-product-ids")
+    if use_created_product_ids and use_created_product_ids.lower() == "true":
+        use_created_product_ids = True
+    else:
+        use_created_product_ids = False
+
     # search for vulns either via previous cpe_search results or user's query
     productids = PRODUCTID_SEARCH_CACHE.get(query.lower(), ({}, {}))[0]
 
@@ -259,6 +270,17 @@ def search_vulns():
     )
     query_lower = query.lower()
     PRODUCTID_SEARCH_CACHE[query_lower] = vulns["product_ids"], vulns["pot_product_ids"]
+
+    if use_created_product_ids:
+        _, vulns = check_and_try_sv_rerun_with_created_cpes(
+            query,
+            vulns,
+            ignore_general_product_vulns,
+            include_single_version_vulns,
+            include_patched,
+            use_created_product_ids,
+            config,
+        )
 
     if vulns is None:
         vulns = {}

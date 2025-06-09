@@ -427,6 +427,63 @@ def search_vulns(
     return results
 
 
+def check_and_try_sv_rerun_with_created_cpes(
+    query,
+    sv_result,
+    ignore_general_product_vulns,
+    include_single_version_vulns,
+    include_patched,
+    use_created_product_ids,
+    config,
+):
+    """On bad result, rerun with created CPEs if possible"""
+
+    # check if result is good, i.e. vulns or product IDs were found
+    all_product_ids = []
+    for pids in sv_result["product_ids"].values():
+        all_product_ids += pids
+
+    is_good_result = True
+    if not sv_result["vulns"]:
+        if not all_product_ids:
+            is_good_result = False
+        else:
+            # small sanity check on retrieved CPE
+            check_str = sv_result["product_ids"]["cpe"][0][8:]
+            if any(char.isdigit() for char in query) and not any(
+                char.isdigit() for char in check_str
+            ):
+                is_good_result = False
+
+    # if a good product ID couldn't be found, use a created one if configured and appropriate
+    if (
+        not is_good_result
+        and sv_result["pot_product_ids"].get("cpe", [])
+        and use_created_product_ids
+    ):
+        created_cpe = None
+        for pot_cpe in sv_result["pot_product_ids"]["cpe"]:
+            if cpe_matches_query(pot_cpe[0], query):
+                created_cpe = pot_cpe[0]
+                is_good_result = True
+                break
+
+        if is_good_result:
+            sv_result = search_vulns(
+                created_cpe,
+                None,
+                None,
+                None,
+                False,
+                ignore_general_product_vulns,
+                include_single_version_vulns,
+                include_patched,
+                config,
+            )
+
+    return is_good_result, sv_result
+
+
 def serialize_vulns_in_result(result):
     """Serialize the vulnerabilities in the provided result."""
 
@@ -586,50 +643,18 @@ def main():
         )
 
         # check if result is good, i.e. vulns or product IDs were found
+        is_good_result, sv_result = check_and_try_sv_rerun_with_created_cpes(
+            query,
+            sv_result,
+            args.ignore_general_product_vulns,
+            args.include_single_version_vulns,
+            args.include_patched,
+            args.use_created_product_ids,
+            config,
+        )
         all_product_ids = []
         for pids in sv_result["product_ids"].values():
             all_product_ids += pids
-
-        is_good_result = True
-        if not sv_result["vulns"]:
-            if not all_product_ids:
-                is_good_result = False
-            else:
-                # small sanity check on retrieved CPE
-                check_str = sv_result["product_ids"]["cpe"][0][8:]
-                if any(char.isdigit() for char in query) and not any(
-                    char.isdigit() for char in check_str
-                ):
-                    is_good_result = False
-
-        # if a good product ID couldn't be found, use a created one if configured and appropriate
-        if (
-            not is_good_result
-            and sv_result["pot_product_ids"].get("cpe", [])
-            and args.use_created_product_ids
-        ):
-            created_cpe = None
-            for pot_cpe in sv_result["pot_product_ids"]["cpe"]:
-                if cpe_matches_query(pot_cpe[0], query):
-                    created_cpe = pot_cpe[0]
-                    is_good_result = True
-                    break
-
-            if is_good_result:
-                sv_result = search_vulns(
-                    created_cpe,
-                    None,
-                    None,
-                    None,
-                    False,
-                    args.ignore_general_product_vulns,
-                    args.include_single_version_vulns,
-                    args.include_patched,
-                    config,
-                )
-                all_product_ids = []
-                for pids in sv_result["product_ids"].values():
-                    all_product_ids += pids
 
         if not is_good_result:
             if args.format.lower() == "txt":
