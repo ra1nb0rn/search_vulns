@@ -2097,6 +2097,19 @@ html {
   margin-inline-start: calc(var(--border-btn) * -1);
 }
 
+.link-primary {
+  --tw-text-opacity: 1;
+  color: var(--fallback-p,oklch(var(--p)/var(--tw-text-opacity)));
+}
+
+@supports (color:color-mix(in oklab,black,black)) {
+  @media (hover:hover) {
+    .link-primary:hover {
+      color: color-mix(in oklab,var(--fallback-p,oklch(var(--p)/1)) 80%,black);
+    }
+  }
+}
+
 .link:focus {
   outline: 2px solid transparent;
   outline-offset: 2px;
@@ -2776,10 +2789,6 @@ html {
 
 .ml-6 {
   margin-left: 1.5rem;
-}
-
-.ml-9 {
-  margin-left: 2.25rem;
 }
 
 .mr-1 {

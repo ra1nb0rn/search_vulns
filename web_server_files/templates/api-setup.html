@@ -26,7 +26,7 @@
         <div class="mt-3" id="genTokenResponse">
         </div>
     </div>
-    <div class="text-center mt-4">
+    <div class="text-center mt-5">
         <h3 class="text-xl font-bold">Configure an API Key for Use in This Browser</h3>
     </div>
     <div class="mt-1">
@@ -43,31 +43,15 @@
             <button class="btn btn-error ml-2" onclick="deleteAPIKeyFromBrowser()">Clear Saved Key</button>
         </div>
     </div>
-    <div class="text-center mt-4">
+    <div class="text-center mt-5">
         <h3 class="text-xl font-bold">API Documentation</h3>
     </div>
     <div class="mt-1">
-        Unfortunately, there is no proper API documentation available yet. However, the application's frontend
-        uses all underlying API endpoints. This means you can observe how they work. Currently, the following four
-        API endpoints exist:
-        <div class="ml-9 mt-3">
-            <ul class="list-disc text-left">
-                <li class="m-1"><code class="bg-base-300 p-1">/api/search-vulns</code> : Search for known
-                    vulnerabilities via product name + version or CPE 2.3 string.</li>
-                <li class="m-1"><code class="bg-base-300 p-1">/api/cpe-suggestions</code> : Search for possible CPEs
-                    via product name + version.</li>
-                <li class="m-1"><code class="bg-base-300 p-1">/api/check-key-status</code> : Check the status of
-                    your API key.</li>
-                <li class="m-1"><code class="bg-base-300 p-1">/api/version</code> : Check the current version of the
-                    application and its resources.</li>
-            </ul>
-        </div>
-        <div class="mt-3">
-            When making requests to the API, you should include your key via an <code>API-Key</code> header,
-            e.g. <code class="bg-base-300 p-1">API-Key: test</code>
-        </div>
+        You can download search_vulns' OpenAPI specification <a class="link link-primary" href="/api/documentation">here</a>.
+        The app's frontend uses all API endpoints, meaning you can observe how they work here as well.
+        When making requests to the API, you should include your key via an <code class="text-sm">API-Key</code> header, e.g. <code class="text-sm bg-base-300 p-1 rounded">API-Key: test</code>.
     </div>
-    <div class="text-center mt-4">
+    <div class="text-center mt-5">
         <h3 class="text-xl font-bold">Check Status of API Key</h3>
     </div>
     <div class="mt-1">
@@ -85,7 +69,7 @@
         <div class="mt-2 text-center" id="check-api-key-result">
         </div>
     </div>
-    <div class="text-center mt-4">
+    <div class="text-center mt-5">
         <h3 class="text-xl font-bold">Check search_vulns Version</h3>
     </div>
     <div class="mt-2 mb-8 flex justify-center" id="search-vulns-version-content">

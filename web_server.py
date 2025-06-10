@@ -9,7 +9,7 @@ import uuid
 
 import markdown
 import requests
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from modules.cpe_search.cpe_search.database_wrapper_functions import (
     get_connection_pools,
@@ -442,6 +442,11 @@ def check_api_key_status():
         return {"status": "Key does not exist in DB"}
     else:
         return {"status": result[0][0]}
+
+
+@app.route("/api/documentation")
+def api_documentation():
+    return send_from_directory(STATIC_FOLDER, "search_vulns_openapi.yaml")
 
 
 @app.route("/news")

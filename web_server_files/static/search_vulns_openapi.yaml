@@ -1,0 +1,430 @@
+openapi: 3.0.4
+info:
+  title: search_vulns - OpenAPI 3.0
+  description: |-
+    This documents search_vulns' API for vulnerability search and product ID retrieval.
+
+    Some useful links:
+    - [Generate an API key](https://search-vulns.com/api/setup)
+    - [GitHub repository of search_vulns](https://github.com/ra1nb0rn/search_vulns/)
+    - [Public website and database](https://search-vulns.com/)
+    - [Changelog & news](https://search-vulns.com/news)
+  termsOfService: https://search-vulns.com/legal-notice
+  contact:
+    name: Feedback Form
+    url: https://tally.so/r/nW0qjL
+  license:
+    name: MIT
+    url: https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE
+  version: 0.6.6
+servers:
+  - url: https://search-vulns.com/api/
+paths:
+  /version:
+    get:
+      summary: Get current version of search_vulns instance
+      responses:
+        '200':
+          description: Successful esponse contains version and datetime of latest database update.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                    description: Version of this search_vulns instance
+                  last_db_update:
+                    type: string
+                    description: Human readable date of latest database update
+                  last_db_update_ts:
+                    type: number
+                    format: double
+                    description: Epoch timestamp of latest database update
+              example:
+                last_db_update: Tue, 10 Jun 2025 06:03:45 GMT
+                last_db_update_ts: 1749535425.4234664
+                version: 0.6.6
+  /check-key-status:
+    post:
+      summary: Check status of an API Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+              properties:
+                key:
+                  type: string
+                  description: The API key to check the status of
+      responses:
+        '200':
+          description: On success, a message of the provided key's status is returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    description: Textual status of the provided key
+              examples:
+                keyValid:
+                  summary: Provided key is valid
+                  value:
+                    status: valid
+                keyRevoked:
+                  summary: Provided key was revoked
+                  value:
+                    status: Revoked - too many requests - send feedback if genuine request.
+                noKeyProvided:
+                  summary: No key was provided
+                  value:
+                    status: No key was provided
+                keyDoesNotExist:
+                  summary: Provided key does not exist in database
+                  value:
+                    status: Key does not exist in DB
+  /product-id-suggestions:
+    get:
+      summary: Retrieve possible product IDs for the provided query
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: query
+          in: query
+          description: Product and version to search product IDs for
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: On success, possible product IDs are returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductIDSearchResponse'
+              examples:
+                basicExample:
+                  summary: Retrieved product IDs for "jquery 2.1.3"
+                  value:
+                    cpe:
+                      - ["cpe:2.3:a:jquery:jquery:2.1.3:*:*:*:*:*:*:*", 0.9919023838421461]
+                      - ["cpe:2.3:a:jquery:jquery:2.1.3:*:*:*:*:node.js:*:*", 0.882450818658909]
+                      - ["cpe:2.3:a:jquery:jquery:-:*:*:*:*:*:*:*", 0.7889609186783934]
+                      - ["cpe:2.3:a:jquery:jquery:*:*:*:*:*:node.js:*:*", 0.7258247616391765]
+                  x-query: "query=jquery+2.1.3"
+        '400':
+          description: No query provided
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "No query provided"
+        '403':
+          description: Permission denied
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                KeyUnknown:
+                  summary: "Provided API key is unknown"
+                  value: API key is unknown
+                KeyInvalid:
+                  summary: "Provided API key is invalid / revoked"
+                  value: "API key is invalid, key status: revoked"
+                KeyRateLimit:
+                  summary: "Provided API key has run into rate limit"
+                  value: "Too many requests with this API key. Try again in a couple of minutes."
+        '413':
+          description: Query too long
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Query length is limited to 256 characters."
+  /search-vulns:
+    get:
+      summary: Retrieve vulnerabilities for provided query (product name and version or product ID)
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: query
+          in: query
+          description: Product name and version or product ID to search vulnerabilities for
+          required: true
+          schema:
+            type: string
+        - name: ignore-general-product-vulns
+          in: query
+          description: If "true", not return vulnerabilities affecting the general product, i.e. "cpe:2.3:a:jquery:jquery:-:\*:\*:\*:\*:\*:\*:\*"
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: include-single-version-vulns
+          in: query
+          description: "If \"true\", include vulnerabilities which only affect a single version later than the queried one. Example: The NVD states that only RosarioSIS 6.7.2 is affected by CVE-2020-15716, but in this case, earlier version are affected as well."
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: is-good-product-id
+          in: query
+          description: "If \"true\", the provided product ID in the query as correct and do not perform any kind of transformation or addition of equivalent or deprecated product IDs."
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: include-patched
+          in: query
+          description: "If \"true\", include vulnerabilities which are considered fixed / backpatched in the provided environment into the results. E.g. CVE-2023-44487 is fixed in \"nginx 1.24.0-3 Debian Trixie\""
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: use-created-product-ids
+          in: query
+          description: "If \"true\", use the created / potential product ID with the highest confidence score to search for vulnerabilities automatically in case a sufficiently good match could not be found beforehand."
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Response containing product IDs and vulnerabilities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VulnSearchApiResponse'
+              examples:
+                BasicExample:
+                  summary: "Search vulns results for nginx 1.12.0, including general, single version and patched vulns"
+                  x-query: "query=cpe:2.3:a:nginx:nginx:1.27.0:*:*:*:*:*:*:*&is-good-product-id=false&include-single-version-vulns=true&include-patched=true"
+                  value:
+                    pot_product_ids:
+                      cpe:
+                        - ["cpe:2.3:a:nginx:nginx:1.27.0:*:*:*:*:*:*:*", 1]
+                    product_ids:
+                      cpe:
+                        - "cpe:2.3:a:nginx:nginx:1.27.0:*:*:*:*:*:*:*"
+                        - "cpe:2.3:a:igor_sysoev:nginx:1.27.0:*:*:*:*:*:*:*"
+                        - "cpe:2.3:a:f5:nginx:1.27.0:*:*:*:*:*:*:*"
+                        - "cpe:2.3:a:f5:nginx_open_source:1.27.0:*:*:*:*:*:*:*"
+                    version_status:
+                      latest: "1.28.0"
+                      ref: "https://endoflife.date/nginx"
+                      status: "outdated"
+                    vulns:
+                      CVE-2024-7347:
+                        aliases:
+                          CVE-2024-7347: "https://nvd.nist.gov/vuln/detail/CVE-2024-7347"
+                        cisa_known_exploited: false
+                        cvss: "5.7"
+                        cvss_vec: "CVSS:4.0/AV:L/AC:H/AT:P/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+                        cvss_ver: "4.0"
+                        description: >
+                          NGINX Open Source and NGINX Plus have a vulnerability in the ngx_http_mp4_module,
+                          which might allow an attacker to over-read NGINX worker memory resulting in its termination,
+                          using a specially crafted mp4 file. The issue only affects NGINX if it is built with the
+                          ngx_http_mp4_module and the mp4 directive is used in the configuration file. Additionally,
+                          the attack is possible only if an attacker can trigger the processing of a specially crafted
+                          mp4 file with the ngx_http_mp4_module.  Note: Software versions which have reached End of
+                          Technical Support (EoTS) are not evaluated.
+                        epss: 0.00063
+                        exploits: []
+                        id: "CVE-2024-7347"
+                        match_reason: "product_match"
+                        match_sources:
+                          - "nvd"
+                        misc: {}
+                        modified: "2025-01-22T16:10:28Z"
+                        published: "2024-08-14T15:15:31Z"
+                        reported_patched_by: []
+                        tracked_by:
+                          - "nvd"
+                      CVE-2025-23419:
+                        aliases:
+                          CVE-2025-23419: "https://nvd.nist.gov/vuln/detail/CVE-2025-23419"
+                        cisa_known_exploited: false
+                        cvss: "5.3"
+                        cvss_vec: "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+                        cvss_ver: "4.0"
+                        description: >
+                          When multiple server blocks are configured to share the same IP address and port,
+                          an attacker can use session resumption to bypass client certificate authentication
+                          requirements on these servers. This vulnerability arises when  TLS Session Tickets
+                          https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_ticket_key  are
+                          used and/or the  SSL session cache https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_cache
+                          are used in the default server and the default server is performing client certificate
+                          authentication.  Note: Software versions which have reached End of Technical Support (EoTS) are not evaluated.
+                        epss: 0.00082
+                        exploits: []
+                        id: "CVE-2025-23419"
+                        match_reason: "general_product_uncertain"
+                        match_sources:
+                          - "nvdpp"
+                        misc: {}
+                        modified: "2025-02-05T20:15:45Z"
+                        published: "2025-02-05T18:15:33Z"
+                        reported_patched_by: []
+                        tracked_by:
+                          - "nvdpp"
+        '400':
+          description: No query provided
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "No query provided"
+        '403':
+          description: Permission denied
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                KeyUnknown:
+                  summary: "Provided API key is unknown"
+                  value: API key is unknown
+                KeyInvalid:
+                  summary: "Provided API key is invalid / revoked"
+                  value: "API key is invalid, key status: revoked"
+                KeyRateLimit:
+                  summary: "Provided API key has run into rate limit"
+                  value: "Too many requests with this API key. Try again in a couple of minutes."
+        '413':
+          description: Query too long
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Query length is limited to 256 characters."
+components:  
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: API-Key
+  schemas:
+    ProductIDSearchItem:
+      type: array
+      items:
+        oneOf:
+          - type: string
+          - type: number
+            format: double
+
+    ProductIDSearchResponse:
+      type: object
+      properties:
+        cpe:
+          type: array
+          description: List of retrieved product IDs (here CPEs) with confidence scores between 0 and 1
+          items:
+            $ref: '#/components/schemas/ProductIDSearchItem'
+      required:
+        - cpe
+    Vulnerability:
+      type: object
+      properties:
+        aliases:
+          type: object
+          additionalProperties:
+            type: string
+        cisa_known_exploited:
+          type: boolean
+        cvss:
+          type: string
+        cvss_vec:
+          type: string
+        cvss_ver:
+          type: string
+        description:
+          type: string
+        epss:
+          type: number
+          format: float
+        exploits:
+          type: array
+          items: {}
+        id:
+          type: string
+        match_reason:
+          type: string
+        match_sources:
+          type: array
+          items:
+            type: string
+        misc:
+          type: object
+          additionalProperties: true
+        modified:
+          type: string
+          format: date-time
+        published:
+          type: string
+          format: date-time
+        reported_patched_by:
+          type: array
+          items: {}
+        tracked_by:
+          type: array
+          items:
+            type: string
+
+    PotProductIds:
+      type: object
+      properties:
+        cpe:
+          type: array
+          items:
+            type: array
+            items:
+              oneOf:
+                - type: string
+                - type: number
+
+    ProductIds:
+      type: object
+      properties:
+        cpe:
+          type: array
+          items:
+            type: string
+
+    VersionStatus:
+      type: object
+      properties:
+        latest:
+          type: string
+        ref:
+          type: string
+          format: uri
+        status:
+          type: string
+
+    Vulns:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/Vulnerability'
+
+    VulnSearchApiResponse:
+      type: object
+      properties:
+        pot_product_ids:
+          $ref: '#/components/schemas/PotProductIds'
+        product_ids:
+          $ref: '#/components/schemas/ProductIds'
+        version_status:
+          $ref: '#/components/schemas/VersionStatus'
+        vulns:
+          $ref: '#/components/schemas/Vulns'
+      required:
+        - pot_product_ids
+        - product_ids
+        - vulns
