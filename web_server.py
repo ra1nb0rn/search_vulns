@@ -22,7 +22,9 @@ from search_vulns import (
     search_product_ids,
 )
 from search_vulns import search_vulns as search_vulns_call
-from search_vulns import serialize_vulns_in_result
+from search_vulns import (
+    serialize_vulns_in_result,
+)
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))

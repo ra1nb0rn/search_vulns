@@ -555,6 +555,24 @@ class TestSearches(unittest.TestCase):
         ]
         self.assertEqual(set(expected_cves), set(result_cves))
 
+    def test_apache_oracle_http(self):
+        # check that only subversions of "apache http" and "oracle http" are
+        # considered equal and not the entire product
+        self.maxDiff = None
+        query = "cpe:2.3:a:apache:http_server:11.1.1.9.0:*:*:*:*:*:*:*"
+        result = search_vulns.search_vulns(query=query)
+        result_cves = [
+            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
+        ]
+        self.assertIn("CVE-2013-2566", result_cves)
+
+        query = "cpe:2.3:a:apache:http_server:*:*:*:*:*:*:*:*"
+        result = search_vulns.search_vulns(query=query)
+        result_cves = [
+            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
+        ]
+        self.assertNotIn("CVE-2013-2566", result_cves)
+
 
 if __name__ == "__main__":
     unittest.main()
