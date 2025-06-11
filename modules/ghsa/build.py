@@ -92,6 +92,16 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                         if "last_affected" in event and not fixed:
                             fixed = event["last_affected"]
                             is_version_end_incl = True
+
+                        # strip alpha/beta information, b/c it cannot be mapped consistently
+                        # and non-contradictory, e.g., GHSA-p6gg-5hf4-4rgj and GHSA-6hh7-46r2-vf29
+                        if "-alpha" in introduced or "-beta" in introduced:
+                            introduced = introduced.split("-", maxsplit=1)[0]
+                        if "-alpha" in fixed or "-beta" in fixed:
+                            fixed = fixed.split("-", maxsplit=1)[0]
+                        if fixed == introduced:
+                            continue
+
                     if not fixed:
                         db_specific_fixed = pkg.get("database_specific", {}).get(
                             "last_known_affected_version_range", ""
