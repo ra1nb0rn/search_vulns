@@ -664,12 +664,12 @@ function searchVulns(query, url_query, recaptcha_response) {
             var productIDs = search_results.product_ids;
             productIDs = Object.values(productIDs).flatMap(pids => pids);
 
-            if (typeof Object.values(search_results)[0] !== "object" || productIDs.length == 0) {
+            if (typeof Object.values(search_results)[0] !== "object") {
                 search_display_html = `<h5 class="text-error text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
                 queryError = true;
             }
             else {
-                if (productIDs != undefined && productIDs.length != 0 || search_results.vulns.length != 0) {
+                if ((productIDs != undefined && productIDs.length != 0) || Object.keys(search_results.vulns).length != 0) {
                     curVulnData = search_results.vulns;
                     search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)}`;
                     if (productIDs.length > 0 && productIDs[0].length > 0)  // show product ID (when searching for just vuln IDs there is none)
