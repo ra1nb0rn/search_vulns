@@ -316,6 +316,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2023-44402": "GHSA-7m48-wc93-9g85",
             "CVE-2023-29198": "GHSA-p7v2-p9m8-qqg7",
             "CVE-2023-39956": "GHSA-7x97-j373-85x5",
+            "CVE-2022-36077": "GHSA-p2jh-44qj-pf2v",
             "GHSA-qqvq-6xgj-jw8g": {
                 "published": "2023-09-28 18:30:45",
                 "cvss_ver": "3.1",
@@ -331,7 +332,7 @@ class TestSearches(unittest.TestCase):
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
             for vuln_id in expected_vulns
         ]
-        expected_not_matching = {"CVE-2022-36077": "GHSA-p2jh-44qj-pf2v"}
+        expected_not_matching = {}
         actual_ghsa_vulns = []
         actual_not_matching = {}
 
