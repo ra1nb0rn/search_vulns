@@ -187,16 +187,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2024-22262": "GHSA-2wrp-6fg6-hmc5",
             "CVE-2024-22243": "GHSA-ccgv-vj62-xf9h",
             "CVE-2024-22259": "GHSA-hgjh-9rj2-g67j",
-            "GHSA-9cmq-m9j5-mvww": {
-                "published": "2024-08-20 09:30:28",
-                "cvss_ver": "3.1",
-                "cvss": "4.3",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:L",
-                "aliases": {
-                    "CVE-2024-38808": "https://nvd.nist.gov/vuln/detail/CVE-2024-38808",
-                    "GHSA-9cmq-m9j5-mvww": "https://github.com/advisories/GHSA-9cmq-m9j5-mvww",
-                },
-            },
+            "CVE-2024-38808": "GHSA-9cmq-m9j5-mvww",
             "CVE-2024-38809": "GHSA-2rmj-mq67-h97g",
             "GHSA-cx7f-g6mp-7hqm": {
                 "published": "2024-09-13 06:30:42",
@@ -327,6 +318,7 @@ class TestSearches(unittest.TestCase):
                     "GHSA-qqvq-6xgj-jw8g": "https://github.com/advisories/GHSA-qqvq-6xgj-jw8g",
                 },
             },
+            "CVE-2024-46993": "GHSA-6r2x-8pq8-9489",
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
@@ -733,6 +725,16 @@ class TestSearches(unittest.TestCase):
                 "aliases": {
                     "CVE-2024-4028": "https://nvd.nist.gov/vuln/detail/CVE-2024-4028",
                     "GHSA-q4xq-445g-g6ch": "https://github.com/advisories/GHSA-q4xq-445g-g6ch",
+                },
+            },
+            "GHSA-gj52-35xm-gxjh": {
+                "published": "2025-07-10 15:31:30",
+                "cvss_ver": "3.1",
+                "cvss": "5.4",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:H/I:L/A:N",
+                "aliases": {
+                    "CVE-2025-7365": "https://nvd.nist.gov/vuln/detail/CVE-2025-7365",
+                    "GHSA-gj52-35xm-gxjh": "https://github.com/advisories/GHSA-gj52-35xm-gxjh",
                 },
             },
         }

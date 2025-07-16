@@ -899,6 +899,13 @@ class TestSearches(unittest.TestCase):
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:L/A:L",
                 "cisa_known_exploited": False,
             },
+            "CVE-2024-55466": {
+                "published": "2025-05-12 19:15:48",
+                "cvss_ver": "3.1",
+                "cvss": "6.5",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+                "cisa_known_exploited": False,
+            },
         }
 
         for vuln_id, vuln in result["vulns"].items():
