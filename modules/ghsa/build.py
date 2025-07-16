@@ -29,7 +29,12 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 GHSA_GITHUB_REPO = "https://github.com/github/advisory-database"
 GHSA_GITHUB_DIR = os.path.join(SCRIPT_DIR, "ghsa-database")
 GHSA_HARDCODED_MATCHES_FILE = os.path.join(SCRIPT_DIR, "ghsa_hardcoded_matches.json")
-DIFFICULT_PACKAGE_PREFIXES = ["github.com/go", "github.com/microsoft/go", "microsoft/microsoft"]
+DIFFICULT_PACKAGE_PREFIXES = [
+    "github.com/go",
+    "github.com/microsoft/go",
+    "microsoft/microsoft",
+    "python-",
+]
 LOGGER = logging.getLogger()
 
 
@@ -229,7 +234,7 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
 
 def complete_pname_cpe_map(pname_cpe_map, ghsa_no_cpe_yet, productdb_config):
     """If a CPE couldn't be found by comparing a product name with the NVD's
-    # CPEs for the same vulnerbility, use cpe_search to attempt finding a CPE."""
+    CPEs for the same vulnerbility, use cpe_search to attempt finding a CPE."""
 
     productdb_conn = get_database_connection(productdb_config, sqlite_timeout=SQLITE_TIMEOUT)
     productdb_cursor = productdb_conn.cursor()
