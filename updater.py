@@ -214,7 +214,8 @@ def update(config):
         return False, []
 
     # convert downloaded SQLite DBs to MariaDB if necessary
-    print("[+] Migrating core databases from SQLite to MariaDB")
+    if config[db]["TYPE"] == "mariadb":
+        print("[+] Migrating core databases from SQLite to MariaDB")
     for db in ("PRODUCT_DATABASE", "VULN_DATABASE"):
         if config[db]["TYPE"] == "mariadb":
             # write DB network address and credentials to secure config file
