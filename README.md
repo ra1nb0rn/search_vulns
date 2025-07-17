@@ -120,7 +120,7 @@ Here are some examples:
 
 
 ## Modularity
-search_vulns' search engine is designed in a modular manner. Therefore, new databases can be integrated easily. For example, modules can help in finding product IDs, vulnerabilities, extra information about vulnerabilities and extra information about the queried product. Examples for the latter two are CVSS scores or software recency information. Furthermore, modules can classify identified vulnerabilities as patched if they manage special information related to the query, for example.
+search_vulns' search engine is designed in a modular manner. Therefore, new databases can be integrated easily. For example, modules can help in finding product IDs, vulnerabilities, extra information about vulnerabilities and extra information about the queried product. Examples of the latter two are CVSS scores or software recency information. Furthermore, modules can classify identified vulnerabilities as patched if they store and utilize special information related to the query, for example.
 
 Have a look at the template module to get started writing your own modules: [``modules/template/search_vulns_template.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/modules/template/search_vulns_template.py).
 
