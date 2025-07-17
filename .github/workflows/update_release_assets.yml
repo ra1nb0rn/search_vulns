@@ -19,10 +19,13 @@ jobs:
       - name: Install tool
         run: ./install.sh --no-resources
       - name: Build product and vulnerability databases
+        id: build
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
           VULNCHECK_API_KEY: ${{ secrets.VULNCHECK_API_KEY }}
-        run: ./search_vulns.py --full-update -a | tail -n 1 | jq -r '.[]' > /tmp/artifacts.txt
+        run: |
+          ARTIFACTS_JSON=$(./search_vulns.py --full-update -a | tail -n 1)
+          echo "artifacts=$ARTIFACTS_JSON" >> "$GITHUB_OUTPUT"
       - name: Test everything is working
         run: python3 ./search_vulns.py -q 'jquery 2.1.3' | grep 'CVE-2020-11022'
       # Do not perform actual tests here, since they become outdated rather quickly
@@ -40,6 +43,17 @@ jobs:
       #   run: python3 ./tests/test_ghsa_completeness.py
       # - name: Test Vuln ID Search Correctness
       #   run: python3 ./tests/test_vuln_id_search.py
+      - name: Collect dynamic artifact files
+        run: |
+          mkdir -p release-artifacts
+          files=$(echo '${{ steps.build.outputs.artifacts }}' | jq -r '.[]')
+          for f in $files; do
+            if [ -f "$f" ]; then
+              ln -s "$f" release-artifacts/
+            else
+              echo "Warning: file '$f' does not exist"
+            fi
+          done
       - name: Get latest release tag
         run: |
           LATEST_TAG=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/ra1nb0rn/search_vulns/releases/latest | jq -r '.tag_name')
@@ -50,4 +64,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.LATEST_RELEASE_TAG }}
           files: |
-            $(cat /tmp/artifacts.txt)
+            resources/productdb.db3
+            resources/vulndb.db3
+            release-artifacts/**
