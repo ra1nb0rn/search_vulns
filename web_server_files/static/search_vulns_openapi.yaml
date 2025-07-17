@@ -25,7 +25,7 @@ paths:
       summary: Get current version of search_vulns instance
       responses:
         '200':
-          description: Successful esponse contains version and datetime of latest database update.
+          description: Successful response contains version and datetime of latest database update.
           content:
             application/json:
               schema:

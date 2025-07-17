@@ -196,7 +196,6 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
         full_update_async(productdb_config, vulndb_config, module_config, stop_update)
     )
     if error:
-        stop_update.set()
         LOGGER.error(error)
         return False, []
     else:

@@ -241,7 +241,6 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
     )
     if error:
         LOGGER.error(error)
-        stop_update.set()
         return False, []
     else:
         return True, []
