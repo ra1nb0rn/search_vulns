@@ -1,6 +1,25 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.7.0 - 2025-07-17
+### Added
+- search_vulns is now modular.
+- Concept of considering vulnerabilities fixed, e.g. by backpatches.
+- Included Debian Security Tracker data for backpatch information.
+- Added EPSS score to vulnerability information.
+- Extended "--use-created-product-ids" from CLI to web app API.
+- Added proper openapi.yaml API documentation to web app.
+
+### Changed
+- Major rework of search_vulns' internal structure. **New install is recommended.**
+- Deprecated CPEs are sometimes only considered for specific subversions and not the entire product.
+
+### Fixed
+- Updated test cases.
+- Skip Python subpackages in GHSA data because they cannot be processed properly, yet.
+- Ignore alpha and beta information in GHSA data because of inconsistencies.
+
+
 ## v0.6.6 - 2025-05-08
 ### Added
 - Added a few more hardcoded product <-> CPE matches.
