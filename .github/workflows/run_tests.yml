@@ -16,8 +16,8 @@ jobs:
         id: changes
         with:
           filters: |
-            db_build_code_changed:
-              - 'db_build/**'
+            build_code_changed:
+              - 'updater.py'
 
       - name: Set up Python and Pip
         uses: actions/setup-python@v5
