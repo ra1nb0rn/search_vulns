@@ -38,9 +38,7 @@ jobs:
       - name: Install tool and pull resources from release
         if: steps.changes.outputs.build_code_changed == 'false'
         run: |
-          pip3 install -r requirements.txt
-          git submodule init
-          git submodule update
+          ./install.sh --no-resources
           ./search_vulns.py -u
 
       - name: Test CVE Completeness
