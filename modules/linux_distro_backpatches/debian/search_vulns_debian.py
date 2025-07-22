@@ -129,7 +129,7 @@ def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, conf
 
         for cpe in cpes:
             cpe_parts = cpe.split(":")
-            if "debian" not in cpe_parts[12]:
+            if len(cpe_parts) < 13 or "debian" not in cpe_parts[12]:
                 new_cpes.append(cpe)
                 continue
 
