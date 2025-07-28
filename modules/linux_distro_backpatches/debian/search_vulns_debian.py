@@ -17,7 +17,7 @@ DEBIAN_VERSION_RE = re.compile(
     r"\b(\d[\w\.\-]+[+~](\d+|dfsg(\.\d)*|ds(\.\d)*|deb\d+u+\d+|git[a-fA-F\d]+)(-[\d+\.]+)?)"
 )
 SIMPLE_VERSION_RE = re.compile(r"\b(\d[\w\.\-]+(-[\d\.]+)?)")
-SUBVERSION_RE = re.compile(r".*(-[\d\.]+)$")
+SUBVERSION_RE = re.compile(r".*(-[\d\.]+)?$")
 INIT_LOCK = Lock()
 
 
@@ -112,7 +112,8 @@ def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, conf
             subversion_match = SUBVERSION_RE.match(simple_version)
             if subversion_match:
                 extra_params["debian_subversion"] = simple_version
-                simple_version = simple_version[: simple_version.rfind("-")]
+                if '-' in simple_version:
+                    simple_version = simple_version[: simple_version.rfind("-")]
             extra_params["debian_provided_version"] = simple_version
             query_no_debian = query_no_debian.replace(debian_version, simple_version)
 
@@ -164,7 +165,7 @@ def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, conf
             # extract info about version and replace it with non-debian version
             extra_params["debian_subversion"] = cpe_parts[5]
             subversion_match = SUBVERSION_RE.match(cpe_parts[5])
-            if subversion_match:
+            if subversion_match and '-' in cpe_parts[5]:
                 cpe_parts[5] = cpe_parts[5][: cpe_parts[5].rfind("-")]
             extra_params["debian_provided_version"] = cpe_parts[5]
             new_cpes.append(":".join(cpe_parts))
