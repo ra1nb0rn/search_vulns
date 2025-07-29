@@ -1,6 +1,13 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.7.2 - 2025-07-29
+### Fixed
+- Updated test cases.
+- Fix bug when supplying non-subpatch version string in Debian query.
+- Fix bug when supplying short CPE strings.
+
+
 ## v0.7.1 - 2025-07-18
 ### Fixed
 - Fixed GitHub workflow files.
