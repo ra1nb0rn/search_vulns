@@ -223,9 +223,9 @@ def search_product_ids(
         pot_cpes = cpe_search_results.get("pot_cpes", [])
     else:
         cpe = query
-        cpe_parts = cpe.split(':')
+        cpe_parts = cpe.split(":")
         if len(cpe_parts) < 13:
-            cpe = cpe + (13-len(cpe_parts)) * ':*'
+            cpe = cpe + (13 - len(cpe_parts)) * ":*"
         pot_cpes = [(cpe, 1)]
 
     # get equivalent CPEs
