@@ -11,6 +11,7 @@ from vulnerability import MatchReason, Vulnerability
 MATCH_CVE_IDS_RE = re.compile(
     r"(CVE-[0-9]{4}-[0-9]{4,19})"
 )  # Source: https://cveproject.github.io/cve-schema/schema/docs/#oneOf_i0_cveMetadata_cveId
+DESCR_VERSION_MATCH_RE = re.compile(r"\d\.[\d\w\.]+")
 
 
 def get_detailed_vulns(vulns, vuln_db_cursor):
@@ -110,7 +111,7 @@ def search_vulns(query, product_ids, vuln_db_cursor, config, extra_params):
                         )
                         if version_beginning:
                             version = version_beginning.group(1)
-                    if version:
+                    if version and DESCR_VERSION_MATCH_RE.match(version):
                         if cpe_version < CPEVersion(version):
                             vulns.append((cve_id, MatchReason.DESCRIPTION_MATCH))
 
