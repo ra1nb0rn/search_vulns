@@ -20,6 +20,7 @@ Using the *search_vulns* tool, this local information can be queried, either by 
 
 ## Quick Links
 * Public instance of the web server: [https://search-vulns.com](https://search-vulns.com)
+* [Black Hat Arsenal recorded demo](https://search-vulns.com/static/video/SearchVulnsBlackHatDemo.mp4)
 * [The Surprising Complexity of Finding Known Vulnerabilities](https://search-vulns.com/blog-post/1) - A blog post detailing the challenges and motivations behind search_vulns.
 * [search_vulns: Simplifying the Surprising Complexity of Finding Known Vulnerabilities](https://search-vulns.com/blog-post/2) - A blog post introducing search_vulns and describing its features.
 * [search_vulns: A Deep Dive into its Technologies and Approaches](https://search-vulns.com/blog-post/3) - A blog post detailing how search_vulns works on a technical level, including its novel approaches.
