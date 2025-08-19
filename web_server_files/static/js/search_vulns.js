@@ -251,8 +251,8 @@ function createVulnTableRowHtml(idx, vuln) {
 function renderSearchResults(reloadFilterDropdown) {
     var sortIconVulnId = iconUnsorted, sortFunctionVulnId = "reorderVulns(0, false)";
     var sortIconCVSS = iconUnsorted, sortFunctionCVSS = "reorderVulns(1, false)";
-    var sortIconEPSS = iconUnsorted, sortFunctionEPSS = "reorderVulns(1, false)";
-    var sortIconExploits = iconUnsorted, sortFunctionExploits = "reorderVulns(3, false)";
+    var sortIconEPSS = iconUnsorted, sortFunctionEPSS = "reorderVulns(2, false)";
+    var sortIconExploits = iconUnsorted, sortFunctionExploits = "reorderVulns(4, false)";
 
     // retrieve and sort vulns
     var vulns = getCurrentVulnsSorted();
@@ -289,11 +289,11 @@ function renderSearchResults(reloadFilterDropdown) {
     else if (curSortColIdx == 4) {  // Exploits
         if (curSortColAsc) {
             sortIconExploits = iconSortAsc;
-            sortFunctionExploits = "reorderVulns(3, false)";
+            sortFunctionExploits = "reorderVulns(4, false)";
         }
         else {
             sortIconExploits = iconSortDesc;
-            sortFunctionExploits = "reorderVulns(3, true)";
+            sortFunctionExploits = "reorderVulns(4, true)";
         }
     }
 
