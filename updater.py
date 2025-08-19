@@ -196,7 +196,7 @@ def update(config):
 
     # download shared productdb and vulndb
     return_code = subprocess.call(
-        "wget -q %s -O %s"
+        "wget -q --show-progress %s -O %s"
         % (shlex.quote(PRODUCT_DB_ARTIFACT_URL), shlex.quote(download_productdb_out)),
         shell=True,
     )
