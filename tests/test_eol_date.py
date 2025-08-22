@@ -61,18 +61,18 @@ class TestSearches(unittest.TestCase):
         result = search_vulns.search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": "eol",
-            "latest": "8.1.2",
+            "latest": "8.1.3",
             "ref": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result["version_status"], expected_result)
 
     def test_search_mongodb_6_0_13(self):
         self.maxDiff = None
-        query = "cpe:2.3:a:mongodb:mongodb:6.0.13:*:*:*:*:*:*:*"
+        query = "cpe:2.3:a:mongodb:mongodb:7.0.13:*:*:*:*:*:*:*"
         result = search_vulns.search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": "outdated",
-            "latest": "8.1.2",
+            "latest": "8.1.3",
             "ref": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result["version_status"], expected_result)
