@@ -222,22 +222,37 @@ def postprocess_results(
                     )
                     fixed_version_info = vuln_db_cursor.fetchall()
                     fixed_version, fixed_latest_release_number = "", -1
+
                     for fixed_codename, cur_fixed_version in fixed_version_info:
                         if fixed_codename not in CODENAME_RELEASE_NUMBER_MAP:
                             continue
                         fixed_release_number = CODENAME_RELEASE_NUMBER_MAP[fixed_codename]
-                        if (
-                            not codename
-                            and float(fixed_release_number) > fixed_latest_release_number
-                        ):
-                            fixed_latest_release_number = float(fixed_release_number)
-                            fixed_version = cur_fixed_version
-                        elif codename and codename == fixed_codename:
+
+                        # typical use case: debian major release to use was provided
+                        if codename and codename == fixed_codename:
                             fixed_version = cur_fixed_version
                             break
 
+                        # debian major version to use was not provided
+                        if not codename:
+                            # if product version was provided, use latest available Debian major release
+                            if (
+                                CPEVersion("debian_provided_version")
+                                and float(fixed_release_number) > fixed_latest_release_number
+                            ):
+                                fixed_latest_release_number = float(fixed_release_number)
+                                fixed_version = cur_fixed_version
+                                break
+                            # otherwise check if any Debian version has a backpatch for general product vuln
+                            elif cur_fixed_version:
+                                fixed_version = cur_fixed_version
+                                break
+
                     if fixed_version:
-                        if CPEVersion(extra_params["debian_subversion"]) >= CPEVersion(
+                        debian_subversion = CPEVersion(
+                            extra_params.get("debian_subversion", "")
+                        )
+                        if not debian_subversion or debian_subversion >= CPEVersion(
                             fixed_version
                         ):
                             is_patched = True
