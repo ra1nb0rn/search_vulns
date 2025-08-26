@@ -15,7 +15,7 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = "cpe:2.3:a:nginx:nginx:1.24.0-3:*:*:*:*:*:*:debian_trixie"
         result = search_vulns.search_vulns(query=query, include_patched=True)
-        expected_open = ["CVE-2024-7347", "CVE-2025-23419"]
+        expected_open = ["CVE-2024-7347", "CVE-2025-23419", "CVE-2025-53859"]
         expected_backpatched = ["CVE-2023-44487"]
         result_open, result_backpatched = [], []
 
@@ -69,12 +69,12 @@ class TestSearches(unittest.TestCase):
         self.assertEqual(set(expected_backpatched), set(result_backpatched))
         self.assertEqual(set(expected_open), set(result_open))
 
-    def test_search_thunderbird(self):
+    def test_search_squid(self):
         self.maxDiff = None
         query = "squid 5.7-2 Debian 12"
         result = search_vulns.search_vulns(query=query, include_patched=True)
 
-        expected_open = ["CVE-2023-49288", "CVE-2024-45802", "CVE-2023-5824", "CVE-2023-46728"]
+        expected_open = ["CVE-2023-49288", "CVE-2024-45802", "CVE-2023-46728"]
         expected_backpatched = [
             "CVE-2024-23638",
             "CVE-2023-50269",
@@ -87,6 +87,8 @@ class TestSearches(unittest.TestCase):
             "CVE-2023-49285",
             "CVE-2023-46848",
             "CVE-2024-37894",
+            "CVE-2023-5824",
+            "CVE-2025-54574",
         ]
         result_open, result_backpatched = [], []
 
