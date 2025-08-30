@@ -256,12 +256,16 @@ def update(config):
         if hasattr(module, "update") and callable(module.update):
             module_config = config["MODULES"].get(mid, {})
             try:
-                m_success, m_artifacts = module.update(
+                m_results = module.update(
                     config["PRODUCT_DATABASE"],
                     config["VULN_DATABASE"],
                     module_config,
                     stop_update,
                 )
+                if m_results:
+                    m_success, m_artifacts = m_results
+                else:
+                    m_success, m_artifacts = True, []
                 if not m_success:
                     success = False
                     print(f"[-] Module {mid} ran did not update successfully.")
@@ -320,9 +324,13 @@ def _run_full_update_module_wrapper(module_id, config, stop_update):
     # Run module
     modules = get_modules()
     module_config = config["MODULES"].get(module_id, {})
-    success, artifacts = modules[module_id].full_update(
+    module_results = modules[module_id].full_update(
         config["PRODUCT_DATABASE"], config["VULN_DATABASE"], module_config, stop_update
     )
+    if module_results:
+        success, artifacts = module_results
+    else:
+        success, artifacts = True, []
 
     # Remove empty logs
     if os.path.exists(log_filename) and os.path.getsize(log_filename) == 0:
