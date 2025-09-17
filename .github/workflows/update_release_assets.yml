@@ -1,7 +1,7 @@
 name: Update release assets
 on:
   schedule:
-    - cron: "15 4 1,8,16,24 * *"
+    - cron: "15 4 * * *"
   workflow_dispatch:
 jobs:
   build-artifacts:
