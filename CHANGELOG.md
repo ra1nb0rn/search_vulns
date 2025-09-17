@@ -1,6 +1,24 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.7.3 - 2025-09-17
+### Added
+- Added new module to explicitly include information about Metasploit exploits.
+
+### Changed
+- Only apply textual matching for simple version expressions.
+- Do not error during update process when a module returns no status.
+- Reference BlackHat demo recording in README, instead of older, smaller one.
+
+### Fixed
+- Added back progressbar for downloading product DB during update.
+- Fixed sorting by EPSS and exploits in web view.
+- Run build of deprecated CPE dictionary on non-live file.
+- Updated test cases.
+- Fix bug with debian backpatch module and general queries.
+- Update match_reason when merging vulnerabilities.
+
+
 ## v0.7.2 - 2025-07-29
 ### Fixed
 - Updated test cases.
