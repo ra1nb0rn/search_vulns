@@ -211,7 +211,6 @@ class TestSearches(unittest.TestCase):
             "CVE-2023-45145",
             "CVE-2024-31449",
             "CVE-2024-31228",
-            "CVE-2024-46981",
             "CVE-2025-21605",
             "CVE-2025-32023",
             "CVE-2025-49112",
@@ -286,7 +285,6 @@ class TestSearches(unittest.TestCase):
             "CVE-2021-3967",
             "CVE-2021-3866",
             "CVE-2022-31168",
-            "CVE-2024-27286",
             "CVE-2025-27149",
             "CVE-2025-25195",
             "CVE-2025-30369",
@@ -335,6 +333,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2023-47642",
             "CVE-2024-21630",
             "CVE-2024-36612",
+            "CVE-2024-27286",
         ]
         result_cves = [
             vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
@@ -355,6 +354,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2022-36077",
             "CVE-2023-44402",
             "CVE-2024-46993",
+            "CVE-2025-55305",
         ]
         result_cves = [
             vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
@@ -514,6 +514,10 @@ class TestSearches(unittest.TestCase):
             "CVE-2022-40709",
             "CVE-2022-40710",
             "CVE-2022-40708",
+            "CVE-2025-30640",
+            "CVE-2025-30641",
+            "CVE-2024-51503",
+            "CVE-2025-30642",
         ]
         result_cves = [
             vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
