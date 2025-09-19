@@ -42,9 +42,9 @@ install_linux_packages() {
         pip3 install -r requirements.txt --break-system-packages
     fi
 
-    pip3 install mariadb
+    pip3 install mariadb==1.1.12
     if [ $? != 0 ]; then
-        pip3 install mariadb --break-system-packages
+        pip3 install mariadb==1.1.12 --break-system-packages
     fi
 }
 
