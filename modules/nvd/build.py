@@ -13,6 +13,7 @@ try:  # use ujson if available
 except ModuleNotFoundError:
     import json
 
+from modules.utils import split_cpe
 from modules.cpe_search.cpe_search.cpe_search import add_cpes_to_db
 from modules.utils import SQLITE_TIMEOUT, get_database_connection
 
@@ -69,7 +70,17 @@ def add_vuln_cpes_to_product_db(productdb_config, vulndb_config):
     db_conn_vulndb.close()
 
     not_contained_cpes = vuln_cpes - nvd_official_cpes
-    add_cpes_to_db(not_contained_cpes, {"DATABASE": productdb_config}, check_duplicates=False)
+
+    # influence similarity scores to be slightly lower to decrease likelihood of some
+    # outlier CPE overshadowing genuine CPEs used with the majority of vulns and contained
+    # in the official dictionary
+    not_contained_cpe_infos = []
+    for cpe in not_contained_cpes:
+        cpe_name = ' '.join(split_cpe(cpe)[3:]).replace(' *', ' ').replace(' -', ' ').replace('_', ' ')
+        cpe_name += ' (s34rch-vuln5-s34rch-vuln5)'
+        not_contained_cpe_infos.append((cpe, cpe_name))
+
+    add_cpes_to_db(not_contained_cpe_infos, {"DATABASE": productdb_config}, check_duplicates=False)
 
 
 async def api_request(headers, params, requestno):
