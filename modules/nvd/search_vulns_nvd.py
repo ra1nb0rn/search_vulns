@@ -19,6 +19,9 @@ def get_detailed_vulns(vulns, vuln_db_cursor):
     for vuln_info in vulns:
         vuln_id, match_reason = vuln_info
         if vuln_id in detailed_vulns:
+            # update match reason, e.g. if better match happened with another CPE
+            if match_reason > detailed_vulns[vuln_id].match_reason:
+                detailed_vulns[vuln_id].match_reason = match_reason
             continue
 
         query = "SELECT description, published, last_modified, cvss_version, base_score, vector, cisa_known_exploited FROM nvd WHERE cve_id = ?"
