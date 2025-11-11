@@ -125,15 +125,15 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
                 return False, []
 
             # sometimes, package has version in its name, e.g. apache2, libssh2 or log4j1.2
+            all_pkgs = [initial_pkg]
             version_in_name_match = VERSION_IN_NAME_RE.findall(initial_pkg)
-            all_pkgs = [(None, initial_pkg)]
             if version_in_name_match:
                 new_pkg = initial_pkg.replace(version_in_name_match[0][-1], "")
                 if new_pkg.endswith("-") or new_pkg.endswith("_"):
                     new_pkg = new_pkg[:-1]
-                all_pkgs.append((version_in_name_match[0][-1], new_pkg))
+                all_pkgs.append(new_pkg)
 
-            for version_start, pkg in all_pkgs:
+            for pkg in all_pkgs:
                 vuln_data[pkg] = {}
                 cpe = None
                 if pkg in pkg_cpe_matches_hardcoded:
@@ -174,7 +174,7 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
                                     pkgs_latest_versions[pkg] = {}
                                 if release_codename not in pkgs_latest_versions[pkg]:
                                     pkgs_latest_versions[pkg][release_codename] = set()
-                                pkgs_latest_versions[pkg][release_codename].add((version_start, latest_version))
+                                pkgs_latest_versions[pkg][release_codename].add(latest_version)
 
                 # try to retrieve a CPE for the product name by comparing it with the NVD's affected CPEs
                 if not cpe:
@@ -244,13 +244,13 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
         # create latest pkg versions table
         if vulndb_config["TYPE"] == "sqlite":
             vulndb_cursor.execute("DROP TABLE IF EXISTS debian_latest_pkg_versions;")
-            create_latest_releases_table = "CREATE TABLE debian_latest_pkg_versions (cpe VARCHAR(255), pkg VARCHAR(100), codename VARCHAR(25), version_start VARCHAR(25), latest_version VARCHAR(100), PRIMARY KEY(cpe, pkg, codename, version_start, latest_version));"
+            create_latest_releases_table = "CREATE TABLE debian_latest_pkg_versions (cpe VARCHAR(255), pkg VARCHAR(100), codename VARCHAR(25), latest_version VARCHAR(100), PRIMARY KEY(cpe, pkg, codename, latest_version));"
         elif vulndb_config["TYPE"] == "mariadb":
-            create_latest_releases_table = "CREATE OR REPLACE TABLE debian_latest_pkg_versions (cpe VARCHAR(255) CHARACTER SET utf8, pkg VARCHAR(100) CHARACTER SET ascii, codename VARCHAR(25) CHARACTER SET ascii, version_start VARCHAR(25) CHARACTER SET utf-8, latest_version VARCHAR(100) CHARACTER SET utf8, PRIMARY KEY(cpe, pkg, codename, version_start, latest_version));"
+            create_latest_releases_table = "CREATE OR REPLACE TABLE debian_latest_pkg_versions (cpe VARCHAR(255) CHARACTER SET utf8, pkg VARCHAR(100) CHARACTER SET ascii, codename VARCHAR(25) CHARACTER SET ascii, latest_version VARCHAR(100) CHARACTER SET utf8, PRIMARY KEY(cpe, pkg, codename, latest_version));"
         vulndb_cursor.execute(create_latest_releases_table)
 
         insert_latest_version_info_query = (
-            "INSERT INTO debian_latest_pkg_versions VALUES (?, ?, ?, ?, ?);"
+            "INSERT INTO debian_latest_pkg_versions VALUES (?, ?, ?, ?);"
         )
         for pkg, latest_version_info in pkgs_latest_versions.items():
             if stop_update.is_set():
@@ -259,14 +259,11 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
                 continue
 
             for release_codename, latest_versions in latest_version_info.items():
-                for version_start, latest_version in latest_versions:
+                for latest_version in latest_versions:
                     try:
-                        # insert CPE truncated like it's done in end_of_life_date module
-                        cpe = pkg_cpe_map[pkg]
-                        cpe = ":".join(cpe.split(":")[:5]) + ":"
                         vulndb_cursor.execute(
                             insert_latest_version_info_query,
-                            (cpe, pkg, release_codename, version_start, latest_version),
+                            (pkg_cpe_map[pkg], pkg, release_codename, latest_version),
                         )
                     # unique constrained failed, b/c sometimes two packages rightfully match
                     # to same CPE and cause duplicate insert, since version is also the same
