@@ -29,7 +29,7 @@ from search_vulns import (
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))
 TEMPLATE_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "templates"))
-CONFIG_FILE = os.path.join(PROJECT_DIR, 'config.json')
+CONFIG_FILE = os.path.join(PROJECT_DIR, "config.json")
 CHANGELOG_FILE = os.path.join(PROJECT_DIR, "CHANGELOG.md")
 LICENSE_INFO_FILE = os.path.join(os.path.join(PROJECT_DIR, "resources"), "license_infos.md")
 README_FILE = os.path.join(PROJECT_DIR, "README.md")

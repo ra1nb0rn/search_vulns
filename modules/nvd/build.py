@@ -13,9 +13,8 @@ try:  # use ujson if available
 except ModuleNotFoundError:
     import json
 
-from modules.utils import split_cpe
 from modules.cpe_search.cpe_search.cpe_search import add_cpes_to_db
-from modules.utils import SQLITE_TIMEOUT, get_database_connection
+from modules.utils import SQLITE_TIMEOUT, get_database_connection, split_cpe
 
 REQUIRES_BUILT_MODULES = ["cpe_search.search_vulns_cpe_search"]
 
@@ -76,11 +75,15 @@ def add_vuln_cpes_to_product_db(productdb_config, vulndb_config):
     # in the official dictionary
     not_contained_cpe_infos = []
     for cpe in not_contained_cpes:
-        cpe_name = ' '.join(split_cpe(cpe)[3:]).replace(' *', ' ').replace(' -', ' ').replace('_', ' ')
-        cpe_name += ' (s34rch-vuln5-s34rch-vuln5)'
+        cpe_name = (
+            " ".join(split_cpe(cpe)[3:]).replace(" *", " ").replace(" -", " ").replace("_", " ")
+        )
+        cpe_name += " (s34rch-vuln5-s34rch-vuln5)"
         not_contained_cpe_infos.append((cpe, cpe_name))
 
-    add_cpes_to_db(not_contained_cpe_infos, {"DATABASE": productdb_config}, check_duplicates=False)
+    add_cpes_to_db(
+        not_contained_cpe_infos, {"DATABASE": productdb_config}, check_duplicates=False
+    )
 
 
 async def api_request(headers, params, requestno):

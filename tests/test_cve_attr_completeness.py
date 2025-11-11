@@ -948,6 +948,20 @@ class TestSearches(unittest.TestCase):
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
                 "cisa_known_exploited": False,
             },
+            "CVE-2025-34282": {
+                "published": "2025-10-17 19:15:37",
+                "cvss_ver": "4.0",
+                "cvss": "6.9",
+                "cvss_vec": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:L/SI:L/SA:L/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
+                "cisa_known_exploited": False,
+            },
+            "CVE-2025-34281": {
+                "published": "2025-10-17 19:15:37",
+                "cvss_ver": "4.0",
+                "cvss": "5.1",
+                "cvss_vec": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:N/SC:L/SI:L/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
+                "cisa_known_exploited": False,
+            },
         }
 
         for vuln_id, vuln in result["vulns"].items():
@@ -1364,6 +1378,13 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "2.7",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:L/A:N",
+                "cisa_known_exploited": False,
+            },
+            "CVE-2025-52559": {
+                "published": "2025-07-02 20:15:31",
+                "cvss_ver": "3.1",
+                "cvss": "6.8",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:H/I:N/A:N",
                 "cisa_known_exploited": False,
             },
         }
