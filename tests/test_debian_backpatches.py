@@ -33,7 +33,7 @@ class TestSearches(unittest.TestCase):
         query = "curl 7.88.1-11+deb12u10"
         result = search_vulns.search_vulns(query=query, include_patched=True)
 
-        expected_open = ["CVE-2025-0725", "CVE-2024-32928", "CVE-2025-9086"]
+        expected_open = ["CVE-2025-0725", "CVE-2024-32928", "CVE-2025-9086", "CVE-2025-10966"]
         expected_backpatched = [
             "CVE-2023-46219",
             "CVE-2023-38039",
@@ -74,7 +74,7 @@ class TestSearches(unittest.TestCase):
         query = "squid 5.7-2 Debian 12"
         result = search_vulns.search_vulns(query=query, include_patched=True)
 
-        expected_open = ["CVE-2023-49288", "CVE-2024-45802", "CVE-2023-46728"]
+        expected_open = ["CVE-2023-49288", "CVE-2024-45802", "CVE-2023-46728", "CVE-2025-59362"]
         expected_backpatched = [
             "CVE-2024-23638",
             "CVE-2023-50269",
@@ -89,6 +89,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2024-37894",
             "CVE-2023-5824",
             "CVE-2025-54574",
+            "CVE-2025-62168",
         ]
         result_open, result_backpatched = [], []
 

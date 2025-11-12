@@ -1,6 +1,19 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.7.4 - 2025-11-11
+### Added
+- Added equivalent CPE for Apache HTTP webserver.
+
+### Changed
+- Updated cpe_search submodule to improve matching.
+
+### Fixed
+- Fix issue when splitting CPEs that contain an escaped colon.
+- Set version of Python MariaDB package to 1.1.12 to fix bug in newer version.
+- Updated test cases.
+
+
 ## v0.7.3 - 2025-09-17
 ### Added
 - Added new module to explicitly include information about Metasploit exploits.

@@ -142,6 +142,25 @@ def _is_cpe_included_from_field(cpe1, cpe2, field=6):
     return True
 
 
+def split_cpe(cpe):
+    """Split a CPE by ':' into its individual fields, preserving escaped colons"""
+
+    parts = []
+    current = []
+    escape = False
+
+    for char in cpe:
+        if char == ":" and not escape:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+        escape = char == "\\"
+    parts.append("".join(current))
+
+    return parts
+
+
 def _is_more_specific_cpe_contained(vuln_cpe, vuln_entry_cpes):
     """
     Return boolean whether a more specific CPE than vuln_cpe
@@ -152,9 +171,9 @@ def _is_more_specific_cpe_contained(vuln_cpe, vuln_entry_cpes):
         if vuln_cpe != vuln_other_cpe:
             if _is_cpe_included_from_field(vuln_cpe, vuln_other_cpe, 5):
                 # assume the number of fields is the same for both, since they're official NVD CPEs
-                vuln_cpe_fields, vuln_other_cpe_fields = vuln_cpe.split(
-                    ":"
-                ), vuln_other_cpe.split(":")
+                vuln_cpe_fields, vuln_other_cpe_fields = split_cpe(vuln_cpe), split_cpe(
+                    vuln_other_cpe
+                )
                 for i in range(len(vuln_other_cpe_fields) - 1, -1, -1):
                     vuln_cpe_field_version = CPEVersion(vuln_cpe_fields[i])
                     vuln_other_cpe_field_version = CPEVersion(vuln_other_cpe_fields[i])
