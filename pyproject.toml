@@ -61,7 +61,7 @@ all = [
 ]
 
 [project.scripts]
-search_vulns = "search_vulns_cli:main"
+search_vulns = "search_vulns.search_vulns_cli:main"
 
 [project.urls]
 Homepage = "https://github.com/ra1nb0rn/search_vulns"
@@ -72,17 +72,23 @@ Issues = "https://github.com/ra1nb0rn/search_vulns/issues"
 [tool.setuptools]
 # Automatically discover all packages
 packages = {find = {}}
-# Include root-level Python modules
-py-modules = ["search_vulns", "vulnerability", "updater", "cpe_version", "web_server", "wsgi", "search_vulns_cli"]
 include-package-data = true
 
-[tool.setuptools.package-dir]
-"" = "."
-
 [tool.setuptools.package-data]
-"*" = ["*.json", "*.txt", "*.md"]
-"modules" = ["**/*.json", "**/*.py", "**/*.sh", "**/*.cpp", "**/*.h", "**/*.txt", "**/CMakeLists.txt"]
-"resources" = ["**/*"]
+"search_vulns" = [
+    "*.json",
+    "*.txt",
+    "*.md",
+    "modules/**/*.json",
+    "modules/**/*.py",
+    "modules/**/*.sh",
+    "modules/**/*.cpp",
+    "modules/**/*.h",
+    "modules/**/*.txt",
+    "modules/**/CMakeLists.txt",
+    "resources/**/*",
+    "web_server_files/**/*",
+]
 
 [tool.black]
 line-length = 96

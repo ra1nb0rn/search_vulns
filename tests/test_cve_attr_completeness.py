@@ -1,12 +1,7 @@
-#!/usr/bin/env python3
 
-import os
-import sys
 import unittest
 
-SEARCH_VULNS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-sys.path.insert(1, SEARCH_VULNS_PATH)
-import search_vulns
+from search_vulns.search_vulns import search_vulns
 
 
 class TestSearches(unittest.TestCase):
@@ -14,7 +9,7 @@ class TestSearches(unittest.TestCase):
     def test_search_wp_572(self):
         self.maxDiff = None
         query = "cpe:2.3:a:wordpress:wordpress:5.7.2:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_attrs = {
             "CVE-2021-44223": {
                 "published": "2021-11-25 15:15:09",
@@ -209,7 +204,7 @@ class TestSearches(unittest.TestCase):
     def test_search_apache_2425(self):
         self.maxDiff = None
         query = "cpe:2.3:a:apache:http_server:2.4.25:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_attrs = {
             "CVE-2017-15710": {
                 "id": "CVE-2017-15710",
@@ -888,7 +883,7 @@ class TestSearches(unittest.TestCase):
     def test_search_thingsboard_340(self):
         self.maxDiff = None
         query = "cpe:2.3:a:thingsboard:thingsboard:3.4.0:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(
+        result = search_vulns(
             query=query, is_product_id_query=True, include_single_version_vulns=True
         )
         expected_attrs = {
@@ -980,7 +975,7 @@ class TestSearches(unittest.TestCase):
     def test_search_piwik_045(self):
         self.maxDiff = None
         query = "cpe:2.3:a:piwik:piwik:0.4.5:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query)
+        result = search_vulns(query=query)
         expected_attrs = {
             "CVE-2010-1453": {
                 "published": "2010-05-07 18:24:15",
@@ -1105,7 +1100,7 @@ class TestSearches(unittest.TestCase):
     def test_search_zulip_server_general(self):
         self.maxDiff = None
         query = "cpe:2.3:a:zulip:zulip_server:*:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_attrs = {
             "CVE-2017-0881": {
                 "published": "2017-03-28 02:59:01",
@@ -1405,7 +1400,7 @@ class TestSearches(unittest.TestCase):
     def test_search_handlebars_js_300(self):
         self.maxDiff = None
         query = "cpe:2.3:a:handlebarsjs:handlebars:3.0.0:*:*:*:*:node.js:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_attrs = {
             "CVE-2021-23369": {
                 "published": "2021-04-12 14:15:14",

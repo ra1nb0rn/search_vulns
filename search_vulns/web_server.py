@@ -11,18 +11,18 @@ import markdown
 import requests
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
-from modules.cpe_search.cpe_search.database_wrapper_functions import (
+from search_vulns.modules.cpe_search.cpe_search.database_wrapper_functions import (
     get_connection_pools,
 )
-from modules.utils import get_database_connection
-from search_vulns import (
+from search_vulns.modules.utils import get_database_connection
+from search_vulns.search_vulns import (
     VERSION_FILE,
     _load_config,
     check_and_try_sv_rerun_with_created_cpes,
     search_product_ids,
 )
-from search_vulns import search_vulns as search_vulns_call
-from search_vulns import (
+from search_vulns.search_vulns import search_vulns as search_vulns_call
+from search_vulns.search_vulns import (
     serialize_vulns_in_result,
 )
 

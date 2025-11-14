@@ -9,9 +9,9 @@ import re
 import sys
 import threading
 
-from modules.cpe_search.cpe_search.cpe_search import cpe_matches_query
-from modules.utils import get_database_connection
-from vulnerability import MatchReason
+from search_vulns.modules.cpe_search.cpe_search.cpe_search import cpe_matches_query
+from search_vulns.modules.utils import get_database_connection
+from search_vulns.vulnerability import MatchReason
 
 # general variables and settings
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -619,7 +619,7 @@ def main():
         args.update = True
 
     if args.update == True:
-        from updater import update
+        from search_vulns.updater import update
 
         config = _load_config(args.config)
         success, artifacts = update(config)
@@ -628,7 +628,7 @@ def main():
         if not success:
             sys.exit(1)
     elif args.full_update == True:
-        from updater import full_update
+        from search_vulns.updater import full_update
 
         config = _load_config(args.config)
         success, artifacts = full_update(config)
