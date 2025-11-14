@@ -1,9 +1,9 @@
 [submodule "cpe_search"]
-	path = search_vulns/modules/cpe_search/cpe_search
+	path = modules/cpe_search/cpe_search
 	url = https://github.com/ra1nb0rn/cpe_search.git
 [submodule "modules/nvd/create_db_source/SQLiteCpp"]
-	path = search_vulns/modules/nvd/create_db_source/SQLiteCpp
+	path = modules/nvd/create_db_source/SQLiteCpp
 	url = https://github.com/SRombauts/SQLiteCpp.git
 [submodule "modules/nvd/create_db_source/mariadb-connector-cpp"]
-	path = search_vulns/modules/nvd/create_db_source/mariadb-connector-cpp
+	path = modules/nvd/create_db_source/mariadb-connector-cpp
 	url = https://github.com/mariadb-corporation/mariadb-connector-cpp/
