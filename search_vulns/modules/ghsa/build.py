@@ -16,8 +16,8 @@ try:  # use ujson if available
 except ModuleNotFoundError:
     import json
 
-from modules.cpe_search.cpe_search.cpe_search import add_cpes_to_db, search_cpes
-from modules.utils import (
+from search_vulns.modules.cpe_search.cpe_search.cpe_search import add_cpes_to_db, search_cpes
+from search_vulns.modules.utils import (
     SQLITE_TIMEOUT,
     compute_cosine_similarity,
     get_database_connection,

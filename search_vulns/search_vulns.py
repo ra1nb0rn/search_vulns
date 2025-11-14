@@ -609,8 +609,8 @@ def main():
     args = parse_args()
 
     # Autoset update to True if resource files are missing
-    DEFAULT_VULN_DATABASE_FILE = os.path.join(os.path.dirname(__file__), "resources", "vulndb.db3")
-    DEFAULT_PRODUCT_DATABASE_FILE = os.path.join(os.path.dirname(__file__), "resources", "productdb.db3")
+    DEFAULT_VULN_DATABASE_FILE = os.path.join(os.path.dirname(__file__), "resources", "vulndb.db3.update")
+    DEFAULT_PRODUCT_DATABASE_FILE = os.path.join(os.path.dirname(__file__), "resources", "productdb.db3.update")
     if not os.path.exists(DEFAULT_VULN_DATABASE_FILE):
         printit("[!] Vulnerability database file not found, setting update to True", color=RED)
         args.update = True

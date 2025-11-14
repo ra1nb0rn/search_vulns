@@ -1,13 +1,13 @@
 import re
 from threading import Lock
 
-from cpe_version import CPEVersion
-from modules.cpe_search.cpe_search.cpe_search import MATCH_CPE_23_RE
-from modules.linux_distro_backpatches.debian.build import (
+from search_vulns.cpe_version import CPEVersion
+from search_vulns.modules.cpe_search.cpe_search.cpe_search import MATCH_CPE_23_RE
+from search_vulns.modules.linux_distro_backpatches.debian.build import (
     REQUIRES_BUILT_MODULES,
     full_update,
 )
-from modules.linux_distro_backpatches.utils import get_clean_version
+from search_vulns.modules.linux_distro_backpatches.utils import get_clean_version
 
 CODENAME_RELEASE_NUMBER_MAP = {}
 RELEASE_NUMBER_CODENAME_MAP = {}

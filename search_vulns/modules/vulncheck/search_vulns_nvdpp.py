@@ -1,6 +1,6 @@
-from modules.nvd.search_vulns_nvd import get_detailed_vulns
-from modules.utils import search_vulns_by_cpes_simple
-from modules.vulncheck.build import REQUIRES_BUILT_MODULES, full_update
+from search_vulns.modules.nvd.search_vulns_nvd import get_detailed_vulns
+from search_vulns.modules.utils import search_vulns_by_cpes_simple
+from search_vulns.modules.vulncheck.build import REQUIRES_BUILT_MODULES, full_update
 
 
 def search_vulns(query, product_ids, vuln_db_cursor, config, extra_params):

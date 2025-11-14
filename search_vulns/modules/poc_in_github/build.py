@@ -10,7 +10,7 @@ import os
 import shutil
 import subprocess
 
-from modules.utils import SQLITE_TIMEOUT, get_database_connection
+from search_vulns.modules.utils import SQLITE_TIMEOUT, get_database_connection
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"

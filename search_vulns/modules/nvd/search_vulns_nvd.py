@@ -1,12 +1,12 @@
 import re
 from typing import List
 
-from cpe_version import CPEVersion
+from search_vulns.cpe_version import CPEVersion
 
 # implement update procedures in separate file
-from modules.nvd.build import REQUIRES_BUILT_MODULES, full_update, install
-from modules.utils import search_vulns_by_cpes_simple
-from vulnerability import MatchReason, Vulnerability
+from search_vulns.modules.nvd.build import REQUIRES_BUILT_MODULES, full_update, install
+from search_vulns.modules.utils import search_vulns_by_cpes_simple
+from search_vulns.vulnerability import MatchReason, Vulnerability
 
 MATCH_CVE_IDS_RE = re.compile(
     r"(CVE-[0-9]{4}-[0-9]{4,19})"

@@ -1,7 +1,7 @@
 from typing import List
 
-from modules.poc_in_github.build import full_update
-from vulnerability import Vulnerability
+from search_vulns.modules.poc_in_github.build import full_update
+from search_vulns.vulnerability import Vulnerability
 
 
 def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, extra_params):

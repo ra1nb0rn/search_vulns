@@ -9,9 +9,9 @@ try:
 except ImportError:
     import json
 
-from modules.cpe_search.cpe_search.cpe_search import search_cpes
-from modules.linux_distro_backpatches.utils import get_clean_version
-from modules.utils import (
+from search_vulns.modules.cpe_search.cpe_search.cpe_search import search_cpes
+from search_vulns.modules.linux_distro_backpatches.utils import get_clean_version
+from search_vulns.modules.utils import (
     SQLITE_TIMEOUT,
     compute_cosine_similarity,
     get_database_connection,

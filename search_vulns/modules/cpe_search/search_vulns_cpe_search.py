@@ -5,16 +5,16 @@ except ModuleNotFoundError:
 
 from threading import Lock
 
-from cpe_version import CPEVersion
+from search_vulns.cpe_version import CPEVersion
 
 # implement update procedures in separate file
-from modules.cpe_search.build import full_update, install, update
-from modules.cpe_search.cpe_search.cpe_search import (
+from search_vulns.modules.cpe_search.build import full_update, install, update
+from search_vulns.modules.cpe_search.cpe_search.cpe_search import (
     MATCH_CPE_23_RE,
     is_cpe_equal,
     search_cpes,
 )
-from modules.cpe_search.cpe_search.database_wrapper_functions import *
+from search_vulns.modules.cpe_search.cpe_search.database_wrapper_functions import *
 
 MODULE_RESOURCE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources")
 DEBIAN_EQUIV_CPES_FILE = os.path.join(MODULE_RESOURCE_DIR, "debian_equiv_cpes.json")

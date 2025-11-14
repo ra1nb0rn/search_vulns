@@ -2,14 +2,14 @@ import math
 import re
 from collections import Counter
 
-from cpe_version import CPEVersion
+from search_vulns.cpe_version import CPEVersion
 
 # import and provide these functionalities from this module for simplicity
-from modules.cpe_search.cpe_search.database_wrapper_functions import (
+from search_vulns.modules.cpe_search.cpe_search.database_wrapper_functions import (
     get_database_connection,
     is_safe_db_name,
 )
-from vulnerability import MatchReason
+from search_vulns.vulnerability import MatchReason
 
 CPE_COMPARISON_STOP_CHARS_RE = re.compile(r"[\+\-\_\~]")
 NUMERIC_VERSION_RE = re.compile(r"[\d\.]+")

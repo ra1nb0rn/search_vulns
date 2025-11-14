@@ -9,8 +9,8 @@ import re
 import shutil
 import subprocess
 
-from modules.cpe_search.cpe_search.cpe_search import search_cpes
-from modules.utils import SQLITE_TIMEOUT, get_database_connection
+from search_vulns.modules.cpe_search.cpe_search.cpe_search import search_cpes
+from search_vulns.modules.utils import SQLITE_TIMEOUT, get_database_connection
 
 REQUIRES_BUILT_MODULES = ["cpe_search.search_vulns_cpe_search"]
 

@@ -7,7 +7,7 @@ import time
 
 import requests
 
-from modules.cpe_search.cpe_search.cpe_search import update as update_cpe_search
+from search_vulns.modules.cpe_search.cpe_search.cpe_search import update as update_cpe_search
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 INSTALL_SCRIPT = os.path.join(SCRIPT_DIR, "install.sh")
@@ -27,7 +27,7 @@ def install(silent=False):
 def setup():
     # avoid circular import
     global DEPRECATED_CPES_FILE, DEPRECATED_CPES_FILE_BUILD
-    from modules.cpe_search.search_vulns_cpe_search import DEPRECATED_CPES_FILE
+    from search_vulns.modules.cpe_search.search_vulns_cpe_search import DEPRECATED_CPES_FILE
 
     DEPRECATED_CPES_FILE_BUILD = DEPRECATED_CPES_FILE + ".build"
     if not os.path.isfile(

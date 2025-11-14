@@ -1,7 +1,7 @@
 import datetime
 
-from cpe_version import CPEVersion
-from modules.end_of_life_date.build import REQUIRES_BUILT_MODULES, full_update
+from search_vulns.cpe_version import CPEVersion
+from search_vulns.modules.end_of_life_date.build import REQUIRES_BUILT_MODULES, full_update
 
 
 def postprocess_results(

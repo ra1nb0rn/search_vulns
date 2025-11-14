@@ -3,7 +3,7 @@ import logging
 
 import requests
 
-from modules.utils import get_database_connection
+from search_vulns.modules.utils import get_database_connection
 
 LOGGER = logging.getLogger()
 
