@@ -26,7 +26,7 @@ from search_vulns.search_vulns import (
     serialize_vulns_in_result,
 )
 
-PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
+PROJECT_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "search_vulns")
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))
 TEMPLATE_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "templates"))
 CONFIG_FILE = os.path.join(PROJECT_DIR, "config.json")
