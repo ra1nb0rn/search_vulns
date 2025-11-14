@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ['hatchling']
+build-backend = 'hatchling.build'
 
 [project]
 name = "search-vulns"
@@ -68,27 +68,6 @@ Homepage = "https://github.com/ra1nb0rn/search_vulns"
 Documentation = "https://github.com/ra1nb0rn/search_vulns"
 Repository = "https://github.com/ra1nb0rn/search_vulns"
 Issues = "https://github.com/ra1nb0rn/search_vulns/issues"
-
-[tool.setuptools]
-# Automatically discover all packages
-packages = {find = {}}
-include-package-data = true
-
-[tool.setuptools.package-data]
-"search_vulns" = [
-    "*.json",
-    "*.txt",
-    "*.md",
-    "modules/**/*.json",
-    "modules/**/*.py",
-    "modules/**/*.sh",
-    "modules/**/*.cpp",
-    "modules/**/*.h",
-    "modules/**/*.txt",
-    "modules/**/CMakeLists.txt",
-    "resources/**/*",
-    "web_server_files/**/*",
-]
 
 [tool.black]
 line-length = 96
