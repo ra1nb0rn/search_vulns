@@ -1,0 +1,26 @@
+{
+    "TABLES": {
+        "NVD": {
+            "sqlite": "DROP TABLE IF EXISTS nvd; CREATE TABLE nvd (cve_id VARCHAR(25), description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3), base_score CHAR(4), vector VARCHAR(200), severity VARCHAR(15), cisa_known_exploited BOOL, PRIMARY KEY(cve_id));",
+            "mariadb": "CREATE OR REPLACE TABLE nvd (cve_id VARCHAR(25) CHARACTER SET ascii, description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3) CHARACTER SET ascii, base_score CHAR(4) CHARACTER SET ascii, vector VARCHAR(200) CHARACTER SET ascii, severity VARCHAR(15) CHARACTER SET ascii, cisa_known_exploited BOOL, PRIMARY KEY(cve_id));"
+        },
+        "NVD_CPE": {
+            "sqlite": "DROP TABLE IF EXISTS nvd_cpe; CREATE TABLE nvd_cpe (cve_id VARCHAR(25), cpe VARCHAR(255), cpe_version_start VARCHAR(100), is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(100), is_cpe_version_end_including BOOL, PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including));",
+            "mariadb": "CREATE OR REPLACE TABLE nvd_cpe (cve_id VARCHAR(25) CHARACTER SET ascii, cpe VARCHAR(255) CHARACTER SET utf8, cpe_version_start VARCHAR(100)  CHARACTER SET utf8, is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(100)  CHARACTER SET utf8, is_cpe_version_end_including BOOL, PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including), INDEX(cpe) USING BTREE);"
+        },
+        "NVD_EXPLOITS_REFS_INDIRECT": {
+            "sqlite": "DROP TABLE IF EXISTS nvd_exploits_refs_indirect; CREATE TABLE nvd_exploits_refs_indirect (cve_id VARCHAR(25), ref_id INTEGER, PRIMARY KEY (cve_id, ref_id))",
+            "mariadb": "CREATE OR REPLACE TABLE nvd_exploits_refs_indirect (cve_id VARCHAR(25) CHARACTER SET ascii, ref_id INTEGER, PRIMARY KEY (cve_id, ref_id));"
+        },
+        "NVD_EXPLOITS_REFS": {
+            "sqlite": "DROP TABLE IF EXISTS nvd_exploits_refs; CREATE TABLE nvd_exploits_refs (ref_id INTEGER, exploit_ref text, PRIMARY KEY (ref_id))",
+            "mariadb": "CREATE OR REPLACE TABLE nvd_exploits_refs (ref_id INTEGER, exploit_ref TEXT CHARACTER SET ascii, PRIMARY KEY (ref_id));"
+        }
+    },
+    "VIEWS" : {
+        "NVD_EXPLOITS_REFS_VIEW": {
+            "sqlite": "DROP VIEW IF EXISTS nvd_exploits_refs_view; CREATE VIEW nvd_exploits_refs_view AS SELECT cve_id, exploit_ref FROM nvd_exploits_refs INNER JOIN nvd_exploits_refs_indirect ON nvd_exploits_refs.ref_id = nvd_exploits_refs_indirect.ref_id",
+            "mariadb": "CREATE OR REPLACE VIEW nvd_exploits_refs_view AS SELECT cve_id, exploit_ref FROM nvd_exploits_refs INNER JOIN nvd_exploits_refs_indirect ON nvd_exploits_refs.ref_id = nvd_exploits_refs_indirect.ref_id;"
+        }
+    }
+}
