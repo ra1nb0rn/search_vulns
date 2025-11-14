@@ -1,3 +1,89 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "search-vulns"
+version = "0.7.4"
+description = "Search for known vulnerabilities in software using software titles or a CPE 2.3 string. Note: This package requires system dependencies (git, sqlite3, libsqlite3-dev, libmariadb-dev, jq) which must be installed separately via your system package manager."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Dustin Born", email = "ra1nb0rn@protonmail.com"}
+]
+keywords = ["security", "vulnerability", "cve", "cpe", "nvd", "exploit"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Security",
+    "Topic :: System :: Systems Administration",
+]
+
+dependencies = [
+    "requests",
+    "aiohttp",
+    "aiolimiter",
+    "ujson",
+    "cvss",
+]
+
+[project.optional-dependencies]
+web = [
+    "Flask",
+    "gunicorn",
+    "gevent",
+    "markdown",
+]
+mariadb = [
+    "mariadb==1.1.12",
+]
+dev = [
+    "black",
+    "isort",
+    "ruff",
+    "pylint",
+]
+all = [
+    "Flask",
+    "gunicorn",
+    "gevent",
+    "markdown",
+    "mariadb==1.1.12",
+    "aiohttp",
+    "aiolimiter",
+    "ujson",
+    "cvss",
+]
+
+[project.scripts]
+search_vulns = "search_vulns_cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ra1nb0rn/search_vulns"
+Documentation = "https://github.com/ra1nb0rn/search_vulns"
+Repository = "https://github.com/ra1nb0rn/search_vulns"
+Issues = "https://github.com/ra1nb0rn/search_vulns/issues"
+
+[tool.setuptools]
+# Automatically discover all packages
+packages = {find = {}}
+# Include root-level Python modules
+py-modules = ["search_vulns", "vulnerability", "updater", "cpe_version", "web_server", "wsgi", "search_vulns_cli"]
+include-package-data = true
+
+[tool.setuptools.package-dir]
+"" = "."
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.txt", "*.md"]
+"modules" = ["**/*.json", "**/*.py", "**/*.sh", "**/*.cpp", "**/*.h", "**/*.txt", "**/CMakeLists.txt"]
+"resources" = ["**/*"]
+
 [tool.black]
 line-length = 96
 target-version = ['py311']
