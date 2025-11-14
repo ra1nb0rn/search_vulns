@@ -126,18 +126,22 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
 
             # sometimes, package has version in its name, e.g. apache2, libssh2 or log4j1.2
             version_in_name_match = VERSION_IN_NAME_RE.findall(initial_pkg)
-            all_pkgs = [(None, initial_pkg)]
+            all_pkgs = []
             if version_in_name_match:
                 new_pkg = initial_pkg.replace(version_in_name_match[0][-1], "")
                 if new_pkg.endswith("-") or new_pkg.endswith("_"):
                     new_pkg = new_pkg[:-1]
                 all_pkgs.append((version_in_name_match[0][-1], new_pkg))
+            if not all_pkgs:
+                all_pkgs.append((None, initial_pkg))
 
             for version_start, pkg in all_pkgs:
                 vuln_data[pkg] = {}
                 cpe = None
                 if pkg in pkg_cpe_matches_hardcoded:
                     cpe = pkg_cpe_matches_hardcoded[pkg]
+                elif pkg in pkg_cpe_map:
+                    cpe = pkg_cpe_map[pkg]
 
                 # go over every package's vulns
                 all_affected_nvd_cpes = []
@@ -179,10 +183,10 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
                 # try to retrieve a CPE for the product name by comparing it with the NVD's affected CPEs
                 if not cpe:
                     most_similar = None
-                    for cpe in all_affected_nvd_cpes:
-                        sim = compute_cosine_similarity(cpe[10:], pkg, r"[a-zA-Z0-9]+")
+                    for affected_cpe in all_affected_nvd_cpes:
+                        sim = compute_cosine_similarity(affected_cpe[10:], pkg, r"[a-zA-Z0-9]+")
                         if not most_similar or sim > most_similar[1]:
-                            most_similar = (cpe, sim)
+                            most_similar = (affected_cpe, sim)
 
                     if most_similar and most_similar[1] > SIM_SCORE_THRES_NVD_CPE_RETRIEVAL:
                         cpe = most_similar[0]
@@ -199,6 +203,8 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
                         cpe = ":".join(cpe_parts[:5] + ["*"] * 8)
 
                 if not cpe:
+                    # ignoring this is acceptable for now, since no actual vulnerability
+                    # retrieval is performed in this module
                     pkgs_no_cpe.append(pkg)
                 else:
                     pkg_cpe_map[pkg] = cpe
@@ -246,7 +252,7 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
             vulndb_cursor.execute("DROP TABLE IF EXISTS debian_latest_pkg_versions;")
             create_latest_releases_table = "CREATE TABLE debian_latest_pkg_versions (cpe VARCHAR(255), pkg VARCHAR(100), codename VARCHAR(25), version_start VARCHAR(25), latest_version VARCHAR(100), PRIMARY KEY(cpe, pkg, codename, version_start, latest_version));"
         elif vulndb_config["TYPE"] == "mariadb":
-            create_latest_releases_table = "CREATE OR REPLACE TABLE debian_latest_pkg_versions (cpe VARCHAR(255) CHARACTER SET utf8, pkg VARCHAR(100) CHARACTER SET ascii, codename VARCHAR(25) CHARACTER SET ascii, version_start VARCHAR(25) CHARACTER SET utf-8, latest_version VARCHAR(100) CHARACTER SET utf8, PRIMARY KEY(cpe, pkg, codename, version_start, latest_version));"
+            create_latest_releases_table = "CREATE OR REPLACE TABLE debian_latest_pkg_versions (cpe VARCHAR(255) CHARACTER SET utf8, pkg VARCHAR(100) CHARACTER SET ascii, codename VARCHAR(25) CHARACTER SET ascii, version_start VARCHAR(25) CHARACTER SET utf8, latest_version VARCHAR(100) CHARACTER SET utf8, PRIMARY KEY(cpe, pkg, codename, version_start, latest_version));"
         vulndb_cursor.execute(create_latest_releases_table)
 
         insert_latest_version_info_query = (
@@ -261,6 +267,8 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
             for release_codename, latest_versions in latest_version_info.items():
                 for version_start, latest_version in latest_versions:
                     try:
+                        if not version_start:
+                            version_start = ''
                         # insert CPE truncated like it's done in end_of_life_date module
                         cpe = pkg_cpe_map[pkg]
                         cpe = ":".join(cpe.split(":")[:5]) + ":"
