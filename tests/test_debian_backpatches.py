@@ -68,6 +68,12 @@ class TestSearches(unittest.TestCase):
 
         self.assertEqual(set(expected_backpatched), set(result_backpatched))
         self.assertEqual(set(expected_open), set(result_open))
+        expected_version_result = {
+            "status": "current",
+            "latest": "7.88.1-10",
+            "ref": "https://security-tracker.debian.org/tracker/source-package/curl",
+        }
+        self.assertEqual(result["version_status"], expected_version_result)
 
     def test_search_squid(self):
         self.maxDiff = None
@@ -101,6 +107,26 @@ class TestSearches(unittest.TestCase):
 
         self.assertEqual(set(expected_backpatched), set(result_backpatched))
         self.assertEqual(set(expected_open), set(result_open))
+
+    def test_search_apache_eol(self):
+        query = "cpe:2.3:a:apache:http_server:2.4.60:*:*:*:*:*:*:debian_11"
+        result = search_vulns.search_vulns(query=query, include_patched=True)
+        expected_version_result = {
+            "status": "outdated",
+            "latest": "2.4.62-1",
+            "ref": "https://security-tracker.debian.org/tracker/source-package/apache2",
+        }
+        self.assertEqual(result["version_status"], expected_version_result)
+
+    def test_search_log4j12_eol(self):
+        query = "cpe:2.3:a:apache:log4j:1.2.17-10:*:*:*:*:*:*:debian_11"
+        result = search_vulns.search_vulns(query=query, include_patched=True)
+        expected_version_result = {
+            "status": "outdated",
+            "latest": "2.17.1-1",
+            "ref": "https://security-tracker.debian.org/tracker/source-package/apache-log4j2",
+        }
+        self.assertEqual(result["version_status"], expected_version_result)
 
 
 if __name__ == "__main__":
