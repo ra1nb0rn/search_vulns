@@ -3,7 +3,6 @@
 .ruff_cache/
 *.egg-info
 build
-modules
 __pycache__
 create_db
 db_build/core/build_source_cpp/build/
