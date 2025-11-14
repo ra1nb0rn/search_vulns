@@ -315,11 +315,13 @@ def postprocess_results(
         cpes_prefixes = [":".join(product_id.split(":")[:5]) + ":" for product_id in cpes]
 
         # query information
-        cpe_placeholders = ', '.join(['?'] * len(cpes_prefixes))  # Create a placeholder string for the number of product IDs
+        cpe_placeholders = ", ".join(
+            ["?"] * len(cpes_prefixes)
+        )  # Create a placeholder string for the number of product IDs
         cpes_prefixes_str = tuple(cpes_prefixes)
         vuln_db_cursor.execute(
             f"SELECT pkg, version_start, latest_version FROM debian_latest_pkg_versions WHERE cpe IN ({cpe_placeholders}) AND codename = ?;",
-            cpes_prefixes_str + (codename,)
+            cpes_prefixes_str + (codename,),
         )
         latest_pkg_versions = vuln_db_cursor.fetchall()
 
@@ -343,10 +345,22 @@ def postprocess_results(
             eol_ref = f"https://security-tracker.debian.org/tracker/source-package/{pkg}{version_start}"
             version_status = None
             if not query_version:
-                version_status = { "status": "N/A", "latest": str(latest_version), "ref": eol_ref}
+                version_status = {
+                    "status": "N/A",
+                    "latest": str(latest_version),
+                    "ref": eol_ref,
+                }
             else:
                 if query_version < latest_version:
-                    version_status = { "status": "outdated", "latest": str(latest_version), "ref": eol_ref}
+                    version_status = {
+                        "status": "outdated",
+                        "latest": str(latest_version),
+                        "ref": eol_ref,
+                    }
                 else:
-                    version_status = { "status": "current", "latest": str(latest_version), "ref": eol_ref}
+                    version_status = {
+                        "status": "current",
+                        "latest": str(latest_version),
+                        "ref": eol_ref,
+                    }
             results["version_status"] = version_status

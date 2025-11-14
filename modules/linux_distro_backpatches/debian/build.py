@@ -178,7 +178,9 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
                                     pkgs_latest_versions[pkg] = {}
                                 if release_codename not in pkgs_latest_versions[pkg]:
                                     pkgs_latest_versions[pkg][release_codename] = set()
-                                pkgs_latest_versions[pkg][release_codename].add((version_start, latest_version))
+                                pkgs_latest_versions[pkg][release_codename].add(
+                                    (version_start, latest_version)
+                                )
 
                 # try to retrieve a CPE for the product name by comparing it with the NVD's affected CPEs
                 if not cpe:
@@ -268,7 +270,7 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
                 for version_start, latest_version in latest_versions:
                     try:
                         if not version_start:
-                            version_start = ''
+                            version_start = ""
                         # insert CPE truncated like it's done in end_of_life_date module
                         cpe = pkg_cpe_map[pkg]
                         cpe = ":".join(cpe.split(":")[:5]) + ":"
