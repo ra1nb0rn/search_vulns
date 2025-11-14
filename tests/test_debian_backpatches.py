@@ -6,7 +6,7 @@ import unittest
 
 SEARCH_VULNS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.insert(1, SEARCH_VULNS_PATH)
-import search_vulns
+from search_vulns.search_vulns import search_vulns
 
 
 class TestSearches(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestSearches(unittest.TestCase):
     def test_search_nginx(self):
         self.maxDiff = None
         query = "cpe:2.3:a:nginx:nginx:1.24.0-3:*:*:*:*:*:*:debian_trixie"
-        result = search_vulns.search_vulns(query=query, include_patched=True)
+        result = search_vulns(query=query, include_patched=True)
         expected_open = ["CVE-2024-7347", "CVE-2025-23419", "CVE-2025-53859"]
         expected_backpatched = ["CVE-2023-44487"]
         result_open, result_backpatched = [], []
@@ -31,7 +31,7 @@ class TestSearches(unittest.TestCase):
     def test_search_curl(self):
         self.maxDiff = None
         query = "curl 7.88.1-11+deb12u10"
-        result = search_vulns.search_vulns(query=query, include_patched=True)
+        result = search_vulns(query=query, include_patched=True)
 
         expected_open = ["CVE-2025-0725", "CVE-2024-32928", "CVE-2025-9086", "CVE-2025-10966"]
         expected_backpatched = [
@@ -72,7 +72,7 @@ class TestSearches(unittest.TestCase):
     def test_search_squid(self):
         self.maxDiff = None
         query = "squid 5.7-2 Debian 12"
-        result = search_vulns.search_vulns(query=query, include_patched=True)
+        result = search_vulns(query=query, include_patched=True)
 
         expected_open = ["CVE-2023-49288", "CVE-2024-45802", "CVE-2023-46728", "CVE-2025-59362"]
         expected_backpatched = [

@@ -1,12 +1,6 @@
-#!/usr/bin/env python3
-
-import os
-import sys
 import unittest
 
-SEARCH_VULNS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-sys.path.insert(1, SEARCH_VULNS_PATH)
-from cpe_version import CPEVersion
+from search_vulns.cpe_version import CPEVersion
 
 
 class TestSearches(unittest.TestCase):
