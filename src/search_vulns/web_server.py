@@ -299,6 +299,9 @@ def version():
     db_cursor = db_conn.cursor()
     db_cursor.execute("SELECT UTCTimestamp FROM meta_last_data_update;")
     last_update_utc = db_cursor.fetchall()[0][0]
+    if isinstance(last_update_utc, str):  # (sqlite)
+        last_update_utc = datetime.datetime.fromisoformat(last_update_utc)
+        last_update_utc = last_update_utc.replace(tzinfo=datetime.timezone.utc)
     db_cursor.close()
     db_conn.close()
 
