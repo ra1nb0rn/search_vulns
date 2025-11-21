@@ -24,6 +24,16 @@ VERSION_FILE = os.path.join(PROJECT_DIR, "version.txt")
 DEDUP_LINEBREAKS_RE_1 = re.compile(r"(\r\n)+")
 DEDUP_LINEBREAKS_RE_2 = re.compile(r"\n+")
 
+# Optional dependency groups used for better error messages when modules
+# require extras that are not installed by default.
+OPTIONAL_DEP_GROUPS = {
+    "Flask": "web",
+    "gunicorn": "web",
+    "gevent": "web",
+    "markdown": "web",
+    "mariadb": "mariadb",
+}
+
 # define ANSI color escape sequences
 # Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
 # and: http://www.topmudsites.com/forums/showthread.php?t=413
@@ -216,7 +226,23 @@ def get_modules():
                     spec = importlib.util.spec_from_file_location(module_name, filepath)
                     if spec and spec.loader:
                         module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(module)
+                        try:
+                            spec.loader.exec_module(module)
+                        except ModuleNotFoundError as exc:
+                            missing_dep = getattr(exc, "name", str(exc))
+                            opt_group = OPTIONAL_DEP_GROUPS.get(missing_dep)
+                            if opt_group:
+                                printit(
+                                    "[!] Skipping module '{module_id}' – missing optional dependency '{missing_dep}'.".format(
+                                        module_id=module_id, missing_dep=missing_dep
+                                    )
+                                    + " Install extras via 'pip install \"search-vulns[{opt_group}]\"' to enable it.".format(
+                                        opt_group=opt_group
+                                    ),
+                                    color=YELLOW,
+                                )
+                                continue
+                            raise
                         MODULES[module_id] = module
         LOAD_MODULES_MUTEX.release()
 
@@ -581,6 +607,16 @@ def parse_args():
 def main():
     # parse args and run update routine if requested
     args = parse_args()
+
+    # Autoset update to True if resource files are missing
+    DEFAULT_VULN_DATABASE_FILE = os.path.join(os.path.dirname(__file__), "resources", "vulndb.db3")
+    DEFAULT_PRODUCT_DATABASE_FILE = os.path.join(os.path.dirname(__file__), "resources", "productdb.db3")
+    if not os.path.exists(DEFAULT_VULN_DATABASE_FILE):
+        printit("[!] Vulnerability database file not found, setting update to True", color=RED)
+        args.update = True
+    if not os.path.exists(DEFAULT_PRODUCT_DATABASE_FILE):
+        printit("[!] Product database file not found, setting update to True", color=RED)
+        args.update = True
 
     if args.update == True:
         from updater import update

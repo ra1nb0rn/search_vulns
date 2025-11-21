@@ -1,0 +1,15 @@
+# Include all necessary files for the package
+include README.md
+include LICENSE
+include CHANGELOG.md
+include version.txt
+include requirements.txt
+include *.json
+include *.py
+recursive-include modules *.py *.json *.sh *.cpp *.h *.txt CMakeLists.txt
+recursive-include resources *
+recursive-include web_server_files *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * .git*
+
