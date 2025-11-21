@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 
-import os
-import sys
 import unittest
 
-SEARCH_VULNS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-sys.path.insert(1, SEARCH_VULNS_PATH)
-import search_vulns
+from search_vulns.search_vulns import search_vulns
 
 
 class TestSearches(unittest.TestCase):
@@ -14,7 +10,7 @@ class TestSearches(unittest.TestCase):
     def test_search_handlebars_js_300(self):
         self.maxDiff = None
         query = "cpe:2.3:a:handlebarsjs:handlebars:3.0.0:*:*:*:*:node.js:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_vulns = {
             "CVE-2021-23369": "GHSA-f2jv-r9rf-7988",
             "CVE-2019-20920": "GHSA-3cqr-58rm-57f8",
@@ -97,7 +93,7 @@ class TestSearches(unittest.TestCase):
     def test_search_rosariosis_7_0_0(self):
         self.maxDiff = None
         query = "cpe:2.3:a:rosariosis:rosariosis:7.0.0:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(
+        result = search_vulns(
             query=query, is_product_id_query=False, include_single_version_vulns=True
         )
         expected_vulns = {
@@ -180,7 +176,7 @@ class TestSearches(unittest.TestCase):
     def test_search_vmware_spring_framework_5_3_26(self):
         self.maxDiff = None
         query = "cpe:2.3:a:vmware:spring_framework:5.3.26:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_vulns = {
             "CVE-2023-20863": "GHSA-wxqc-pxw9-g2p8",
             "CVE-2016-1000027": "GHSA-4wrc-f8pq-fpqp",
@@ -270,7 +266,7 @@ class TestSearches(unittest.TestCase):
     def test_search_jquery_2_1_3(self):
         self.maxDiff = None
         query = "cpe:2.3:a:jquery:jquery:2.1.3:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_vulns = {
             "CVE-2020-11022": "GHSA-gxr4-xjj5-5px2",
             "CVE-2020-11023": "GHSA-jpcq-cgw6-v4j6",
@@ -317,15 +313,7 @@ class TestSearches(unittest.TestCase):
     def test_search_electron_20_0_0(self):
         self.maxDiff = None
         query = "cpe:2.3:a:electronjs:electron:20.0.0:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
-        from modules.utils import get_database_connection
-
-        db_conn = get_database_connection(search_vulns._load_config()["VULN_DATABASE"])
-        db_cursor = db_conn.cursor()
-        db_cursor.execute('SELECT * FROM ghsa_cpe where ghsa_id = "GHSA-qqvq-6xgj-jw8g";')
-        db_cursor.close()
-        db_conn.close()
-
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_vulns = {
             "CVE-2023-44402": "GHSA-7m48-wc93-9g85",
             "CVE-2023-29198": "GHSA-p7v2-p9m8-qqg7",
@@ -384,7 +372,7 @@ class TestSearches(unittest.TestCase):
     def test_search_typo3_7_4_22(self):
         self.maxDiff = None
         query = "cpe:2.3:a:typo3:typo3:7.4.22:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_vulns = {
             "CVE-2022-31046": "GHSA-8gmv-9hwg-w89g",
             "CVE-2022-31047": "GHSA-fh99-4pgr-8j99",
@@ -661,7 +649,7 @@ class TestSearches(unittest.TestCase):
     def test_search_keycloak_23_0_7(self):
         self.maxDiff = None
         query = "cpe:2.3:a:redhat:keycloak:23.0.7:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_vulns = {
             "GHSA-cq42-vhv7-xr7p": {
                 "published": "2024-06-12 19:42:21",
@@ -839,6 +827,17 @@ class TestSearches(unittest.TestCase):
                     "GHSA-64w3-5q9m-68xf": "https://github.com/advisories/GHSA-64w3-5q9m-68xf",
                 },
             },
+            "GHSA-7m9g-pmxf-m9m8": {
+                "published": "2025-11-13 18:31:05",
+                "cvss_ver": "3.1",
+                "cvss": "6.8",
+                "cvss_vec": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N",
+                "cisa_known_exploited": False,
+                "aliases": {
+                    "CVE-2025-11538": "https://nvd.nist.gov/vuln/detail/CVE-2025-11538",
+                    "GHSA-7m9g-pmxf-m9m8": "https://github.com/advisories/GHSA-7m9g-pmxf-m9m8",
+                },
+            },
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
@@ -898,7 +897,7 @@ class TestSearches(unittest.TestCase):
     def test_search_wagtail_2_7_4(self):
         self.maxDiff = None
         query = "cpe:2.3:a:torchbox:wagtail:2.7.4:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_vulns = {
             "CVE-2023-28836": "GHSA-5286-f2rf-35c2",
             "CVE-2021-32681": "GHSA-xfrw-hxr5-ghqf",

@@ -1,30 +1,32 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ['hatchling']
+build-backend = 'hatchling.build'
 
 [project]
-name = "search-vulns"
+name = "search_vulns"
 version = "0.7.4"
-description = "Search for known vulnerabilities in software using software titles or a CPE 2.3 string. Note: This package requires system dependencies (git, sqlite3, libsqlite3-dev, libmariadb-dev, jq) which must be installed separately via your system package manager."
+description = "Search for known vulnerabilities in software using software titles or a CPE 2.3 string."
 readme = "README.md"
-requires-python = ">=3.11"
-license = {text = "MIT"}
+requires-python = ">=3.10"
+license = "MIT"
 authors = [
-    {name = "Dustin Born", email = "ra1nb0rn@protonmail.com"}
+    {name = "Dustin Born", email = "search.vulns1@gmail.com"}
 ]
-keywords = ["security", "vulnerability", "cve", "cpe", "nvd", "exploit"]
+keywords = ["security", "vulnerability", "cve", "cpe", "nvd", "exploit", "pentest"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.10",
     "Topic :: Security",
     "Topic :: System :: Systems Administration",
 ]
 
 dependencies = [
+    "cpe_search==0.1.3",
     "requests",
     "aiohttp",
     "aiolimiter",
@@ -49,19 +51,21 @@ dev = [
     "pylint",
 ]
 all = [
+    "cpe_search==0.1.3",
+    "requests",
+    "aiohttp",
+    "aiolimiter",
+    "ujson",
+    "cvss",
     "Flask",
     "gunicorn",
     "gevent",
     "markdown",
     "mariadb==1.1.12",
-    "aiohttp",
-    "aiolimiter",
-    "ujson",
-    "cvss",
 ]
 
 [project.scripts]
-search_vulns = "search_vulns_cli:main"
+search_vulns = "search_vulns.search_vulns:main"
 
 [project.urls]
 Homepage = "https://github.com/ra1nb0rn/search_vulns"
@@ -69,41 +73,26 @@ Documentation = "https://github.com/ra1nb0rn/search_vulns"
 Repository = "https://github.com/ra1nb0rn/search_vulns"
 Issues = "https://github.com/ra1nb0rn/search_vulns/issues"
 
-[tool.setuptools]
-# Automatically discover all packages
-packages = {find = {}}
-# Include root-level Python modules
-py-modules = ["search_vulns", "vulnerability", "updater", "cpe_version", "web_server", "wsgi", "search_vulns_cli"]
-include-package-data = true
-
-[tool.setuptools.package-dir]
-"" = "."
-
-[tool.setuptools.package-data]
-"*" = ["*.json", "*.txt", "*.md"]
-"modules" = ["**/*.json", "**/*.py", "**/*.sh", "**/*.cpp", "**/*.h", "**/*.txt", "**/CMakeLists.txt"]
-"resources" = ["**/*"]
-
 [tool.black]
 line-length = 96
 target-version = ['py311']
 exclude = '''
-(modules/nvd/create_db_source/.*|modules/cpe_search/cpe_search/test_cpe_suggestions.py|modules/template/.*)
+(src/search_vulns/modules/nvd/create_db_source/.*|src/search_vulns/modules/template/.*)
 '''
 
 [tool.isort]
 profile = "black"
-skip = ["modules/nvd/create_db_source/"]
+skip = ["src/search_vulns/modules/nvd/create_db_source/"]
 
 [tool.ruff]
 line-length = 96
 target-version = "py311"
 select = ["ALL"]
 ignore = ["S104", "S201", "T201", "TRY201", "COM812", "E501", "TRY003", "EM101"]
-exclude = ["modules/nvd/create_db_source"]
+exclude = ["src/search_vulns/modules/nvd/create_db_source"]
 
 [tool.pylint.MASTER]
-ignore-paths = "modules/nvd/create_db_source/.*"
+ignore-paths = "src/search_vulns/modules/nvd/create_db_source/.*"
 
 [tool.pylint."FORMAT"]
 max-line-length = 96

@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 
-import os
-import sys
 import unittest
 
-SEARCH_VULNS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-sys.path.insert(1, SEARCH_VULNS_PATH)
-import search_vulns
+from search_vulns.search_vulns import search_vulns
 
 
 class TestSearches(unittest.TestCase):
@@ -14,7 +10,7 @@ class TestSearches(unittest.TestCase):
     def test_search_wp_572(self):
         self.maxDiff = None
         query = "cpe:2.3:a:wordpress:wordpress:5.7.2:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = [
             "CVE-2021-44223",
             "CVE-2022-21663",
@@ -52,7 +48,7 @@ class TestSearches(unittest.TestCase):
     def test_search_apache_2425(self):
         self.maxDiff = None
         query = "cpe:2.3:a:apache:http_server:2.4.25:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = [
             "CVE-2017-15710",
             "CVE-2017-3169",
@@ -147,7 +143,7 @@ class TestSearches(unittest.TestCase):
     def test_search_proftpd_133c(self):
         self.maxDiff = None
         query = "cpe:2.3:a:proftpd:proftpd:1.3.3:c:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = [
             "CVE-2011-1137",
             "CVE-2011-4130",
@@ -174,7 +170,7 @@ class TestSearches(unittest.TestCase):
     def test_search_thingsboard_340(self):
         self.maxDiff = None
         query = "cpe:2.3:a:thingsboard:thingsboard:3.4.0:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(
+        result = search_vulns(
             query=query, is_product_id_query=True, include_single_version_vulns=True
         )
         expected_cves = [
@@ -198,7 +194,7 @@ class TestSearches(unittest.TestCase):
     def test_search_redis_323(self):
         self.maxDiff = None
         query = "cpe:2.3:a:redis:redis:3.2.3:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = [
             "CVE-2021-32626",
             "CVE-2022-3647",
@@ -233,7 +229,7 @@ class TestSearches(unittest.TestCase):
     def test_search_piwik_045(self):
         self.maxDiff = None
         query = "cpe:2.3:a:piwik:piwik:0.4.5:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query)
+        result = search_vulns(query=query)
         expected_cves = [
             "CVE-2015-7815",
             "CVE-2015-7816",
@@ -259,7 +255,7 @@ class TestSearches(unittest.TestCase):
     def test_search_vmware_spring_framework_5326(self):
         self.maxDiff = None
         query = "cpe:2.3:a:vmware:spring_framework:5.3.26:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = [
             "CVE-2016-1000027",
             "CVE-2023-20863",
@@ -281,7 +277,7 @@ class TestSearches(unittest.TestCase):
     def test_search_zulip_48(self):
         self.maxDiff = None
         query = "cpe:2.3:a:zulip:zulip:4.8:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = [
             "CVE-2022-35962",
             "CVE-2022-36048",
@@ -303,7 +299,7 @@ class TestSearches(unittest.TestCase):
     def test_search_zulip_server_general(self):
         self.maxDiff = None
         query = "cpe:2.3:a:zulip:zulip_server:*:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = [
             "CVE-2022-41914",
             "CVE-2023-33186",
@@ -352,7 +348,7 @@ class TestSearches(unittest.TestCase):
     def test_search_electron_1317(self):
         self.maxDiff = None
         query = "cpe:2.3:a:electronjs:electron:13.1.7:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = [
             "CVE-2023-39956",
             "CVE-2022-29247",
@@ -373,7 +369,7 @@ class TestSearches(unittest.TestCase):
     def test_search_hitachi_replication_manager_86500(self):
         self.maxDiff = None
         query = "cpe:2.3:a:hitachi:replication_manager:8.6.5-00:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = ["CVE-2022-4146", "CVE-2020-36695", "CVE-2019-17360"]
         result_cves = [
             vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
@@ -383,7 +379,7 @@ class TestSearches(unittest.TestCase):
     def test_search_handlebars_js_300(self):
         self.maxDiff = None
         query = "cpe:2.3:a:handlebarsjs:handlebars:3.0.0:*:*:*:*:node.js:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_cves = [
             "CVE-2019-19919",
             "CVE-2021-23369",
@@ -399,7 +395,7 @@ class TestSearches(unittest.TestCase):
     def test_search_proftpd_135f(self):
         self.maxDiff = None
         query = "cpe:2.3:a:proftpd:proftpd:1.3.5f:-:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_cves = [
             "CVE-2001-0027",
             "CVE-2015-3306",
@@ -421,7 +417,7 @@ class TestSearches(unittest.TestCase):
     def test_search_xorg_xorg_server_1100901(self):
         self.maxDiff = None
         query = "x.org xorg server 1.10.0.901"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_cves = [
             "CVE-2024-0409",
             "CVE-2024-0408",
@@ -512,7 +508,7 @@ class TestSearches(unittest.TestCase):
     def test_search_trendmicro_dsa_20_0_u1558(self):
         self.maxDiff = None
         query = "cpe:2.3:a:trendmicro:deep_security_agent:20.0:u1559:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = [
             "CVE-2023-52337",
             "CVE-2022-23120",
@@ -536,7 +532,7 @@ class TestSearches(unittest.TestCase):
     def test_search_vmware_esxi_802(self):
         self.maxDiff = None
         query = "cpe:2.3:o:vmware:esxi:8.0:update_2:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = [
             "CVE-2024-22253",
             "CVE-2024-22273",
@@ -558,7 +554,7 @@ class TestSearches(unittest.TestCase):
     def test_search_openstack_glance(self):
         self.maxDiff = None
         query = "cpe:2.3:a:openstack:glance:*:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=False)
+        result = search_vulns(query=query, is_product_id_query=False)
         expected_cves = [
             "CVE-2022-47951",
             "CVE-2013-1840",
@@ -595,7 +591,7 @@ class TestSearches(unittest.TestCase):
     def test_search_simplednsplus(self):
         self.maxDiff = None
         query = "simpledns simple dns plus"
-        result = search_vulns.search_vulns(query=query)
+        result = search_vulns(query=query)
         expected_cves = ["CVE-2008-3208"]
         result_cves = [
             vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
@@ -605,7 +601,7 @@ class TestSearches(unittest.TestCase):
     def test_search_portainer_2_19_0(self):
         self.maxDiff = None
         query = "cpe:2.3:a:portainer:portainer:2.19.0:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query, is_product_id_query=True)
+        result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = ["CVE-2024-33661", "CVE-2024-33662", "CVE-2025-49593"]
         result_cves = [
             vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
@@ -617,14 +613,14 @@ class TestSearches(unittest.TestCase):
         # considered equal and not the entire product
         self.maxDiff = None
         query = "cpe:2.3:a:apache:http_server:11.1.1.9.0:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query)
+        result = search_vulns(query=query)
         result_cves = [
             vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
         ]
         self.assertIn("CVE-2013-2566", result_cves)
 
         query = "cpe:2.3:a:apache:http_server:*:*:*:*:*:*:*:*"
-        result = search_vulns.search_vulns(query=query)
+        result = search_vulns(query=query)
         result_cves = [
             vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
         ]

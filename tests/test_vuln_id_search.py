@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 
-import os
-import sys
 import unittest
 
-SEARCH_VULNS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-sys.path.insert(1, SEARCH_VULNS_PATH)
-import search_vulns
+from search_vulns.search_vulns import search_vulns
 
 
 class TestSearches(unittest.TestCase):
@@ -14,7 +10,7 @@ class TestSearches(unittest.TestCase):
     def test_search_cve_ghsa_ids1(self):
         self.maxDiff = None
         query = "CVE-2024-27286, GHSA-hfjr-m75m-wmh7, CVE-2024-12345678"
-        result = search_vulns.search_vulns(query)
+        result = search_vulns(query)
         expected_vulns = {
             "CVE-2024-27286": {
                 "published": "2024-03-20 20:15:08",
@@ -58,7 +54,7 @@ class TestSearches(unittest.TestCase):
         query = (
             "CVE-2015-9251 ;;asd GHSA-6c3j-c64m-qhgq iuhnd CVE-2019-11358 .121w CVE-2007-2379"
         )
-        result = search_vulns.search_vulns(query)
+        result = search_vulns(query)
         expected_vulns = {
             "CVE-2015-9251": {
                 "published": "2018-01-18 23:29:00",

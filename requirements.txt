@@ -1,9 +1,0 @@
-requests
-Flask
-gunicorn
-gevent
-aiohttp
-aiolimiter
-ujson
-markdown
-cvss
