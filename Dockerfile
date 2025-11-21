@@ -2,9 +2,9 @@ FROM ubuntu:latest
 
 WORKDIR /home/search_vulns
 RUN apt-get update >/dev/null && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata locales sudo git build-essential gcc >/dev/null && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip tzdata locales sudo git build-essential gcc >/dev/null && \
     git clone --quiet --depth 1 https://github.com/ra1nb0rn/search_vulns.git . && \
-    pip3 install . && \
+    pip3 install -e . --break-system-packages && \
     search_vulns --full-install && \
     search_vulns -u && \
     rm -rf /var/lib/apt/lists/*
