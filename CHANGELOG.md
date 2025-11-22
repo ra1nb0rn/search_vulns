@@ -1,6 +1,22 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.8.0 - 2025-11-22
+### Added
+- Information about outdated software status for Debian packages is provided (thanks @pommfresser ).
+
+### Changed
+- Converted search_vulns to a Python package (thanks @ocervell ). A new install is recommended.
+- No longer use git submodules. Instead, a shallow clone of required repos is made.
+- Included cpe_search as Python package instead of git submodule.
+
+### Fixed
+- Added fix to abort daily update of release assets if tag could not be retrieved.
+- Added fix for the NVD not providing `deprecatedBy` information for deprecated CPEs.
+- Added some other small fixes.
+- Updated test cases.
+
+
 ## v0.7.4 - 2025-11-11
 ### Added
 - Added equivalent CPE for Apache HTTP webserver.
