@@ -10,6 +10,7 @@ Search for known vulnerabilities in software using software titles or a CPE 2.3 
 * Exploit information from [PoC-in-GitHub](https://github.com/nomi-sec/PoC-in-GitHub)
 * Vulnerability information from the [GitHub Security Advisory Database](https://github.com/github/advisory-database)
 * Software currency information from [endoflife.date](https://github.com/endoflife-date/endoflife.date)
+* Backpatch information from the [Debian Security Bug Tracker](https://security-tracker.debian.org/tracker/)
 
 Since search_vulns is designed in a modular fashion, new data sources and extensions can be integrated easily.
 
@@ -27,68 +28,96 @@ Using the *search_vulns* tool, this local information can be queried, either by 
 
 
 ## Installation
-You can perform a quick install by running the following commands:
+The core of *search_vulns* can be installed as a lightweight Python package, optionally with a web server component. An extended installation can be performed, which enables you to build the local databases yourself instead of pulling them from [the latest release on GitHub](https://github.com/ra1nb0rn/search_vulns/releases/latest) and to use MariaDB as database backend. As of now, there are no other functional differences.
+
+### Lightweight Python Package Installation
+You can install the search_vulns Python package from PyPI like so:
+```shell
+pip3 install search_vulns
+```
+Note that you may have to include ``--break-system-packages``, or use a virtualenv or [*pipx*](https://github.com/pypa/pipx).
+
+To install the required packages for the optional web server component, you can run ``pip3 install search_vulns[web]``.
+
+You can also clone this repository, build the Python package yourself and keep all data editable and in the cloned repository (beneficial for development purposes):
 ```shell
 git clone https://github.com/ra1nb0rn/search_vulns
-cd search_vulns
-pip3 install -r requirements.txt
-git submodule init
-git submodule update
-./search_vulns.py -u
+pip3 install -e .
 ```
 
-Alternatively, for a full install, run the ``install.sh`` script (*note that it is configured to ``--break-system-packages`` for installing Python dependencies*). First, this script automatically installs the required dependencies. Thereafter it downloads the required software and vulnerability resources (see the [Release artifacts](https://github.com/ra1nb0rn/search_vulns/releases/latest)). These resources can also be built directly by invoking the install script with the according flag: ``install.sh --full``. Note, however, that this may take more time than simply downloading the resources. Of course, you can also look at the installation script and set up everything manually. Finally, you can also use the provided ``Dockerfile`` to build a container:
+After installing *search_vulns*, you need to pull the prebuilt database files from GitHub like so:
+```shell
+search_vulns -u
 ```
+
+Lastly, you can run *search_vulns* or start the *search_vulns* web server if the web dependencies are installed:
+```shell
+$ search_vulns -q 'jquery 2.1.3'
+$ python3 -m search_vulns.web_server
+```
+
+### Complete / Full Installation of search_vulns
+You can perform a full installation like so (see notes above regarding `pip` installation):
+```shell
+pip3 install search_vulns
+search_vulns --full-install
+```
+Note that this installs some required system packages, as specified in the ``install.sh`` files throughout the code.
+
+Thereafter, you can download the database files from GitHub as shown above or build the databases yourself:
+```shell
+search_vulns --full-update
+```
+Note, however, that you should supply API keys via a config file, e.g. [`src/search_vulns/config.json`](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/config.json) or as environment variables. The API keys are free and you just need to register with the [NVD](https://nvd.nist.gov/developers/request-an-api-key) or [VulnCheck](https://www.vulncheck.com/), for example.
+
+### Dockerfile
+There's also a ``Dockerfile`` you can use:
+```shell
 docker build -t search_vulns .
-```
-and then start it:
-```
-docker run -it search_vulns bash
-```
-or with an exposed port for the web server:
-```
 docker run -p 127.0.0.1:5000:5000 -it search_vulns bash
 ```
-Note that here you have to update the host and port accordingly in the ``app.run`` call in [``web_server.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/web_server.py).
+The port forwarding is optional, in case you do not intend on using the web server component.
 
 
 ## Usage
 *search_vulns*'s usage information is shown in the following:
 ```
-usage: search_vulns.py [-h] [-u] [--full-update] [-a] [-f {json,txt}] [-o OUTPUT] [-q QUERY]
-                       [-c CONFIG] [-V] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
-                       [--ignore-general-product-vulns] [--include-single-version-vulns]
-                       [--use-created-product-ids]
+usage: search_vulns [-h] [-u] [--full-update] [--full-install] [-a] [-f {json,txt}] [-o OUTPUT]
+                    [-q QUERY] [-c CONFIG] [-V] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
+                    [--ignore-general-product-vulns] [--include-single-version-vulns]
+                    [--use-created-product-ids] [--include-patched]
 
 Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)
 
 options:
   -h, --help            show this help message and exit
-  -u, --update          Download the latest version of the the local vulnerability and software
-                        database
+  -u, --update          Download the latest version of the the local vulnerability and software database
   --full-update         Fully (re)build the local vulnerability and software database
+  --full-install        Fully install search_vulns, including all dependencies (python packages, system
+                        packages etc.)
   -a, --artifacts       Print JSON list of artifacts created during full update
   -f {json,txt}, --format {json,txt}
                         Output format, either 'txt' or 'json' (default: 'txt')
   -o OUTPUT, --output OUTPUT
                         File to write found vulnerabilities to
   -q QUERY, --query QUERY
-                        A query, either software title like 'Apache 2.4.39' or a product ID string
-                        (e.g. CPE 2.3)
+                        A query, either software title like 'Apache 2.4.39' or a product ID string (e.g.
+                        CPE 2.3)
   -c CONFIG, --config CONFIG
                         A config file to use (default: config.json)
   -V, --version         Print the version of search_vulns
   --cpe-search-threshold CPE_SEARCH_THRESHOLD
                         Similarity threshold used for retrieving a CPE via the cpe_search tool
   --ignore-general-product-vulns
-                        Ignore vulnerabilities that only affect a general product (i.e. without
-                        version)
+                        Ignore vulnerabilities that only affect a general product (i.e. without version)
   --include-single-version-vulns
                         Include vulnerabilities that only affect one specific version of a product when
                         querying a lower version
   --use-created-product-ids
                         If no matching product ID exists in the software database, automatically use
                         matching ones created by search_vulns
+  --include-patched     Include vulnerabilities reported as (back)patched, e.g. by Debian Security
+                        Tracker, in results
 ```
 Note that when querying software with ``-q`` you have to put the software information in quotes if it contains any spaces. Also, you can use ``-q`` multiple times to make multiple queries at once. For one, a query can be a software name / title like 'Apache 2.4.39' or 'Wordpress 5.7.2'. Furthermore, a query can also be a [CPE 2.3](https://csrc.nist.gov/projects/security-content-automation-protocol/specifications/cpe) string.
 
@@ -123,32 +152,32 @@ Here are some examples:
 ## Modularity
 search_vulns' search engine is designed in a modular manner. Therefore, new databases can be integrated easily. For example, modules can help in finding product IDs, vulnerabilities, extra information about vulnerabilities and extra information about the queried product. Examples of the latter two are CVSS scores or software recency information. Furthermore, modules can classify identified vulnerabilities as patched if they store and utilize special information related to the query, for example.
 
-Have a look at the template module to get started writing your own modules: [``modules/template/search_vulns_template.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/modules/template/search_vulns_template.py).
+Have a look at the template module to get started writing your own modules: [``src/search_vulns/modules/template/search_vulns_template.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/template/search_vulns_template.py).
 
 
 ## Running a Web Server
-It is also possible to run a web server that provides this tool's functionality to clients over the network. ``web_server.py`` contains a working example using Flask. Depending on your environment, you may want to modify the server IP and port at the end of this file. To run a simple Flask web server, just run:
+It is also possible to run a web server that provides this tool's functionality to clients over the network. [``src/search_vulns/web_server.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/web_server.py) contains a working example using Flask. Depending on your environment, you may want to modify the server IP and port at the end of this file. To run a simple Flask web server, just run:
 ```bash
-./web_server.py
+python3 -m search_vulns.web_server
 ```
 Furthermore, you can use ``gunicorn`` to make the web server more scalable; for example by running:
 ```bash
-gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind '0.0.0.0:8000' wsgi:app
+gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind '0.0.0.0:8000' search_vulns.wsgi:app
 ```
 You can read more about choosing good ``gunicorn`` settings for your system [here](https://medium.com/building-the-system/gunicorn-3-means-of-concurrency-efbb547674b7). Note, however, that this tool is quite CPU intensive, meaning that scalability is somewhat limited.
 
 Finally, you can also use Nginx as a reverse proxy. A sample configuration file is provided in [``web_server_files/nginx.conf.sample``](https://github.com/ra1nb0rn/search_vulns/blob/master/web_server_files/nginx.conf.sample). Again, you may have to adjust this to your needs. When using Nginx, make sure you have the app running at the configured endpoint(s). For the sample configuration file, for example, you would have to run something similar to the following:
 ```bash
-gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind 'unix:/tmp/gunicorn.sock' wsgi:app
+gunicorn --worker-class=gevent --worker-connections=50 --workers=3 --bind 'unix:/tmp/gunicorn.sock' search_vulns.wsgi:app
 ```
 
 
 ## MariaDB as Alternative Database Option
-search_vulns can be configured to use *MariaDB* as an alternative to the preconfigured *SQLite* mechanism. A sample configuration file for MariaDB is provided in [``config_mariadb.json``](https://github.com/ra1nb0rn/search_vulns/blob/master/config_mariadb.json).
+search_vulns can be configured to use *MariaDB* as an alternative to the preconfigured *SQLite* mechanism. A sample configuration file for MariaDB is provided in [``src/search_vulns/config_mariadb.json``](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/config_mariadb.json).
 
 Make sure that you adjust the values for MariaDB in the configuration file to your MariaDB deployment (*user*, *password*, *host* and *port*).
 
-To use MariaDB instead of *SQLite* for the webserver, simply change the ``CONFIG_FILE`` variable in ``web_server.py`` to your config file (e.g. ``config_mariadb.json``).
+To use MariaDB instead of *SQLite* for the webserver, simply change the ``CONFIG_FILE`` variable in ``web_server.py`` to your config file (e.g. ``src/search_vulns/config_mariadb.json``).
 
 To improve the performance of search_vulns with MariaDB, it is recommend to add the following settings to your MariaDB configuration file (e.g. ``/etc/mysql/my.cnf``):
 ```
@@ -164,4 +193,4 @@ thread_handling = pool-of-threads
 ## License
 *search_vulns* is licensed under the MIT license, see [here](https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE).
 
-View the licenses of the included data sources [here](https://github.com/ra1nb0rn/search_vulns/blob/master/resources/license_infos.md).
+View the licenses of the included data sources [here](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/resources/license_infos.md).
