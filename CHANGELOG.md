@@ -1,6 +1,11 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.8.1 - 2025-11-22
+### Changed
+- Split search_vulns.py into core.py and cli.py
+
+
 ## v0.8.0 - 2025-11-22
 ### Added
 - Information about outdated software status for Debian packages is provided (thanks @pommfresser ).
