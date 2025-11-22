@@ -2,7 +2,7 @@
 
 import unittest
 
-from search_vulns.search_vulns import search_vulns
+from search_vulns.core import search_vulns
 
 
 class TestSearches(unittest.TestCase):

@@ -14,18 +14,18 @@ from cpe_search.database_wrapper_functions import (
 )
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
-from .modules.utils import get_database_connection
-from .search_vulns import (
+from .core import (
     PROJECT_DIR,
     _load_config,
     check_and_try_sv_rerun_with_created_cpes,
     get_version,
     search_product_ids,
 )
-from .search_vulns import search_vulns as search_vulns_call
-from .search_vulns import (
+from .core import search_vulns as search_vulns_call
+from .core import (
     serialize_vulns_in_result,
 )
+from .modules.utils import get_database_connection
 
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))
 TEMPLATE_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "templates"))

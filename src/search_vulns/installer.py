@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from .search_vulns import IS_FULLY_INSTALLED_FILE, PROJECT_DIR
+from .core import IS_FULLY_INSTALLED_FILE, PROJECT_DIR
 
 INSTALL_SCRIPT = os.path.join(PROJECT_DIR, "install.sh")
 
