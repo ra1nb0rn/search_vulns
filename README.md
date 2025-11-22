@@ -31,21 +31,21 @@ Using the *search_vulns* tool, this local information can be queried, either by 
 The core of *search_vulns* can be installed as a lightweight Python package, optionally with a web server component. An extended installation can be performed, which enables you to build the local databases yourself instead of pulling them from [the latest release on GitHub](https://github.com/ra1nb0rn/search_vulns/releases/latest) and to use MariaDB as database backend. As of now, there are no other functional differences.
 
 ### Lightweight Python Package Installation
-You can install the search_vulns Python package from PyPI like so:
+To install search_vulns, you have to have Python, pip and wget installed beforehand. Then you can install the *search_vulns* Python package from PyPI like so:
 ```shell
-pip3 install search_vulns
+pip install search_vulns
 ```
 Note that you may have to include ``--break-system-packages``, or use a virtualenv or [*pipx*](https://github.com/pypa/pipx).
 
 To install the required packages for the optional web server component, you can run:
 ```shell
-pip3 install search_vulns[web]
+pip install search_vulns[web]
 ```
 
 You can also clone this repository, build the Python package yourself and keep all data editable and in the cloned repository (beneficial for development purposes):
 ```shell
 git clone https://github.com/ra1nb0rn/search_vulns
-pip3 install -e .
+pip install -e .
 ```
 
 After installing *search_vulns*, you need to pull the prebuilt database files from GitHub like so:
@@ -62,7 +62,7 @@ $ python3 -m search_vulns.web_server
 ### Complete / Full Installation of search_vulns
 You can perform a full installation like so (see notes above regarding `pip` installation):
 ```shell
-pip3 install search_vulns
+pip install search_vulns
 search_vulns --full-install
 ```
 Note that this installs some required system packages, as specified in the ``install.sh`` files throughout the code.
@@ -79,7 +79,7 @@ There's also a ``Dockerfile`` you can use:
 docker build -t search_vulns .
 docker run -p 127.0.0.1:5000:5000 -it search_vulns bash
 ```
-The port forwarding is optional, in case you do not intend on using the web server component.
+The port forwarding is optional, in case you do not intend on using the web server component. If you do, make sure to adjust the listening socket at the end of [``src/search_vulns/web_server.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/web_server.py) accordingly.
 
 
 ## Usage

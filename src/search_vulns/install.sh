@@ -5,6 +5,13 @@ LINUX_PACKAGE_MANAGER="apt-get"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 install_linux_packages() {
+    # Check if script is run as root
+    if [[ "$EUID" -ne 0 ]]; then
+        SUDO="sudo"
+    else
+        SUDO=""
+    fi
+
     # Install required packages
     PACKAGES="sudo git wget curl sqlite3 libsqlite3-dev libmariadb-dev jq"
     which ${LINUX_PACKAGE_MANAGER} &> /dev/null
@@ -14,9 +21,9 @@ install_linux_packages() {
     fi
 
     if [ $QUIET != 1 ]; then
-        sudo ${LINUX_PACKAGE_MANAGER} update
+        ${SUDO} ${LINUX_PACKAGE_MANAGER} update
     else
-        sudo ${LINUX_PACKAGE_MANAGER} update >/dev/null
+        ${SUDO} ${LINUX_PACKAGE_MANAGER} update >/dev/null
     fi
     if [ $? != 0 ]; then
         printf "${RED}Installation of ${LINUX_PACKAGE_MANAGER} packages was not successful.\\n${SANE}"
@@ -24,9 +31,9 @@ install_linux_packages() {
     fi
 
     if [ ${QUIET} != 1 ]; then
-        sudo ${LINUX_PACKAGE_MANAGER} -y install ${PACKAGES}
+        ${SUDO} ${LINUX_PACKAGE_MANAGER} -y install ${PACKAGES}
     else
-        sudo ${LINUX_PACKAGE_MANAGER} -y install ${PACKAGES} >/dev/null
+        ${SUDO} ${LINUX_PACKAGE_MANAGER} -y install ${PACKAGES} >/dev/null
     fi
     if [ $? != 0 ]; then
         printf "${RED}Installation of ${LINUX_PACKAGE_MANAGER} packages was not successful.\\n${SANE}"

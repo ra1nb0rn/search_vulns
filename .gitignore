@@ -18,3 +18,4 @@ productdb.db3.update
 deprecated-cpes.json
 update_logs
 src/search_vulns/.is_installed
+dist/
