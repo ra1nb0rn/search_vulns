@@ -37,7 +37,10 @@ pip3 install search_vulns
 ```
 Note that you may have to include ``--break-system-packages``, or use a virtualenv or [*pipx*](https://github.com/pypa/pipx).
 
-To install the required packages for the optional web server component, you can run ``pip3 install search_vulns[web]``.
+To install the required packages for the optional web server component, you can run:
+```shell
+pip3 install search_vulns[web]
+```
 
 You can also clone this repository, build the Python package yourself and keep all data editable and in the cloned repository (beneficial for development purposes):
 ```shell
