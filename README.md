@@ -127,7 +127,7 @@ Note that when querying software with ``-q`` you have to put the software inform
 Here are some examples:
 * Query *Sudo 1.8.2* for known vulnerabilities:
   ```bash
-  $ ./search_vulns.py -q 'Sudo 1.8.2'
+  $ search_vulns -q 'Sudo 1.8.2'
 
   [+] Sudo 1.8.2 (cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*/cpe:2.3:a:todd_miller:sudo:1.8.2:*:*:*:*:*:*:*)
   CVE-2019-14287 (CVSSv3.1/8.8): In Sudo before 1.8.28, an attacker with access to a Runas ALL sudoer account can bypass certain policy blacklists and session PAM modules, and can cause incorrect logging, by invoking sudo with a crafted user ID. For example, this allows bypass of !root configuration, and USER= logging, for a "sudo -u \#$((0xffffffff))" command.
@@ -140,7 +140,7 @@ Here are some examples:
   ```
 * Query *Moodle 3.4.0* for known vulnerabilities:
   ```bash
-  $ ./search_vulns.py -q 'Moodle 3.4.0'
+  $ search_vulns -q 'Moodle 3.4.0'
 
   [+] Moodle 3.4.0 (cpe:2.3:a:moodle:moodle:3.4.0:*:*:*:*:*:*:*)
   CVE-2018-14630 (CVSSv3.0/8.8): moodle before versions 3.5.2, 3.4.5, 3.3.8, 3.1.14 is vulnerable to an XML import of ddwtos could lead to intentional remote code execution. When importing legacy 'drag and drop into text' (ddwtos) type quiz questions, it was possible to inject and execute PHP code from within the imported questions, either intentionally or by importing questions from an untrusted source.
