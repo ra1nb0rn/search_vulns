@@ -4,7 +4,7 @@ build-backend = 'hatchling.build'
 
 [project]
 name = "search_vulns"
-version = "0.8.1"
+version = "0.8.2"
 description = "Search for known vulnerabilities in software using software titles or a CPE 2.3 string."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -69,7 +69,7 @@ all = [
 search_vulns = "search_vulns.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/ra1nb0rn/search_vulns"
+Homepage = "https://search-vulns.com"
 Documentation = "https://github.com/ra1nb0rn/search_vulns"
 Repository = "https://github.com/ra1nb0rn/search_vulns"
 Issues = "https://github.com/ra1nb0rn/search_vulns/issues"

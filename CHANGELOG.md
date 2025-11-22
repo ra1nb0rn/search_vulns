@@ -1,6 +1,14 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.8.2 - 2025-11-22
+### Changed
+- Implement Python-native download for lightweight installation instead of using wget.
+
+### Fixed
+- Fixed GitHub workflow for updating the latest release assets
+
+
 ## v0.8.1 - 2025-11-22
 ### Changed
 - Split search_vulns.py into core.py and cli.py
