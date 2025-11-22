@@ -31,7 +31,7 @@ Using the *search_vulns* tool, this local information can be queried, either by 
 The core of *search_vulns* can be installed as a lightweight Python package, optionally with a web server component. An extended installation can be performed, which enables you to build the local databases yourself instead of pulling them from [the latest release on GitHub](https://github.com/ra1nb0rn/search_vulns/releases/latest) and to use MariaDB as database backend. As of now, there are no other functional differences.
 
 ### Lightweight Python Package Installation
-To install search_vulns, you have to have Python, pip and wget installed beforehand. Then you can install the *search_vulns* Python package from PyPI like so:
+To install search_vulns, you have to have Python and pip installed beforehand. Then you can install the *search_vulns* Python package from PyPI like so:
 ```shell
 pip install search_vulns
 ```

@@ -32,6 +32,7 @@ dependencies = [
     "aiolimiter",
     "ujson",
     "cvss",
+    "tqdm",
 ]
 
 [project.optional-dependencies]

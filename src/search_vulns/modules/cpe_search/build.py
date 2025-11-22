@@ -3,8 +3,8 @@ import os
 import threading
 import time
 
-import requests
 from cpe_search.cpe_search import update as update_cpe_search
+from search_vulns.modules.utils import download_file
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 CPE_DEPRECATIONS_ARTIFACT_URL = (
@@ -27,13 +27,7 @@ def setup():
 def update(productdb_config, vulndb_config, module_config, stop_update):
     setup()
 
-    response = requests.get(CPE_DEPRECATIONS_ARTIFACT_URL, stream=True)
-    response.raise_for_status()  # Raise an error for bad status codes
-
-    with open(DEPRECATED_CPES_FILE_BUILD, "wb") as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            if chunk:
-                f.write(chunk)
+    download_file(CPE_DEPRECATIONS_ARTIFACT_URL, DEPRECATED_CPES_FILE_BUILD, show_progressbar=True)
 
     os.replace(DEPRECATED_CPES_FILE_BUILD, DEPRECATED_CPES_FILE)
 

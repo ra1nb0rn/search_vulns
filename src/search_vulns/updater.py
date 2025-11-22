@@ -12,7 +12,7 @@ import requests
 
 from .core import MODULE_DIRECTORY, PROJECT_DIR, get_modules, get_version
 from .cpe_version import CPEVersion
-from .modules.utils import get_database_connection, is_safe_db_name
+from .modules.utils import get_database_connection, is_safe_db_name, download_file
 
 UPDATE_MODULES = None
 UPDATE_LOGS_DIR = os.path.join(PROJECT_DIR, "update_logs")
@@ -193,21 +193,15 @@ def update(config):
         )
 
     # download shared productdb and vulndb
-    return_code = subprocess.call(
-        "wget -q --show-progress %s -O %s"
-        % (shlex.quote(PRODUCT_DB_ARTIFACT_URL), shlex.quote(download_productdb_out)),
-        shell=True,
-    )
-    if return_code != 0:
+    try:
+        download_file(PRODUCT_DB_ARTIFACT_URL, download_productdb_out, show_progressbar=True)
+    except:
         print("[-] Could not download latest productdb file")
         return False, []
 
-    return_code = subprocess.call(
-        "wget -q --show-progress %s -O %s"
-        % (shlex.quote(VULNDB_ARTIFACT_URL), shlex.quote(download_vulndb_out)),
-        shell=True,
-    )
-    if return_code != 0:
+    try:
+        download_file(VULNDB_ARTIFACT_URL, download_vulndb_out, show_progressbar=True)
+    except:
         print("[-] Could not download latest vulndb file")
         return False, []
 
