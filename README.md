@@ -85,7 +85,7 @@ The port forwarding is optional, in case you do not intend on using the web serv
 ## Usage
 *search_vulns*'s usage information is shown in the following:
 ```
-usage: search_vulns [-h] [-u] [--full-update] [--full-install] [-a] [-f {json,txt}] [-o OUTPUT]
+usage: search_vulns [-h] [-u] [--full-update] [--full-install] [-a] [-f {txt,json}] [-o OUTPUT]
                     [-q QUERY] [-c CONFIG] [-V] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
                     [--ignore-general-product-vulns] [--include-single-version-vulns]
                     [--use-created-product-ids] [--include-patched]
@@ -99,13 +99,13 @@ options:
   --full-install        Fully install search_vulns, including all dependencies (python packages, system
                         packages etc.)
   -a, --artifacts       Print JSON list of artifacts created during full update
-  -f {json,txt}, --format {json,txt}
+  -f {txt,json}, --format {txt,json}
                         Output format, either 'txt' or 'json' (default: 'txt')
   -o OUTPUT, --output OUTPUT
                         File to write found vulnerabilities to
   -q QUERY, --query QUERY
-                        A query, either software title like 'Apache 2.4.39' or a product ID string (e.g.
-                        CPE 2.3)
+                        A query, either a software title like 'Apache 2.4.39', a product ID string (e.g.
+                        CPE 2.3) or a list of vuln IDs
   -c CONFIG, --config CONFIG
                         A config file to use (default: config.json)
   -V, --version         Print the version of search_vulns
@@ -128,7 +128,6 @@ Here are some examples:
 * Query *Sudo 1.8.2* for known vulnerabilities:
   ```bash
   $ search_vulns -q 'Sudo 1.8.2'
-
   [+] Sudo 1.8.2 (cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*/cpe:2.3:a:todd_miller:sudo:1.8.2:*:*:*:*:*:*:*)
   CVE-2019-14287 (CVSSv3.1/8.8): In Sudo before 1.8.28, an attacker with access to a Runas ALL sudoer account can bypass certain policy blacklists and session PAM modules, and can cause incorrect logging, by invoking sudo with a crafted user ID. For example, this allows bypass of !root configuration, and USER= logging, for a "sudo -u \#$((0xffffffff))" command.
   Exploits:  https://www.exploit-db.com/exploits/47502
@@ -141,7 +140,6 @@ Here are some examples:
 * Query *Moodle 3.4.0* for known vulnerabilities:
   ```bash
   $ search_vulns -q 'Moodle 3.4.0'
-
   [+] Moodle 3.4.0 (cpe:2.3:a:moodle:moodle:3.4.0:*:*:*:*:*:*:*)
   CVE-2018-14630 (CVSSv3.0/8.8): moodle before versions 3.5.2, 3.4.5, 3.3.8, 3.1.14 is vulnerable to an XML import of ddwtos could lead to intentional remote code execution. When importing legacy 'drag and drop into text' (ddwtos) type quiz questions, it was possible to inject and execute PHP code from within the imported questions, either intentionally or by importing questions from an untrusted source.
   Reference: https://nvd.nist.gov/vuln/detail/CVE-2018-14630, 2018-09-17
@@ -149,6 +147,16 @@ Here are some examples:
   Exploits:  https://www.exploit-db.com/exploits/46551
   Reference: https://nvd.nist.gov/vuln/detail/CVE-2018-1133, 2018-05-25
   [...]
+  ```
+* Explicitly retrieve information about `CVE-2024-24824` and `GHSA-q9q2-3ppx-mwqf`:
+  ```bash
+  $ search_vulns -q 'CVE-2024-24824 GHSA-q9q2-3ppx-mwqf'
+  [+] CVE-2024-24824 GHSA-q9q2-3ppx-mwqf ()
+  CVE-2024-24824 (CVSSv3.1/8.8): Graylog is a free and open log management platform. Starting in version 2.0.0 and prior to versions 5.1.11 and 5.2.4, arbitrary classes can be loaded and instantiated using a HTTP PUT request to the `/api/system/cluster_config/` endpoint. Graylog's cluster config system uses fully qualified class names as config keys. To validate the existence of the requested class before using them, Graylog loads the class using the class loader. [...]
+  Exploits:  https://github.com/Graylog2/graylog2-server/security/advisories/GHSA-p6gg-5hf4-4rgj
+  Reference: https://nvd.nist.gov/vuln/detail/CVE-2024-24824, 2024-02-07
+  GHSA-q9q2-3ppx-mwqf (CVSSv3.1/7.3): Graylog Allows Stored Cross-Site Scripting via Files Plugin and API Browser
+  Reference: https://github.com/advisories/GHSA-q9q2-3ppx-mwqf, 2025-05-07
   ```
 
 

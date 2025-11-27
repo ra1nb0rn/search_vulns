@@ -143,7 +143,7 @@ def parse_args():
         dest="queries",
         metavar="QUERY",
         action="append",
-        help="A query, either software title like 'Apache 2.4.39' or a product ID string (e.g. CPE 2.3)",
+        help="A query, either a software title like 'Apache 2.4.39', a product ID string (e.g. CPE 2.3) or a list of vuln IDs",
     )
     parser.add_argument(
         "-c",
