@@ -359,9 +359,11 @@ def download_file(src, dest, show_progressbar=False):
     total_size = int(response.headers.get("content-length", 0))
     received_size = 0
     block_size = 8192
-    filename = src.split('/')[-1]
+    filename = src.split("/")[-1]
 
-    with tqdm(total=total_size, unit="B", unit_scale=True, desc=filename, disable=not show_progressbar) as progress_bar:
+    with tqdm(
+        total=total_size, unit="B", unit_scale=True, desc=filename, disable=not show_progressbar
+    ) as progress_bar:
         with open(dest, "wb") as file:
             for data in response.iter_content(block_size):
                 progress_bar.update(len(data))

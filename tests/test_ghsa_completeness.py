@@ -838,6 +838,17 @@ class TestSearches(unittest.TestCase):
                     "GHSA-7m9g-pmxf-m9m8": "https://github.com/advisories/GHSA-7m9g-pmxf-m9m8",
                 },
             },
+            "GHSA-93vm-mqpw-8wh3": {
+                "published": "2025-11-25 18:32:22",
+                "cvss_ver": "3.1",
+                "cvss": "5.5",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:N",
+                "cisa_known_exploited": False,
+                "aliases": {
+                    "CVE-2025-13467": "https://nvd.nist.gov/vuln/detail/CVE-2025-13467",
+                    "GHSA-93vm-mqpw-8wh3": "https://github.com/advisories/GHSA-93vm-mqpw-8wh3",
+                },
+            },
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id

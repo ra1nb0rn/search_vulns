@@ -27,7 +27,9 @@ def setup():
 def update(productdb_config, vulndb_config, module_config, stop_update):
     setup()
 
-    download_file(CPE_DEPRECATIONS_ARTIFACT_URL, DEPRECATED_CPES_FILE_BUILD, show_progressbar=True)
+    download_file(
+        CPE_DEPRECATIONS_ARTIFACT_URL, DEPRECATED_CPES_FILE_BUILD, show_progressbar=True
+    )
 
     os.replace(DEPRECATED_CPES_FILE_BUILD, DEPRECATED_CPES_FILE)
 
