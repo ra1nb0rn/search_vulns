@@ -1,6 +1,8 @@
 import math
 import re
 import requests
+import shlex
+import subprocess
 from tqdm import tqdm
 from collections import Counter
 
@@ -373,4 +375,32 @@ def download_file(src, dest, show_progressbar=False):
     if total_size != 0 and received_size != total_size:
         raise RuntimeError("Could not download file %s" % src)
 
+    return True
+
+
+def download_github_folder(repo_url, repo_folder, dest):
+    """
+    Download the given folder from the given URL to the given destination
+    on the local filesystem. Returns True on success, False on failure.
+    """
+
+    repo_url_esc = shlex.quote(repo_url)
+    repo_folder_esc = shlex.quote(repo_folder)
+    dest_esc = shlex.quote(dest)
+
+    if repo_url != repo_url_esc or repo_folder != repo_folder_esc or dest != dest_esc:
+        return False
+
+    return_code = subprocess.call(
+        "git clone -n --depth=1 --filter=tree:0 '%s' '%s' && "
+        % (repo_url_esc, dest_esc)
+        + "cd '%s' && " % dest_esc
+        + "git sparse-checkout set --no-cone '%s' && " % repo_folder_esc
+        + "git checkout",
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    if return_code != 0:
+        return False
     return True

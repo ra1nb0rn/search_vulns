@@ -17,6 +17,7 @@ from search_vulns.modules.utils import (
     SQLITE_TIMEOUT,
     compute_cosine_similarity,
     get_database_connection,
+    download_github_folder
 )
 
 REQUIRES_BUILT_MODULES = ["cpe_search.search_vulns_cpe_search", "nvd.search_vulns_nvd"]
@@ -411,17 +412,8 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
     # download GitHub reviewed advisories from GHSA repo
     cleanup()
     LOGGER.info("Downloading GHSA database")
-    return_code = subprocess.call(
-        "git clone -n --depth=1 --filter=tree:0 %s '%s' && "
-        % (GHSA_GITHUB_REPO, GHSA_GITHUB_DIR)
-        + "cd %s && " % GHSA_GITHUB_DIR
-        + "git sparse-checkout set --no-cone advisories/github-reviewed/ && "
-        + "git checkout",
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    if return_code != 0:
+    success = download_github_folder(GHSA_GITHUB_REPO, 'advisories/github-reviewed/', GHSA_GITHUB_DIR)
+    if not success:
         LOGGER.error("Could not download latest resources of the GHSA")
         return False, []
 
