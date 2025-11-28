@@ -186,6 +186,7 @@ def _search_vulns(
     product_ids,
     vuln_db_cursor,
     config,
+    module_run_order,
     extra_params,
     ignore_general_product_vulns,
     include_single_version_vulns,
@@ -194,7 +195,8 @@ def _search_vulns(
 
     all_module_vulns = {}
     search_vulns_modules = get_modules()
-    for mid, module in search_vulns_modules.items():
+    for mid in module_run_order:
+        module = search_vulns_modules[mid]
         if hasattr(module, "search_vulns") and callable(module.search_vulns):
             m_config = config["MODULES"].get(mid, {})
             module_vulns = module.search_vulns(
@@ -241,7 +243,7 @@ def search_product_ids(
 
 
 def _search_product_ids(
-    query, product_db_cursor, is_product_id_query, config, known_product_ids={}, extra_params={}
+    query, product_db_cursor, is_product_id_query, config, module_run_order, known_product_ids={}, extra_params={}
 ):
     """Search for product IDs matching the query"""
 
@@ -250,7 +252,8 @@ def _search_product_ids(
     product_ids = copy.deepcopy(known_product_ids) if known_product_ids else {}
     pot_product_ids = {}
 
-    for mid, module in search_vulns_modules.items():
+    for mid in module_run_order:
+        module = search_vulns_modules[mid]
         if hasattr(module, "search_product_ids") and callable(module.search_product_ids):
             m_config = config["MODULES"].get(mid, {})
             new_ids, new_pot_ids = module.search_product_ids(
@@ -272,6 +275,26 @@ def _search_product_ids(
                 pot_product_ids[key] += value
 
     return product_ids, pot_product_ids
+
+
+def _retrieve_module_run_order():
+    """Determine order to run search_vulns modules in"""
+    search_vulns_modules = get_modules()
+    remaining_modules = list(search_vulns_modules)
+    module_run_order = []
+
+    while remaining_modules:
+        for mid in remaining_modules:
+            module = search_vulns_modules[mid]
+
+            module_requires = []
+            if hasattr(module, "REQUIRES_RAN_MODULES"):
+                module_requires = module.REQUIRES_RAN_MODULES
+
+            if all(req_module in module_run_order for req_module in module_requires):
+                module_run_order.append(mid)
+                remaining_modules.remove(mid)
+    return module_run_order
 
 
 def search_vulns(
@@ -304,10 +327,12 @@ def search_vulns(
 
     query_processed = query.strip()
     search_vulns_modules = get_modules()
+    module_run_order = _retrieve_module_run_order()
 
     # preprocess query
     extra_params = {}
-    for mid, module in search_vulns_modules.items():
+    for mid in module_run_order:
+        module = search_vulns_modules[mid]
         if hasattr(module, "preprocess_query") and callable(module.preprocess_query):
             m_config = config["MODULES"].get(mid, {})
             new_query, mod_extra_params = module.preprocess_query(
@@ -324,6 +349,7 @@ def search_vulns(
         product_db_cursor,
         is_product_id_query,
         config,
+        module_run_order,
         known_product_ids,
         extra_params,
     )
@@ -335,16 +361,19 @@ def search_vulns(
             product_ids,
             vuln_db_cursor,
             config,
+            module_run_order,
             extra_params,
             ignore_general_product_vulns,
             include_single_version_vulns,
         )
 
         # add extra information to identified vulnerabilities, like exploits or tracking information
-        for mid, module in search_vulns_modules.items():
+        for mid in module_run_order:
+            module = search_vulns_modules[mid]
             if hasattr(module, "add_extra_vuln_info") and callable(module.add_extra_vuln_info):
                 m_config = config["MODULES"].get(mid, {})
                 module.add_extra_vuln_info(vulns, vuln_db_cursor, m_config, extra_params)
+
     else:
         vulns = {}
 
@@ -354,7 +383,8 @@ def search_vulns(
     results["vulns"] = vulns
     results["pot_product_ids"] = pot_product_ids
 
-    for mid, module in search_vulns_modules.items():
+    for mid in module_run_order:
+        module = search_vulns_modules[mid]
         if hasattr(module, "postprocess_results") and callable(module.postprocess_results):
             m_config = config["MODULES"].get(mid, {})
             module.postprocess_results(

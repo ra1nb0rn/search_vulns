@@ -8,6 +8,15 @@
 # absolute import necessary, since modules are loaded dynamically
 # from search_vulns.vulnerability import Vulnerability
 
+### INFLUENCING MODULE ORDER ###
+# Declare which modules have to have been ran before this module is
+# invoked (see examples in other modules).
+# e.g. for build process:
+# REQUIRES_BUILT_MODULES = ['ghsa.search_vulns_ghsa', 'cpe_search.search_vulns_cpe_search']
+# e.g. for search_vulns process:
+# REQUIRES_RAN_MODULES = ['ghsa.search_vulns_ghsa', 'cpe_search.search_vulns_cpe_search']
+
+
 ### INSTALLATION ###
 # def install():
 #     """
@@ -19,10 +28,6 @@
 
 
 ### DATA UPDATES ###
-# For the update process, declare which modules have to have been
-# updated before this module is invoked (see examples in other modules)
-# REQUIRES_BUILT_MODULES = []
-
 # def update(productdb_config, vulndb_config, module_config, stop_update):
 #     """
 #     Runs the soft update process for this module.
