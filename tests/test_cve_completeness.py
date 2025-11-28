@@ -185,6 +185,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-9094",
             "CVE-2025-34282",
             "CVE-2025-34281",
+            "CVE-2025-3261",
         ]
         result_cves = [
             vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
