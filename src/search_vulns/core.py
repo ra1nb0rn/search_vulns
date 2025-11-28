@@ -243,7 +243,13 @@ def search_product_ids(
 
 
 def _search_product_ids(
-    query, product_db_cursor, is_product_id_query, config, module_run_order, known_product_ids={}, extra_params={}
+    query,
+    product_db_cursor,
+    is_product_id_query,
+    config,
+    module_run_order,
+    known_product_ids={},
+    extra_params={},
 ):
     """Search for product IDs matching the query"""
 

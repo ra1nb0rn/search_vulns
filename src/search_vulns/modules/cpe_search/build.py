@@ -4,6 +4,7 @@ import threading
 import time
 
 from cpe_search.cpe_search import update as update_cpe_search
+
 from search_vulns.modules.utils import download_file
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))

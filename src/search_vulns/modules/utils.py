@@ -1,16 +1,17 @@
 import math
 import re
-import requests
 import shlex
 import subprocess
-from tqdm import tqdm
 from collections import Counter
+
+import requests
 
 # import and provide these functionalities from this module for simplicity
 from cpe_search.database_wrapper_functions import (
     get_database_connection,
     is_safe_db_name,
 )
+from tqdm import tqdm
 
 from ..cpe_version import CPEVersion
 from ..vulnerability import MatchReason
@@ -392,8 +393,7 @@ def download_github_folder(repo_url, repo_folder, dest):
         return False
 
     return_code = subprocess.call(
-        "git clone -n --depth=1 --filter=tree:0 '%s' '%s' && "
-        % (repo_url_esc, dest_esc)
+        "git clone -n --depth=1 --filter=tree:0 '%s' '%s' && " % (repo_url_esc, dest_esc)
         + "cd '%s' && " % dest_esc
         + "git sparse-checkout set --no-cone '%s' && " % repo_folder_esc
         + "git checkout",

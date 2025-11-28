@@ -16,8 +16,8 @@ from cvss.exceptions import (
 from search_vulns.modules.utils import (
     SQLITE_TIMEOUT,
     compute_cosine_similarity,
+    download_github_folder,
     get_database_connection,
-    download_github_folder
 )
 
 REQUIRES_BUILT_MODULES = ["cpe_search.search_vulns_cpe_search", "nvd.search_vulns_nvd"]
@@ -412,7 +412,9 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
     # download GitHub reviewed advisories from GHSA repo
     cleanup()
     LOGGER.info("Downloading GHSA database")
-    success = download_github_folder(GHSA_GITHUB_REPO, 'advisories/github-reviewed/', GHSA_GITHUB_DIR)
+    success = download_github_folder(
+        GHSA_GITHUB_REPO, "advisories/github-reviewed/", GHSA_GITHUB_DIR
+    )
     if not success:
         LOGGER.error("Could not download latest resources of the GHSA")
         return False, []
