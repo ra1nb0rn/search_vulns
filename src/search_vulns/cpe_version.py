@@ -89,8 +89,17 @@ class CPEVersion:
         parts, other_parts = self.get_version_parts(), other.get_version_parts()
         min_part_count = min(len(parts), len(other_parts))
 
+        if not str(self):
+            return True
         if self == other:
             return False
+        if str(other).startswith(str(self)):
+            if (
+                "rc" in str(other).split(str(self))[1]
+                or "alpha" in str(other).split(str(self))[1]
+                or "beta" in str(other).split(str(self))[1]
+            ):
+                return False
 
         for part_idx in range(min_part_count):
             part, other_part = parts[part_idx], other_parts[part_idx]

@@ -37,6 +37,8 @@ class TestSearches(unittest.TestCase):
         self.assertTrue(CPEVersion("3.1.2147483647-5") > CPEVersion("3.1.2147483647-1"))
         self.assertFalse(CPEVersion("21.0") < CPEVersion("21.0.0"))
         self.assertFalse(CPEVersion("21") < CPEVersion("21.0.0"))
+        self.assertTrue(CPEVersion("3.7.0") > CPEVersion("3.7.0-rc1"))
+        self.assertFalse(CPEVersion("3.7.0") < CPEVersion("3.7.0-alpha2"))
 
 
 if __name__ == "__main__":
