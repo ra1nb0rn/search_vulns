@@ -1,6 +1,19 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.8.3 - 2025-11-28
+### Added
+- Enable modules to influence execution order during search
+- Improved documentation on using vuln IDs as query
+
+### Changed
+- Some code reformatting and refactoring.
+
+### Fixed
+- Bump cpe_search version including a CPE search fix.
+- Updated test cases.
+
+
 ## v0.8.2 - 2025-11-22
 ### Changed
 - Implement Python-native download for lightweight installation instead of using wget.
