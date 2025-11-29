@@ -6,11 +6,10 @@ import time
 from cpe_search.cpe_search import update as update_cpe_search
 
 from search_vulns.modules.utils import download_file
+from search_vulns.core import get_version
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-CPE_DEPRECATIONS_ARTIFACT_URL = (
-    "https://github.com/ra1nb0rn/search_vulns/releases/latest/download/deprecated-cpes.json"
-)
+CPE_DEPRECATIONS_ARTIFACT_URL = f"https://github.com/ra1nb0rn/search_vulns/releases/download/v{get_version()}/deprecated-cpes.json"
 
 
 def setup():

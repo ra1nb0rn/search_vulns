@@ -16,9 +16,10 @@ from .modules.utils import get_database_connection, is_safe_db_name, download_fi
 
 UPDATE_MODULES = None
 UPDATE_LOGS_DIR = os.path.join(PROJECT_DIR, "update_logs")
-LATEST_RELEASE_URL = "https://github.com/ra1nb0rn/search_vulns/releases/latest/"
-PRODUCT_DB_ARTIFACT_URL = LATEST_RELEASE_URL + "download/productdb.db3"
-VULNDB_ARTIFACT_URL = LATEST_RELEASE_URL + "download/vulndb.db3"
+SV_RELEASE_URL = "https://github.com/ra1nb0rn/search_vulns/releases/"
+LATEST_RELEASE_URL = SV_RELEASE_URL + "/latest"
+PRODUCT_DB_ARTIFACT_URL = SV_RELEASE_URL + f"download/v{get_version()}/productdb.db3"
+VULNDB_ARTIFACT_URL = SV_RELEASE_URL + f"download/v{get_version()}/vulndb.db3"
 MARIADB_CONVERT_SCRIPT = os.path.join(
     os.path.join(PROJECT_DIR, "resources"), "sqlite_to_mariadb.sh"
 )
@@ -169,10 +170,17 @@ def update(config):
     """Perform a shallow update by downloading the latest resources from GitHub"""
 
     if is_version_outdated():
-        print(
-            "[-] Local software version is outdated. Please update or build resources yourself."
-        )
-        return False, []
+        if config["VULN_DATABASE"]["TYPE"] == "mariadb" or os.path.isfile(
+            config["VULN_DATABASE"]["NAME"]
+        ):
+            print(
+                "[-] Local software version is outdated. Please update or build resources yourself."
+            )
+            return False, []
+        else:
+            print(
+                "[-] Warning: Local software version is outdated. Further database updates will not be possible without updating."
+            )
 
     # setup DBs from config and do not overwrite existing data
     print("[+] Downloading latest versions of resources ...")
