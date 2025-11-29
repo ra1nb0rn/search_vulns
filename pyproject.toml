@@ -52,12 +52,13 @@ dev = [
     "pylint",
 ]
 all = [
-    "cpe_search==0.1.3",
+    "cpe_search==0.1.4",
     "requests",
     "aiohttp",
     "aiolimiter",
     "ujson",
     "cvss",
+    "tqdm",
     "Flask",
     "gunicorn",
     "gevent",
