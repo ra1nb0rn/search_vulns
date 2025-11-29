@@ -1,6 +1,16 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.8.4 - 2025-11-29
+### Added
+- Save linux pkg to CPE mapping during full install.
+- Allow initial resource download with outdated version.
+- Include notion of alpha and beta versions in version comparisons.
+
+### Fixed
+- Correctly set new cpe_search version in dependencies.
+
+
 ## v0.8.3 - 2025-11-28
 ### Added
 - Enable modules to influence execution order during search

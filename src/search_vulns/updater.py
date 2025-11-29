@@ -12,7 +12,7 @@ import requests
 
 from .core import MODULE_DIRECTORY, PROJECT_DIR, get_modules, get_version
 from .cpe_version import CPEVersion
-from .modules.utils import get_database_connection, is_safe_db_name, download_file
+from .modules.utils import download_file, get_database_connection, is_safe_db_name
 
 UPDATE_MODULES = None
 UPDATE_LOGS_DIR = os.path.join(PROJECT_DIR, "update_logs")
