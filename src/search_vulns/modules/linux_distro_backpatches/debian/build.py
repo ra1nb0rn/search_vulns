@@ -6,7 +6,10 @@ import requests
 import ujson
 from cpe_search.cpe_search import search_cpes
 
-from search_vulns.modules.linux_distro_backpatches.utils import get_clean_version
+from search_vulns.modules.linux_distro_backpatches.utils import (
+    get_clean_version,
+    save_pkg_cpe_map_to_file,
+)
 from search_vulns.modules.utils import (
     SQLITE_TIMEOUT,
     compute_cosine_similarity,
@@ -280,6 +283,9 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
                         pass
 
         vulndb_conn.commit()
+
+        # save pkg_cpe_map for other linux distro modules
+        save_pkg_cpe_map_to_file(pkg_cpe_map)
 
     except Exception as e:
         LOGGER.error(f"Ran into an error when trying to retrieve Debian vuln data")

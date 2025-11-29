@@ -19,3 +19,4 @@ deprecated-cpes.json
 update_logs
 src/search_vulns/.is_installed
 dist/
+pkg_cpe_map.json
