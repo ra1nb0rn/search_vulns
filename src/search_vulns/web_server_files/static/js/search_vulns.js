@@ -130,7 +130,7 @@ function createVulnTableRowHtml(idx, vuln) {
         if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
             continue
         vuln_id_html += `<a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a><br>`;
-        if (showGHSAVulns && vuln_id.startsWith('GHSA-') && vuln.id.startsWith('CVE-') && !vuln.match_sources.includes('ghsa'))
+        if (vuln.match_reason != "vuln_id" && showGHSAVulns && vuln_id.startsWith('GHSA-') && vuln.id.startsWith('CVE-') && !vuln.match_sources.includes('ghsa'))
             isVulnUnconfirmed = true;
     }
     vuln_id_html = vuln_id_html.slice(0, -4);  // strip trailing "<br>"
