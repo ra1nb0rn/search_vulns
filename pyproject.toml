@@ -26,7 +26,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "cpe_search==0.1.4",
+    "cpe_search==0.1.5",
     "requests",
     "aiohttp",
     "aiolimiter",
@@ -52,7 +52,7 @@ dev = [
     "pylint",
 ]
 all = [
-    "cpe_search==0.1.4",
+    "cpe_search==0.1.5",
     "requests",
     "aiohttp",
     "aiolimiter",
