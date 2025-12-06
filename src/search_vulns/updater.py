@@ -456,6 +456,18 @@ def full_update(config):
                 db_conn.close()
         print("[-] The update failed because an error occurred.")
     else:
+        # if SQLite is used, vacuum databases to minimize size
+        print("[+] Update successful, cleaning up.")
+        if config[db]["TYPE"] == "sqlite":
+            for db in ("PRODUCT_DATABASE", "VULN_DATABASE"):
+                temp_db_name = temp_productdb_name if db == "PRODUCT_DATABASE" else temp_vulndb_name
+                db_conn = get_database_connection(config[db])
+                db_cursor = db_conn.cursor()
+                db_cursor.execute("VACUUM;")
+                db_conn.commit()
+                db_cursor.close()
+                db_conn.close()
+
         # move product DB and vuln DB
         _overwrite_old_shared_databases(
             config,
