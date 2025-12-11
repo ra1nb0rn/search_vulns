@@ -28,13 +28,13 @@ def get_detailed_vulns(vulns, vuln_db_cursor):
         queried_info = vuln_db_cursor.fetchone()
         if queried_info:
             aliases, descr, publ, last_mod, cvss_ver, score, vector = queried_info
-            href = "https://github.com/advisories/" + vuln_id
         else:
             aliases, publ, last_mod, cvss_ver, vector = [], "", "", "", ""
             score, descr = "-1.0", "NOT FOUND"
             match_reason = MatchReason.N_A
         if cvss_ver:
             cvss_ver = str(float(cvss_ver))
+        href = "https://github.com/advisories/" + vuln_id
 
         if aliases:
             if "," in aliases:

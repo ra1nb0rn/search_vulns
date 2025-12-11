@@ -29,13 +29,13 @@ def get_detailed_vulns(vulns, vuln_db_cursor):
         queried_info = vuln_db_cursor.fetchone()
         if queried_info:
             descr, publ, last_mod, cvss_ver, score, vector, cisa_known_exploited = queried_info
-            href = "https://nvd.nist.gov/vuln/detail/" + vuln_id
         else:
             publ, last_mod, cvss_ver, vector, cisa_known_exploited = "", "", "", "", False
             score, descr = "-1.0", "NOT FOUND"
             match_reason = MatchReason.N_A
         if cvss_ver:
             cvss_ver = str(float(cvss_ver))
+        href = "https://nvd.nist.gov/vuln/detail/" + vuln_id
 
         vuln = Vulnerability(
             vuln_id,
