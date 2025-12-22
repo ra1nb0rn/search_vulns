@@ -866,6 +866,34 @@ class TestSearches(unittest.TestCase):
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
                 "cisa_known_exploited": False,
             },
+            "CVE-2025-59775": {
+                "published": "2025-12-05 11:15:52",
+                "cvss_ver": "3.1",
+                "cvss": "7.5",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                "cisa_known_exploited": False,
+            },
+            "CVE-2025-65082": {
+                "published": "2025-12-05 11:15:52",
+                "cvss_ver": "3.1",
+                "cvss": "6.5",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+                "cisa_known_exploited": False,
+            },
+            "CVE-2025-66200": {
+                "published": "2025-12-05 11:15:52",
+                "cvss_ver": "3.1",
+                "cvss": "5.4",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:L",
+                "cisa_known_exploited": False,
+            },
+            "CVE-2025-58098": {
+                "published": "2025-12-05 14:15:49",
+                "cvss_ver": "3.1",
+                "cvss": "8.3",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L",
+                "cisa_known_exploited": False,
+            },
         }
 
         for vuln_id, vuln in result["vulns"].items():
@@ -954,8 +982,15 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-34281": {
                 "published": "2025-10-17 19:15:37",
                 "cvss_ver": "4.0",
-                "cvss": "5.1",
-                "cvss_vec": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:N/SC:L/SI:L/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
+                "cvss": "6.2",
+                "cvss_vec": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:N/SC:H/SI:L/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
+                "cisa_known_exploited": False,
+            },
+            "CVE-2025-9094": {
+                "published": "2025-08-17 23:15:27",
+                "cvss_ver": "4.0",
+                "cvss": "5.3",
+                "cvss_vec": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N/E:P/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
                 "cisa_known_exploited": False,
             },
         }

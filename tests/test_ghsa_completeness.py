@@ -196,7 +196,6 @@ class TestSearches(unittest.TestCase):
                 },
             },
             "CVE-2024-38820": "GHSA-4gc7-5j7h-4qph",
-            "CVE-2024-53677": "GHSA-43mq-6xmg-29vm",
             "CVE-2024-38828": "GHSA-w3c8-7r8f-9jp8",
             "CVE-2024-38819": "GHSA-g5vr-rgqm-vf78",
             "CVE-2025-22233": "GHSA-4wp7-92pw-q264",
@@ -227,10 +226,7 @@ class TestSearches(unittest.TestCase):
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
             for vuln_id in expected_vulns
         ]
-        expected_not_matching = {
-            "CVE-2020-26258": "GHSA-4cch-wxpw-8p28",
-            "CVE-2020-26259": "GHSA-jfvx-7wrx-43fh",
-        }
+        expected_not_matching = {}
         actual_ghsa_vulns = []
         actual_not_matching = {}
 
@@ -761,28 +757,8 @@ class TestSearches(unittest.TestCase):
             },
             "CVE-2025-9162": "GHSA-8hxp-qmph-w5gq",
             "CVE-2025-10044": "GHSA-27gc-wj6x-9w55",
-            "GHSA-895x-rfqp-jh5c": {
-                "published": "2025-10-23 15:30:34",
-                "cvss_ver": "3.1",
-                "cvss": "5.4",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N",
-                "cisa_known_exploited": False,
-                "aliases": {
-                    "CVE-2025-12110": "https://nvd.nist.gov/vuln/detail/CVE-2025-12110",
-                    "GHSA-895x-rfqp-jh5c": "https://github.com/advisories/GHSA-895x-rfqp-jh5c",
-                },
-            },
-            "GHSA-rg35-5v25-mqvp": {
-                "published": "2025-10-28 15:30:43",
-                "cvss_ver": "3.1",
-                "cvss": "6.0",
-                "cvss_vec": "CVSS:3.1/AV:L/AC:H/PR:L/UI:R/S:U/C:H/I:H/A:N",
-                "cisa_known_exploited": False,
-                "aliases": {
-                    "CVE-2025-12390": "https://nvd.nist.gov/vuln/detail/CVE-2025-12390",
-                    "GHSA-rg35-5v25-mqvp": "https://github.com/advisories/GHSA-rg35-5v25-mqvp",
-                },
-            },
+            "CVE-2025-12110": "GHSA-895x-rfqp-jh5c",
+            "CVE-2025-12390": "GHSA-rg35-5v25-mqvp",
             "GHSA-m4j5-5x4r-2xp9": {
                 "published": "2025-09-17 20:24:07",
                 "cvss_ver": "3.1",
@@ -805,48 +781,18 @@ class TestSearches(unittest.TestCase):
                     "GHSA-q8hq-4h99-fj7x": "https://github.com/advisories/GHSA-q8hq-4h99-fj7x",
                 },
             },
-            "GHSA-c6cm-5gc7-c3f4": {
-                "published": "2025-10-28 06:31:05",
+            "CVE-2025-10939": "GHSA-vjr8-56p3-fmqq",
+            "CVE-2025-11429": "GHSA-64w3-5q9m-68xf",
+            "CVE-2025-11538": "GHSA-j4vq-q93m-4683",
+            "CVE-2025-13467": "GHSA-4hx9-48xh-5mxr",
+            "GHSA-6q37-7866-h27j": {
+                "published": "2025-12-10 09:30:24",
                 "cvss_ver": "3.1",
-                "cvss": "3.7",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
-                "cisa_known_exploited": False,
+                "cvss": "2.7",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:L/I:N/A:N",
                 "aliases": {
-                    "CVE-2025-10939": "https://nvd.nist.gov/vuln/detail/CVE-2025-10939",
-                    "GHSA-c6cm-5gc7-c3f4": "https://github.com/advisories/GHSA-c6cm-5gc7-c3f4",
-                },
-            },
-            "GHSA-64w3-5q9m-68xf": {
-                "published": "2025-10-23 15:30:34",
-                "cvss_ver": "3.1",
-                "cvss": "5.4",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N",
-                "cisa_known_exploited": False,
-                "aliases": {
-                    "CVE-2025-11429": "https://nvd.nist.gov/vuln/detail/CVE-2025-11429",
-                    "GHSA-64w3-5q9m-68xf": "https://github.com/advisories/GHSA-64w3-5q9m-68xf",
-                },
-            },
-            "GHSA-7m9g-pmxf-m9m8": {
-                "published": "2025-11-13 18:31:05",
-                "cvss_ver": "3.1",
-                "cvss": "6.8",
-                "cvss_vec": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N",
-                "cisa_known_exploited": False,
-                "aliases": {
-                    "CVE-2025-11538": "https://nvd.nist.gov/vuln/detail/CVE-2025-11538",
-                    "GHSA-7m9g-pmxf-m9m8": "https://github.com/advisories/GHSA-7m9g-pmxf-m9m8",
-                },
-            },
-            "GHSA-93vm-mqpw-8wh3": {
-                "published": "2025-11-25 18:32:22",
-                "cvss_ver": "3.1",
-                "cvss": "5.5",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:N",
-                "cisa_known_exploited": False,
-                "aliases": {
-                    "CVE-2025-13467": "https://nvd.nist.gov/vuln/detail/CVE-2025-13467",
-                    "GHSA-93vm-mqpw-8wh3": "https://github.com/advisories/GHSA-93vm-mqpw-8wh3",
+                    "CVE-2025-14082": "https://nvd.nist.gov/vuln/detail/CVE-2025-14082",
+                    "GHSA-6q37-7866-h27j": "https://github.com/advisories/GHSA-6q37-7866-h27j",
                 },
             },
         }
@@ -872,6 +818,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2024-7885": "GHSA-9623-mqmm-5rcf",
             "CVE-2025-4057": "GHSA-q5q7-8x6x-hcg2",
             "CVE-2025-7784": "GHSA-83j7-mhw9-388w",
+            "CVE-2025-7195": "GHSA-856v-8qm2-9wjv",
         }
 
         actual_ghsa_vulns = []

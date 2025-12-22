@@ -13,7 +13,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": "N/A",
-            "latest": "6.8.3",
+            "latest": "6.9.0",
             "ref": "https://endoflife.date/wordpress",
         }
         self.assertEqual(result["version_status"], expected_result)
@@ -24,7 +24,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": "eol",
-            "latest": "6.8.3",
+            "latest": "6.9.0",
             "ref": "https://endoflife.date/wordpress",
         }
         self.assertEqual(result["version_status"], expected_result)

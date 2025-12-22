@@ -460,7 +460,9 @@ def full_update(config):
         print("[+] Update successful, cleaning up.")
         if config[db]["TYPE"] == "sqlite":
             for db in ("PRODUCT_DATABASE", "VULN_DATABASE"):
-                temp_db_name = temp_productdb_name if db == "PRODUCT_DATABASE" else temp_vulndb_name
+                temp_db_name = (
+                    temp_productdb_name if db == "PRODUCT_DATABASE" else temp_vulndb_name
+                )
                 db_conn = get_database_connection(config[db])
                 db_cursor = db_conn.cursor()
                 db_cursor.execute("VACUUM;")

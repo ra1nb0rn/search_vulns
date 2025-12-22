@@ -118,9 +118,9 @@ class TestSearches(unittest.TestCase):
         query = "cpe:2.3:a:apache:log4j:1.2.17-10:*:*:*:*:*:*:debian_11"
         result = search_vulns(query=query, include_patched=True)
         expected_version_result = {
-            "status": "outdated",
-            "latest": "2.17.1-1",
-            "ref": "https://security-tracker.debian.org/tracker/source-package/apache-log4j2",
+            "status": "current",
+            "latest": "1.2.17-10",
+            "ref": "https://security-tracker.debian.org/tracker/source-package/apache-log4j1.2",
         }
         self.assertEqual(result["version_status"], expected_version_result)
 
