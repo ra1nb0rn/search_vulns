@@ -11,6 +11,8 @@ Search for known vulnerabilities in software using software titles or a CPE 2.3 
 * Vulnerability information from the [GitHub Security Advisory Database](https://github.com/github/advisory-database)
 * Software currency information from [endoflife.date](https://github.com/endoflife-date/endoflife.date)
 * Backpatch information from the [Debian Security Bug Tracker](https://security-tracker.debian.org/tracker/)
+* Backpatch information from the Ubuntu Security API via [*aquasecurity's* repository](https://github.com/aquasecurity/vuln-list)
+* Backpatch information from the Red Hat Security Data API via [*aquasecurity's* repository](https://github.com/aquasecurity/vuln-list-redhat)
 
 Since search_vulns is designed in a modular fashion, new data sources and extensions can be integrated easily.
 
@@ -157,6 +159,21 @@ Here are some examples:
   Reference: https://nvd.nist.gov/vuln/detail/CVE-2024-24824, 2024-02-07
   GHSA-q9q2-3ppx-mwqf (CVSSv3.1/7.3): Graylog Allows Stored Cross-Site Scripting via Files Plugin and API Browser
   Reference: https://github.com/advisories/GHSA-q9q2-3ppx-mwqf, 2025-05-07
+  ```
+* Retrieve open vulnerabilities for `Squid 5.7-2` on `Debian 12`:
+  ```bash
+  $ search_vulns -q 'Squid 5.7-2 Debian 12'
+  [...]
+  ```
+* Retrieve open vulnerabilities for `Apache Tomcat 9.0.70-2` on `Ubuntu Plucky`
+  ```bash
+  $ search_vulns -q 'Apache Tomcat 9.0.70-2 Ubuntu Plucky'
+  [...]
+  ```
+* Retrieve vulnerabilities, including backpatched ones, for `Nginx 1.20.1-22` on `RHEL 9.2` in JSON format:
+  ```bash
+  $ search_vulns -q 'Nginx 1.20.1-22 RHEL 9.2' -f json --include-patched
+  [...]
   ```
 
 

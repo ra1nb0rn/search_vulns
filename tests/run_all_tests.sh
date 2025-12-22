@@ -53,5 +53,13 @@ echo '[+] Running test_debian_backpatches.py'
 python3 "${SCRIPT_DIR}/test_debian_backpatches.py"
 EXIT_10=$?
 
+echo '[+] Running test_ubuntu_backpatches.py'
+python3 "${SCRIPT_DIR}/test_ubuntu_backpatches.py"
+EXIT_11=$?
+
+echo '[+] Running test_redhat_backpatches.py'
+python3 "${SCRIPT_DIR}/test_redhat_backpatches.py"
+EXIT_12=$?
+
 # https://stackoverflow.com/a/16358989
-! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_7 || $EXIT_8 || $EXIT_9 || $EXIT_10 ))
+! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_7 || $EXIT_8 || $EXIT_9 || $EXIT_10 || $EXIT_11 || $EXIT_12 ))

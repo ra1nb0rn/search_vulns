@@ -9,5 +9,7 @@
     "axios-http": "",
     "pdfjs-dist": "cpe:2.3:a:mozilla:pdf.js:*:*:*:*:*:*:*:*",
     "react-pdf": "",
-    "org.springframework:spring-context": "cpe:2.3:a:vmware:spring_framework:"
+    "org.springframework:spring-context": "cpe:2.3:a:vmware:spring_framework:",
+    "import-mysql": "",
+    "mysql-koa": ""
 }

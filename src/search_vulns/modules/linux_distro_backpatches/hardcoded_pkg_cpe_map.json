@@ -1,0 +1,23 @@
+{
+    "abuse-sdl": "cpe:2.3:a:abuse:abuse-sdl:",
+    "aflplusplus": "cpe:2.3:a:afl\\+\\+_project:afl\\+\\+:",
+    "aom": " cpe:2.3:a:aomedia:aomedia:",
+    "apcupsd": "cpe:2.3:a:apcupsd:apc_ups_daemon:",
+    "archvsync": "cpe:2.3:a:debian:ftpsync:",
+    "adobe-flashplugin": "cpe:2.3:a:adobe:flash_plugin:",
+    "acroread": "cpe:2.3:a:adobe:acrobat_reader_dc:*:*:*:*:classic:*:*:*",
+    "armagetronad": "cpe:2.3:a:armagetron:armagetron_advanced:",
+    "dotnet": "cpe:2.3:a:microsoft:.net:",
+    "libpgjava": "cpe:2.3:a:postgresql:postgresql_jdbc_driver:",
+    "bzr": "cpe:2.3:a:canonical:bazaar:",
+    "mc": "cpe:2.3:a:midnight_commander:midnight_commander:",
+    "wv": "cpe:2.3:a:wvware:wvware:",
+    "mozjs": "cpe:2.3:a:mozilla:firefox_esr:",
+    "nvidia-graphics-drivers": "cpe:2.3:a:nvidia:gpu_driver:",
+    "kernel": "cpe:2.3:o:linux:linux_kernel:",
+    "kernel-rt": "cpe:2.3:o:linux:linux_kernel-rt:",
+    "httpd": "cpe:2.3:a:apache:http_server:",
+    "thunderbird": "cpe:2.3:a:mozilla:thunderbird:",
+    "mysql": "cpe:2.3:a:oracle:mysql:",
+    "nss": "'cpe:2.3:a:mozilla:network_security_services:"
+}

@@ -166,6 +166,12 @@ def split_cpe(cpe):
     return parts
 
 
+def get_cpe_product_prefix(cpe):
+    """Return CPE product prefix, e.g. cpe:2.3:a:apache:tomcat:"""
+
+    return ":".join(split_cpe(cpe)[:5]) + ":"
+
+
 def _is_more_specific_cpe_contained(vuln_cpe, vuln_entry_cpes):
     """
     Return boolean whether a more specific CPE than vuln_cpe

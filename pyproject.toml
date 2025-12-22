@@ -26,13 +26,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "cpe_search==0.1.6",
+    "cpe_search==0.1.7",
     "requests",
     "aiohttp",
     "aiolimiter",
     "ujson",
     "cvss",
     "tqdm",
+    "univers",
 ]
 
 [project.optional-dependencies]
@@ -52,13 +53,14 @@ dev = [
     "pylint",
 ]
 all = [
-    "cpe_search==0.1.6",
+    "cpe_search==0.1.7",
     "requests",
     "aiohttp",
     "aiolimiter",
     "ujson",
     "cvss",
     "tqdm",
+    "univers",
     "Flask",
     "gunicorn",
     "gevent",

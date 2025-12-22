@@ -632,7 +632,7 @@ function buildTextualReprFromCPE(cpe) {
     cpe_parts.slice(7).forEach(cpe_part => {
         if (cpe_part && cpe_part != '-' && cpe_part != '*') {
             var cpe_part = cpe_part[0].toUpperCase() + cpe_part.substring(1);
-            cpe_condition += cpe_part.split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ') + ' ';
+            cpe_condition += cpe_part.split('_').map(w => w ? w[0].toUpperCase() + w.substring(1).toLowerCase(): '').join(' ') + ' ';
         }
     });
 
