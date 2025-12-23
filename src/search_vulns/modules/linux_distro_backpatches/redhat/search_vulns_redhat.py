@@ -77,7 +77,7 @@ def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, conf
 
         for cpe in cpes:
             cpe_parts = split_cpe(cpe)
-            if len(cpe_parts) < 13 or "redhat" not in cpe_parts[12]:
+            if len(cpe_parts) < 13 or "rhel" not in cpe_parts[12]:
                 new_cpes.append(cpe)
                 continue
 
@@ -198,7 +198,7 @@ def postprocess_results(
                 else:
                     cpe, match_score = cpe_info, None
                 cpe_parts = split_cpe(cpe)
-                last_cpe_field = "redhat_"
+                last_cpe_field = "rhel_"
 
                 # insert redhat codename or version
                 if extra_params.get("redhat_release", ""):

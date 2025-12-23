@@ -34,8 +34,8 @@ class TestSearches(unittest.TestCase):
 
     def test_search_squid(self):
         self.maxDiff = None
-        query = "squid 5.5-5 RHEL 9.2"
-        result = search_vulns(query=query, include_patched=True)
+        query = "cpe:2.3:a:squid-cache:squid:5.5:*:*:*:*:*:*:rhel_9.2_5.5-5"
+        result = search_vulns(query=query, include_patched=True, is_product_id_query=True)
 
         expected_open = ["CVE-2022-41317", "CVE-2025-59362"]
         expected_backpatched = [
@@ -70,7 +70,7 @@ class TestSearches(unittest.TestCase):
         self.assertEqual(set(expected_backpatched), set(result_backpatched))
         self.assertEqual(set(expected_open), set(result_open))
 
-    def test_search_squid(self):
+    def test_search_apache(self):
         self.maxDiff = None
         query = "apache 2.4.37-43.el8_5.0"
         result = search_vulns(query=query, include_patched=True)
