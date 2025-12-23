@@ -33,58 +33,93 @@ def postprocess_results(
         if vuln_db_cursor:
             eol_releases = vuln_db_cursor.fetchall()
 
-        latest = ""
+        # find release branch matching query version
+        queried_release_branch_idx = 0 if eol_releases else None
+        is_queried_release_eol, is_lower_release_eol = None, None
         for i, release in enumerate(eol_releases):
-            # set up release information
-            eol_ref = "https://endoflife.date/" + release[0]
-            release_start, release_end = CPEVersion(release[1]), CPEVersion(release[2])
-            release_eol, now = release[3], datetime.datetime.now()
+            release_end = CPEVersion(release[2])
+            release_eol, now = release[3].lower(), datetime.datetime.now()
+            is_lower_release_eol = False
             if release_eol not in ("true", "false"):
                 release_eol = datetime.datetime.strptime(release_eol, "%Y-%m-%d")
-            elif release_eol != "true":
-                release_eol = False
+                is_lower_release_eol = now >= release_eol
+            elif release_eol == "true":
+                is_lower_release_eol = True
 
-            # set latest version in first iteration
-            if not latest:
-                latest = release_end
+            if is_queried_release_eol is None:
+                is_queried_release_eol = is_lower_release_eol
 
-            if not query_version:
-                if release_eol and now >= release_eol:
-                    version_status = {"status": "eol", "latest": str(latest), "ref": eol_ref}
-                else:
-                    version_status = {"status": "N/A", "latest": str(latest), "ref": eol_ref}
+            # break if release branch was found
+            if not query_version or query_version > release_end:
+                break
             else:
-                # check query version status
-                if query_version >= release_end:
-                    if release_eol and (release_eol == "true" or now >= release_eol):
+                queried_release_branch_idx = i
+                is_queried_release_eol = is_lower_release_eol
+
+        # determine query version status
+        if queried_release_branch_idx is not None:
+            latest_release = eol_releases[0][2]
+            release = eol_releases[queried_release_branch_idx]
+            release_start, release_end = CPEVersion(release[1]), CPEVersion(release[2])
+            eol_ref = "https://endoflife.date/" + release[0]
+            if not query_version:  # no query version --> return general information
+                if is_queried_release_eol:
+                    version_status = {
+                        "status": "eol",
+                        "latest": str(release_end),
+                        "ref": eol_ref,
+                    }
+                else:
+                    version_status = {
+                        "status": "N/A",
+                        "latest": str(release_end),
+                        "ref": eol_ref,
+                    }
+            else:  # determine version status of query version
+                if (
+                    str(release_end).startswith(str(release_start))
+                    and query_version < release_start
+                ):
+                    if is_lower_release_eol:
                         version_status = {
                             "status": "eol",
-                            "latest": str(latest),
+                            "latest": latest_release,
                             "ref": eol_ref,
                         }
                     else:
+                        if queried_release_branch_idx + 1 < len(eol_releases):
+                            release_end = CPEVersion(eol_releases[i + 1][2])
                         version_status = {
                             "status": "current",
-                            "latest": str(latest),
+                            "latest": str(release_end),
                             "ref": eol_ref,
                         }
-                elif (release_start <= query_version < release_end) or (
-                    i == len(eol_releases) - 1 and query_version <= release_start
-                ):
-                    if release_eol and (release_eol == "true" or now >= release_eol):
-                        version_status = {
-                            "status": "eol",
-                            "latest": str(latest),
-                            "ref": eol_ref,
-                        }
-                    else:
-                        version_status = {
-                            "status": "outdated",
-                            "latest": str(latest),
-                            "ref": eol_ref,
-                        }
-
-            if version_status:
-                break
+                else:
+                    if query_version >= release_end:
+                        if is_queried_release_eol:
+                            version_status = {
+                                "status": "eol",
+                                "latest": latest_release,
+                                "ref": eol_ref,
+                            }
+                        else:
+                            version_status = {
+                                "status": "current",
+                                "latest": str(release_end),
+                                "ref": eol_ref,
+                            }
+                    elif query_version < release_end:
+                        if is_queried_release_eol:
+                            version_status = {
+                                "status": "eol",
+                                "latest": latest_release,
+                                "ref": eol_ref,
+                            }
+                        else:
+                            version_status = {
+                                "status": "outdated",
+                                "latest": str(release_end),
+                                "ref": eol_ref,
+                            }
 
     results["version_status"] = version_status
