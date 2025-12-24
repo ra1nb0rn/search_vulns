@@ -11,7 +11,10 @@ module.exports = {
         "104": "26rem",
         "6.5xl": "76rem",
         "8xl": "88rem"
-      }
+      },
+      textUnderlineOffset: {
+        3: '3px',
+      },
     }
   },
   plugins: [require("daisyui")],
