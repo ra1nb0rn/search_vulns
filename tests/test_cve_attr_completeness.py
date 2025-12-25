@@ -19,13 +19,6 @@ class TestSearches(unittest.TestCase):
                 "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
                 "cisa_known_exploited": False,
             },
-            "CVE-2013-7240": {
-                "published": "2014-01-03 18:54:09",
-                "cvss_ver": "2.0",
-                "cvss": "5.0",
-                "cvss_vec": "AV:N/AC:L/Au:N/C:P/I:N/A:N",
-                "cisa_known_exploited": False,
-            },
             "CVE-2022-43500": {
                 "published": "2022-12-05 04:15:10",
                 "cvss_ver": "3.1",
@@ -38,13 +31,6 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "5.4",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:L/I:L/A:N",
-                "cisa_known_exploited": False,
-            },
-            "CVE-2011-5216": {
-                "published": "2012-10-25 17:55:03",
-                "cvss_ver": "2.0",
-                "cvss": "7.5",
-                "cvss_vec": "AV:N/AC:L/Au:N/C:P/I:P/A:P",
                 "cisa_known_exploited": False,
             },
             "CVE-2021-39200": {
@@ -89,13 +75,6 @@ class TestSearches(unittest.TestCase):
                 "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
                 "cisa_known_exploited": False,
             },
-            "CVE-2012-6527": {
-                "published": "2013-01-31 05:44:00",
-                "cvss_ver": "2.0",
-                "cvss": "2.6",
-                "cvss_vec": "AV:N/AC:H/Au:N/C:N/I:P/A:N",
-                "cisa_known_exploited": False,
-            },
             "CVE-2022-43497": {
                 "published": "2022-12-05 04:15:10",
                 "cvss_ver": "3.1",
@@ -108,13 +87,6 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "7.4",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:L/A:L",
-                "cisa_known_exploited": False,
-            },
-            "CVE-2012-4271": {
-                "published": "2012-08-13 22:55:01",
-                "cvss_ver": "2.0",
-                "cvss": "4.3",
-                "cvss_vec": "AV:N/AC:M/Au:N/C:N/I:P/A:N",
                 "cisa_known_exploited": False,
             },
             "CVE-2022-43504": {

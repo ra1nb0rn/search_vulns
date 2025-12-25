@@ -96,9 +96,9 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     std::list<std::string> cvss_keys = {"cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2"};
     std::list<std::string> cvss_scorer_types = {"Primary", "Secondary"};
     std::size_t datetime_dot_pos;
-    bool vulnerable, cisa_known_exploited;
+    bool vulnerable, cisa_known_exploited, is_general_cpe;
     double base_score;
-    int cur_node_id;
+    int cur_node_id, colon_count, cur_outer_node_idx;
 
     // iterate the array
     for (auto &cve_entry : vulns_json["vulnerabilities"]) {
@@ -222,32 +222,64 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
 
             // fill vector with version information of every mentioned cpe
             std::vector<std::vector<VagueCpeInfo>> all_vulnerable_cpes;
+            cur_outer_node_idx = -1;
             for (auto &config_nodes_entry : cve_config_entry["nodes"]) {
+                cur_outer_node_idx++;
                 std::vector<VagueCpeInfo> node_vulnerable_cpes;
 
                 if (config_nodes_entry.find("cpeMatch") != config_nodes_entry.end()) {
                     for (auto &cpe_entry : config_nodes_entry["cpeMatch"]) {
                         vague_cpe_info = {cpe_entry["criteria"], "", "", "", ""};
+                        is_general_cpe = false;
 
                         if (!cpe_entry["vulnerable"])
                             continue;
 
+                        // check if it's a general CPE in an AND configuration (probably not vulnerable)
+                        colon_count = 0;
+                        const std::string& criteriaCPE = cpe_entry["criteria"].get_ref<const std::string&>();
+                        for (size_t i = 0; i < criteriaCPE.size(); i++) {
+                            if (criteriaCPE[i] == ':') {
+                                colon_count++;
+                                if (colon_count > 4) {
+                                    if (i + 1 < criteriaCPE.size()) {
+                                        if (criteriaCPE[i + 1] == '*' || 
+                                            criteriaCPE[i + 1] == '-' ||
+                                            criteriaCPE[i + 1] == '*') {
+                                            is_general_cpe = true;
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+
                         if (cpe_entry.find("versionStartIncluding") != cpe_entry.end()) {
                             vague_cpe_info.version_start = cpe_entry["versionStartIncluding"];
                             vague_cpe_info.version_start_type = "Including";
+                            is_general_cpe = false;
                         }
                         else if (cpe_entry.find("versionStartExcluding") != cpe_entry.end()) {
                             vague_cpe_info.version_start = cpe_entry["versionStartExcluding"];
                             vague_cpe_info.version_start_type = "Excluding";
+                            is_general_cpe = false;
                         }
 
                         if (cpe_entry.find("versionEndIncluding") != cpe_entry.end()) {
                             vague_cpe_info.version_end = cpe_entry["versionEndIncluding"];
                             vague_cpe_info.version_end_type = "Including";
+                            is_general_cpe = false;
                         }
                         else if (cpe_entry.find("versionEndExcluding") != cpe_entry.end()) {
                             vague_cpe_info.version_end = cpe_entry["versionEndExcluding"];
                             vague_cpe_info.version_end_type = "Excluding";
+                            is_general_cpe = false;
+                        }
+
+                        // catch bad entries where the "running on" platform is falsely considered vulnerable, e.g. CVE-2012-6527
+                        if (op == "AND" && is_general_cpe && cve_config_entry["nodes"].size() == 2 &&
+                            cve_config_entry["nodes"][1-cur_outer_node_idx]["cpeMatch"][0]["vulnerable"] == true) {
+                            continue;
                         }
 
                         node_vulnerable_cpes.push_back(vague_cpe_info);

@@ -1,6 +1,6 @@
 project(cve-database-creation)
 
-SET(CMAKE_CXX_STANDARD 17)
+SET(CMAKE_CXX_STANDARD 20)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Include SQLiteCpp library and build it
