@@ -339,19 +339,25 @@ def _run_full_update_module_wrapper(module_id, config, stop_update):
     return success, artifacts
 
 
-def _run_full_update_modules(config):
-    """Run every module's full_update procedure if available and manage results"""
+def _run_full_update_modules(config, module_ids=None):
+    """
+    Run full_update procedure of all or given modules if available
+    in-place and manage results.
+    """
 
     # setup modules and update tasks
     artifacts = []
     os.makedirs(UPDATE_LOGS_DIR, exist_ok=True)
     modules = get_modules()
-    remaining_update_modules = []
+    remaining_update_modules, finished_update_modules = [], []
     for mid in sorted(modules):
         module = modules[mid]
         if hasattr(module, "full_update") and callable(module.full_update):
-            remaining_update_modules.append(mid)
-    finished_update_modules = []
+            if not module_ids or mid in module_ids:
+                remaining_update_modules.append(mid)
+            if module_ids and mid not in module_ids:
+                finished_update_modules.append(mid)
+
     process_manager = Manager()
     stop_update = process_manager.Event()
 
@@ -418,7 +424,7 @@ def _run_full_update_modules(config):
 
 
 def full_update(config):
-    """Perform full update of all modules"""
+    """Perform full update of all modules out-of-place"""
 
     # setup DBs from config and do not overwrite existing data
     db_names = _setup_new_shared_databases(config)

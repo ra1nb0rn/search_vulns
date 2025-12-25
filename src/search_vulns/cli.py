@@ -108,12 +108,19 @@ def parse_args():
         "-u",
         "--update",
         action="store_true",
-        help="Download the latest version of the the local vulnerability and software database",
+        help="Download the latest version of the the local vulnerability and software database from GitHub repo",
     )
     parser.add_argument(
         "--full-update",
         action="store_true",
         help="Fully (re)build the local vulnerability and software database",
+    )
+    parser.add_argument(
+        "--full-update-module",
+        metavar="MODULE_ID",
+        nargs="+",
+        type=str,
+        help="Fully (re)build the local database for the given module(s) in-place",
     )
     parser.add_argument(
         "--full-install",
@@ -187,6 +194,7 @@ def parse_args():
         not args.update
         and not args.queries
         and not args.full_update
+        and not args.full_update_module
         and not args.version
         and not args.full_install
     ):
@@ -218,7 +226,8 @@ def main():
         and not args.full_update
     ):
         printit(
-            "[!] Vulnerability database file not found, setting update to True", color=YELLOW
+            "[!] Vulnerability database file not found, setting 'update' to 'True'",
+            color=YELLOW,
         )
         args.update = True
 
@@ -248,6 +257,15 @@ def main():
     elif args.version == True:
         print(get_version())
         return
+
+    if args.full_update_module:
+        from .updater import _run_full_update_modules
+
+        success, artifacts = _run_full_update_modules(config, args.full_update_module)
+        if not success:
+            print("[-] Update failed")
+        else:
+            print("[+] Update successful")
 
     if not args.queries:
         return
