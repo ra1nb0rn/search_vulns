@@ -121,7 +121,7 @@ function createVulnTableRowHtml(idx, vuln) {
     var exploits, cvss, cvss_badge_css, epss, epss_badge_css, exploit_url_show;
     var vuln_id_ref_map = vuln.aliases;
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
-    var isVulnUnconfirmed = false;
+    var isVulnUnconfirmed = false, backgroundColorClass = "";
 
     if (selectedColumns.length < 1)
         return '';
@@ -135,12 +135,19 @@ function createVulnTableRowHtml(idx, vuln) {
     }
     vuln_id_html = vuln_id_html.slice(0, -4);  // strip trailing "<br>"
 
-    if (vuln.match_reason == "general_product_uncertain" || vuln.match_reason == "single_higher_version" || vuln.match_reason == "n_a" || isVulnUnconfirmed)
-        vuln_style_class = "uncertain-vuln";
-    if (vuln.cisa_known_exploited)
-        vuln_style_class += " exploited-vuln";  // overwrites color of uncertain vuln
-    if (vuln.reported_patched_by.length > 0)
-        vuln_style_class += " patched-vuln";  // overwrites color of previous
+    if (vuln.match_reason == "general_product_uncertain" || vuln.match_reason == "single_higher_version" || vuln.match_reason == "n_a" || isVulnUnconfirmed) {
+        vuln_style_class += "uncertain-vuln text-base-content/75";
+        backgroundColorClass = "bg-warning/15";
+    }
+    if (vuln.cisa_known_exploited) {
+        vuln_style_class += " exploited-vuln text-base-content";
+        backgroundColorClass = "exploited-vuln-bg";
+    }
+    if (vuln.reported_patched_by.length > 0) {
+        vuln_style_class += "  patched-vuln text-base-content/75";  // overwrites color of previous
+        backgroundColorClass = "bg-info/25";
+    }
+    vuln_style_class += " " + backgroundColorClass;
 
     vuln_row_html += `<tr class="${vuln_style_class} border-none">`;
 
@@ -200,9 +207,9 @@ function createVulnTableRowHtml(idx, vuln) {
             cvss_badge_css = "badge-low";
 
         if (cvss_vector && cvss_badge_css)
-            vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="z-10 badge border-none badge-cvss ${cvss_badge_css} text-center ${vuln_style_class} underline decoration-dotted underline-offset-3 cursor-help py-3" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
+            vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="z-10 badge border-none badge-cvss ${cvss_badge_css} text-center ${vuln_style_class} underline decoration-dotted underline-offset-3 cursor-help py-3" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs text-smxs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
         else
-            vuln_row_html += `<td class="text-nowrap whitespace-nowrap text-center"><div class="dropdown dropdown-hover"><div class="z-10 badge p-1.5 border-none badge-cvss badge-na text-center ${vuln_style_class}" tabindex="0">N / A</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>Not Available (N/A)</b></span></div></div></div></td>`;
+            vuln_row_html += `<td class="text-nowrap whitespace-nowrap text-center"><div class="dropdown dropdown-hover"><div class="z-10 badge p-1.5 border-none badge-cvss badge-na text-center ${vuln_style_class}" tabindex="0">N / A</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs text-smxs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>Not Available (N/A)</b></span></div></div></div></td>`;
     }
 
     if (selectedColumns.includes('epss')) {
@@ -303,7 +310,7 @@ function renderSearchResults(reloadFilterDropdown) {
         return false;
     }
     
-    vulns_html = '<table class="table table-sm my-table-zebra table-rounded table-auto">';
+    vulns_html = '<table class="table table-mdsm sv-vuln-table-zebra table-rounded table-auto">';
     vulns_html += '<thead>';
     vulns_html += '<tr>'
     if (selectedColumns.includes('cve')) {
@@ -337,14 +344,16 @@ function renderSearchResults(reloadFilterDropdown) {
             continue;
 
         has_vulns = true;
-        var checked_html = "";
+        var checked_html = "", margin_html = "";
         if (!showTableFiltering || onlyShowTheseVulns == null || onlyShowTheseVulns.includes(vulns[i].id)) {
             vulns_html += createVulnTableRowHtml(i, vulns[i]);
             checked_html = 'checked="checked"';
         }
+        if (i != 0)
+            margin_html = "mt-3"
 
         // add Vuln ID to filter
-        filter_vulns_html += `<div class="form-control filter-vulns"><label class="label cursor-pointer py-1 gap-4"><span class="label-text text-nowrap whitespace-nowrap">${vulns[i]["id"]}</span><input type="checkbox" class="checkbox" onclick="changeFilterVulns()" ${checked_html} /></label></div>`;
+        filter_vulns_html += `<div class="form-control filter-vulns ${margin_html}"><label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm"><span class="label-text text-nowrap whitespace-nowrap text-base-content flex-1 min-w-0 text-left">${vulns[i]["id"]}</span><input type="checkbox" class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeFilterVulns()" ${checked_html} /></label></div>`;
     }
     vulns_html += "</tbody></table>";
     if (has_vulns)
@@ -738,7 +747,7 @@ function searchVulns(query, url_query, recaptcha_response) {
             $("#buttonFilterVulns").removeClass("btn-disabled");
             $("#buttonManageColumns").removeClass("btn-disabled");
             $("#buttonExportResults").removeClass("btn-disabled");
-            $("#buttonSearchVulns").html('<i class="fa-solid fa-magnifying-glass"></i> Search Vulns');
+            $("#buttonSearchVulns").html('<i class="fa-solid fa-magnifying-glass"></i><span class="max-md:hidden">Search Vulns</span>');
             currentlySearchingVulns = false;
         },
         error: function (jXHR, textStatus, errorThrown) {
@@ -795,7 +804,7 @@ function searchVulnsAction(actionElement) {
     isGoodProductID = true;  // reset for subsequent query that wasn't initiated via URL
 
     history.pushState({}, null, new_url);  // update URL
-    $("#buttonSearchVulns").html('<span class="loading loading-spinner"></span> Searching');
+    $("#buttonSearchVulns").html('<span class="loading loading-spinner"></span><span class="max-md:hidden">Searching</span>');
     $("#buttonSearchVulns").addClass("btn-disabled");
     $("#buttonFilterVulns").addClass("btn-disabled");
     $("#buttonManageColumns").addClass("btn-disabled");
@@ -1113,7 +1122,7 @@ function retrieveProductIDSuggestions(url_query, recaptcha_response) {
             else {
                 var allProductIDs = formatProductIDSuggestions(productIDInfos);
                 if (allProductIDs.length != 0) {
-                    var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box">';
+                    var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box w-full">';
                     for (var i = 0; i < allProductIDs.length; i++) {
                         dropdownContent += `<li tabindex="0"><a class="text-nowrap whitespace-nowrap" id="product-id-suggestion-${i}" onclick="searchVulnsAction(this)">${htmlEntities(allProductIDs[i])}</a></li>`;
                     }
@@ -1229,6 +1238,7 @@ function moveProductIDSuggestionUpDown(event) {
     if (curSelectedProductIDSuggestion > -1)
         $('#product-id-suggestion-' + curSelectedProductIDSuggestion).removeClass('my-menu-item-hover');
 
+    console.log(curSelectedProductIDSuggestion);
     if (event.keyCode == 38)
         curSelectedProductIDSuggestion--;
     else if (event.keyCode == 40)

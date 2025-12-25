@@ -1,4 +1,7 @@
 /* Variables */
+
+
+
 :root {
     --cvss-badge-text-color: rgb(49, 50, 51);
     --cvss-badge-text-color-uncertain: rgb(49, 50, 51, 0.75);
@@ -23,24 +26,14 @@
 
 
 /* Styled vulnerability table row (adapted from DaisyUI CSS) */
-tr.uncertain-vuln td {
-    color: var(--fallback-bc,oklch(var(--bc)/0.75));
-    background-color: var(--fallback-wa,oklch(var(--wa)/0.15));
+.exploited-vuln-bg {
+    background-color: var(--fallback-color-expl, oklch(var(--color-expl)/0.15));
 }
-tr.exploited-vuln td {
-    background-color: var(--fallback-color-expl,oklch(var(--color-expl)/0.15));
-}
-tr.patched-vuln td {
-    color: var(--fallback-bc,oklch(var(--bc)/0.75));
-    background-color: var(--fallback-color-patched,oklch(var(--in)/0.25));
-}
+
 .text-exploited {
-    --tw-text-opacity: 1;
-    color: var(--fallback-color-expl,oklch(var(--color-expl)/var(--tw-text-opacity)));
+    color: oklch(var(--color-expl));
 }
-.patched-vuln {
-    --tw-text-opacity: 1;
-}
+
 .vuln-flag-icon {
     font-size: 0.95rem;
 }
@@ -54,30 +47,39 @@ tr.patched-vuln td {
 .badge-critical {
     background-color: var(--cvss-badge-bg-color-critical);
 }
+
 .badge-critical.uncertain-vuln {
     background-color: var(--cvss-badge-bg-color-critical-uncertain);
 }
+
 .badge-high {
     background-color: var(--cvss-badge-bg-color-high);
 }
+
 .badge-high.uncertain-vuln {
     background-color: var(--cvss-badge-bg-color-high-uncertain);
 }
+
 .badge-medium {
     background-color: var(--cvss-badge-bg-color-medium);
 }
+
 .badge-medium.uncertain-vuln {
     background-color: var(--cvss-badge-bg-color-medium-uncertain);
 }
+
 .badge-low {
     background-color: var(--cvss-badge-bg-color-low);
 }
+
 .badge-low.uncertain-vuln {
     background-color: var(--cvss-badge-bg-color-low-uncertain);
 }
+
 .badge-na {
     background-color: var(--cvss-badge-bg-color-na);
 }
+
 .badge-na.uncertain-vuln {
     background-color: var(--cvss-badge-bg-color-na-uncertain);
 }
@@ -109,24 +111,72 @@ tr.patched-vuln td {
     border-radius: 0 0 0.8rem 0.8rem;
 }
 
-
 /* Overwrite Tailwind striping for styled-vuln table row */
-.my-table-zebra tbody tr:nth-child(even):not(.uncertain-vuln):not(.exploited-vuln):not(.patched-vuln) td {
-  --tw-bg-opacity: 1;
-  background-color: var(--fallback-b2,oklch(var(--b2)/var(--tw-bg-opacity)));
+.sv-vuln-table-zebra {
+    @layer daisyui.l1.l2 {
+        tbody {
+            tr {
+                &:where(:nth-child(even):not(.uncertain-vuln):not(.exploited-vuln):not(.patched-vuln)) {
+                    background-color: var(--color-base-200);
+
+                    :where(.table-pin-cols tr th) {
+                        background-color: var(--color-base-200);
+                    }
+                }
+
+                &.row-hover {
+                    &,
+                    &:where(:nth-child(even):not(.uncertain-vuln):not(.exploited-vuln):not(.patched-vuln)) {
+                        &:hover {
+                            @media (hover: hover) {
+                                background-color: var(--color-base-300);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
-/* Force hover on menu item (from DaisyUI) */
+.table-mdsm {
+    @layer daisyui.l1.l2 {
+        :not(thead, tfoot) tr {
+            font-size: 0.85rem;
+        }
+
+        :where(th, td) {
+            padding-inline: calc(0.2rem * 3);
+            padding-block: calc(0.2rem * 2);
+        }
+    }
+}
+
+/* Force hover on menu item (copied from DaisyUI menu-focus with higher transparency) */
 .my-menu-item-hover {
     /* use !important to overwrite DaisyUI mouse hover styling */
-    background-color: var(--fallback-bc,oklch(var(--bc)/0.18)) !important;
+    cursor: pointer;
+    background-color: var(--color-base-content);
+
+    @supports (color: color-mix(in lab, red, red)) {
+        background-color: color-mix(in oklab, var(--color-base-content) 18%, transparent);
+    }
+
+    color: var(--color-base-content);
+    --tw-outline-style: none;
+    outline-style: none;
+
+    @media (forced-colors: active) {
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+    }
 }
 
 /* reCAPTCHA v2 box remove white border */
 .g-recaptcha {
-    overflow:hidden;
-    width:302px;
-    height:76px;
+    overflow: hidden;
+    width: 302px;
+    height: 76px;
 }
 
 /* Smaller button */
@@ -162,12 +212,18 @@ tr.patched-vuln td {
     line-height: 1.125rem;
 }
 
+.text-mdsm {
+    font-size: 0.938rem;
+    line-height: calc(1.375 / 0.938);
+}
+
 .text-version-badge {
     font-size: 0.825rem;
     line-height: 1.5rem;
 }
 
-.dont-break-out {  /* from https://stackoverflow.com/a/50777367 */
+.dont-break-out {
+    /* from https://stackoverflow.com/a/50777367 */
     /* These are technically the same, but use both */
     overflow-wrap: break-word;
     word-wrap: break-word;
@@ -181,18 +237,23 @@ tr.patched-vuln td {
 
 /* Vertical scrollbar styles for WebKit browsers (Chrome, Safari) */
 .overflow-y-auto::-webkit-scrollbar {
-    width: 0.45rem !important; /* Width for the vertical scrollbar */
+    width: 0.45rem !important;
+    /* Width for the vertical scrollbar */
 }
 
 .overflow-y-auto::-webkit-scrollbar-track {
     border-radius: 0.2rem !important;
-    background: transparent; /* Transparent background to simulate margin */
-    margin-top: 0.55rem; /* Adjust to desired top margin */
-    margin-bottom: 0.55rem; /* Adjust to desired bottom margin */
+    background: transparent;
+    /* Transparent background to simulate margin */
+    margin-top: 0.55rem;
+    /* Adjust to desired top margin */
+    margin-bottom: 0.55rem;
+    /* Adjust to desired bottom margin */
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb {
     border-radius: 0.5rem !important;
     background-color: oklch(var(--bc)) !important;
-    box-shadow: inset 0 0 0 0.55rem; /* Simulate the margin with shadow */
+    box-shadow: inset 0 0 0 0.55rem;
+    /* Simulate the margin with shadow */
 }

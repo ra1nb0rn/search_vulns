@@ -1,3 +1,21 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Tailwind theme extensions */
+@theme {
+  --spacing-90: 22.5rem;
+  --spacing-104: 26rem;
+  --spacing-6_5xl: 76rem;
+  --spacing-8xl: 88rem;
+
+  --text-underline-offset-3: 3px;
+}
+
+@plugin "daisyui" {
+  themes: light, autumn, fantasy, dark, dracula, night, dim, sunset;  /* false: only light + dark | true: all themes | array: specific themes like this ["light", "dark", "cupcake"]  */
+  darkTheme: dim;    /* name of one of the included themes for dark mode */
+  base: true;    /* applies background color and foreground color for root element by default */
+  styled: true;    /* include daisyUI colors and design decisions for all components */
+  utils: true;    /* adds responsive and modifier utility classes */
+  logs: true;    /* Shows info about daisyUI version and used config in the console when building your CSS */
+  themeRoot: ":root";    /* The element that receives theme color CSS variables */
+}

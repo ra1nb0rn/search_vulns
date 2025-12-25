@@ -142,7 +142,7 @@ function retrieveAndShowVersion () {
     $.get({
         url: "/api/version",
         success: function (versionResponse) {
-            $("#search-vulns-version-content").html(`<table class="table table-sm max-w-md"><tr><td>search_vulns Version:</td><td>${versionResponse.version}</td></tr><tr><td>Last Resource Update:</td><td>${versionResponse.last_db_update}</td></tr></table>`);
+            $("#search-vulns-version-content").html(`<table class="table table-sm max-w-md"><tr class="text-sm"><td>search_vulns Version:</td><td>${versionResponse.version}</td></tr><tr class="text-sm"><td>Last Resource Update:</td><td>${versionResponse.last_db_update}</td></tr></table>`);
         },
         error: function (jXHR, textStatus, errorThrown) {
             var errorMsg;
