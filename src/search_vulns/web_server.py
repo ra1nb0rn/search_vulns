@@ -37,11 +37,15 @@ README_FILE = os.path.join(PROJECT_DIR, "README.md")
 MAX_QUERY_LENGTH = 256
 VULN_RESULTS_CACHE, PRODUCTID_SEARCH_CACHE = {}, {}
 RECAPTCHA_THRESHOLD = 0.7
-CODE_HIGHLIGHT_DETAILS_RE = re.compile(r'<code class="language-(\w+)"[^>]*?(hl_lines="([^"]*)")?>')
+CODE_HIGHLIGHT_DETAILS_RE = re.compile(
+    r'<code class="language-(\w+)"[^>]*?(hl_lines="([^"]*)")?>'
+)
 MD_TO_HTML_IMG_REPLACE_RE = re.compile(r'<img[^>]*src="(([^"]+\/)?([^"]+))"')
-MD_TO_HTML_A_REPLACE_RE = re.compile(r'((<a[^>]*class=")([^"]*)("[^>]*>)(.*?)(?=<\/a>)<\/a>|(<a[^>]*>)(.*?)(?=<\/a>)<\/a>)')
-MD_TO_HTML_H_ANCHOR_RE = re.compile(r'((<h\d[^>]*)(>([^<]*)<\/h\d>))')
-MD_TO_HTML_TABLE_RE = re.compile(r'(<table[^>]*>.*?<\/table>)', re.DOTALL)
+MD_TO_HTML_A_REPLACE_RE = re.compile(
+    r'((<a[^>]*class=")([^"]*)("[^>]*>)(.*?)(?=<\/a>)<\/a>|(<a[^>]*>)(.*?)(?=<\/a>)<\/a>)'
+)
+MD_TO_HTML_H_ANCHOR_RE = re.compile(r"((<h\d[^>]*)(>([^<]*)<\/h\d>))")
+MD_TO_HTML_TABLE_RE = re.compile(r"(<table[^>]*>.*?<\/table>)", re.DOTALL)
 SEARCH_VULNS_VERSION = get_version()
 
 
@@ -336,46 +340,65 @@ def index():
 
 
 def style_md_converted_html(markdown_html, center_captions=False, with_color=False):
-    ctr_str = 'text-center ' if center_captions else ''
-    h_color_str = ' text-primary' if with_color else ''
-    a_color_str = ' link-accent' if with_color else ''
-    markdown_html = markdown_html.replace('<h1>', f'<h1 class="{ctr_str}text-2xl my-3 font-bold{h_color_str}">')
-    markdown_html = markdown_html.replace('<h2>', f'<h2 class="{ctr_str}text-xl mt-4 font-semibold{h_color_str}">')
-    markdown_html = markdown_html.replace('<h3>', f'<h3 class="{ctr_str}text-lg mt-3 font-medium{h_color_str}">')
-    markdown_html = markdown_html.replace('<h4>', f'<h4 class="{ctr_str}text-base-lg mt-3 font-medium{h_color_str}">')
-    markdown_html = markdown_html.replace('<ul>', '<ul class="list-disc text-left ml-7 mb-3 mt-1">')
-    markdown_html = markdown_html.replace('<ol>', '<ol class="list-decimal text-left ml-7 mb-3 mt-1">')
-    markdown_html = markdown_html.replace('<pre><code>', '<pre style="display: grid !important; grid-template-columns: repeat(1, minmax(0, 1fr)) !important; overflow-x: auto !important;"><code class="bg-base-300 p-2 rounded-lg">')
-    markdown_html = markdown_html.replace('<code>', '<code class="bg-base-300 p-1 rounded-lg dont-break-out">')
-    markdown_html = markdown_html.replace('<p>', '<p class="mb-3">')
-    markdown_html = markdown_html.replace('<table>', '<table class="table my-table-zebra-bg-200 table-rounded table-auto mb-3">')
-    markdown_html = markdown_html.replace('<th ', '<th class="bg-base-300" ')
-    markdown_html = markdown_html.replace('<th>', '<th class="bg-base-300">')
-    if '<a' in markdown_html:
+    ctr_str = "text-center " if center_captions else ""
+    h_color_str = " text-primary" if with_color else ""
+    a_color_str = " link-accent" if with_color else ""
+    markdown_html = markdown_html.replace(
+        "<h1>", f'<h1 class="{ctr_str}text-2xl my-3 font-bold{h_color_str}">'
+    )
+    markdown_html = markdown_html.replace(
+        "<h2>", f'<h2 class="{ctr_str}text-xl mt-4 font-semibold{h_color_str}">'
+    )
+    markdown_html = markdown_html.replace(
+        "<h3>", f'<h3 class="{ctr_str}text-lg mt-3 font-medium{h_color_str}">'
+    )
+    markdown_html = markdown_html.replace(
+        "<h4>", f'<h4 class="{ctr_str}text-base-lg mt-3 font-medium{h_color_str}">'
+    )
+    markdown_html = markdown_html.replace(
+        "<ul>", '<ul class="list-disc text-left ml-7 mb-3 mt-1">'
+    )
+    markdown_html = markdown_html.replace(
+        "<ol>", '<ol class="list-decimal text-left ml-7 mb-3 mt-1">'
+    )
+    markdown_html = markdown_html.replace(
+        "<pre><code>",
+        '<pre style="display: grid !important; grid-template-columns: repeat(1, minmax(0, 1fr)) !important; overflow-x: auto !important;"><code class="bg-base-300 p-2 rounded-lg">',
+    )
+    markdown_html = markdown_html.replace(
+        "<code>", '<code class="bg-base-300 p-1 rounded-lg dont-break-out">'
+    )
+    markdown_html = markdown_html.replace("<p>", '<p class="mb-3">')
+    markdown_html = markdown_html.replace(
+        "<table>", '<table class="table my-table-zebra-bg-200 table-rounded table-auto mb-3">'
+    )
+    markdown_html = markdown_html.replace("<th ", '<th class="bg-base-300" ')
+    markdown_html = markdown_html.replace("<th>", '<th class="bg-base-300">')
+    if "<a" in markdown_html:
         for a in MD_TO_HTML_A_REPLACE_RE.findall(markdown_html):
             if a[2]:
-                new_a = a[1] + a[2] + ' link' + a_color_str
-                if '//' in a[4] or '?' in a[4]:
-                    new_a += ' dont-break-out'
-                new_a += a[3] + a[4] + '</a>'
+                new_a = a[1] + a[2] + " link" + a_color_str
+                if "//" in a[4] or "?" in a[4]:
+                    new_a += " dont-break-out"
+                new_a += a[3] + a[4] + "</a>"
             else:
-                new_a = a[5][:-1] + ' ' + 'class="link' + a_color_str
-                if '//' in a[6] or '?' in a[6]:
-                    new_a += ' dont-break-out'
-                new_a += '">' + a[6] + '</a>'
+                new_a = a[5][:-1] + " " + 'class="link' + a_color_str
+                if "//" in a[6] or "?" in a[6]:
+                    new_a += " dont-break-out"
+                new_a += '">' + a[6] + "</a>"
             markdown_html = markdown_html.replace(a[0], new_a)
-    if '<h' in markdown_html:
+    if "<h" in markdown_html:
         for header in MD_TO_HTML_H_ANCHOR_RE.findall(markdown_html):
             anchor = header[3]
-            anchor = anchor.replace('&amp;', '&')
-            anchor = re.sub(r'[^\w _-]', '', anchor)
+            anchor = anchor.replace("&amp;", "&")
+            anchor = re.sub(r"[^\w _-]", "", anchor)
             anchor = anchor.lower()
-            anchor = anchor.replace(' ', '-')
+            anchor = anchor.replace(" ", "-")
             new_tag = header[1] + ' id="' + anchor + '"' + header[2]
             markdown_html = markdown_html.replace(header[0], new_tag)
-    if '<table' in markdown_html:
+    if "<table" in markdown_html:
         for table in MD_TO_HTML_TABLE_RE.findall(markdown_html):
-            new_table_str = '<div>' + table + '</div>'
+            new_table_str = "<div>" + table + "</div>"
             markdown_html = markdown_html.replace(table, new_table_str)
 
     return markdown_html
