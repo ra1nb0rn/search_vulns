@@ -143,13 +143,16 @@ def get_equivalent_cpes(cpe, product_db_cursor):
     # if version part consists of more than one version parts, split into two CPE fields
     cpe_version_sections = CPEVersion(cpe_version).get_version_sections()
     if len(cpe_version_sections) > 1 and cpe_subversion in ("*", "", "-"):
-        cpe_split[5] = "".join(cpe_version_sections[:-1])
-        cpe_split[6] = cpe_version_sections[-1]
+        cpe_split[5] = cpe_version_sections[0]
+        cpe_split[6] = "".join(cpe_version_sections[1:])
         cpes.append(":".join(cpe_split))
 
     # if CPE has subversion, create equivalent query with main version and subversion combined in one CPE field
     if cpe_subversion not in ("*", "", "-"):
         cpe_split[5] = cpe_version + "-" + cpe_subversion
+        cpe_split[6] = "*"
+        cpes.append(":".join(cpe_split))
+        cpe_split[5] = cpe_version + cpe_subversion
         cpe_split[6] = "*"
         cpes.append(":".join(cpe_split))
 
