@@ -57,7 +57,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": "eol",
-            "latest": "8.2.2",
+            "latest": "8.2.3",
             "ref": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result["version_status"], expected_result)
