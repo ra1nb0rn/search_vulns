@@ -370,7 +370,7 @@ def style_md_converted_html(markdown_html, center_captions=False, with_color=Fal
     )
     markdown_html = markdown_html.replace("<p>", '<p class="mb-3">')
     markdown_html = markdown_html.replace(
-        "<table>", '<table class="table my-table-zebra-bg-200 table-rounded table-auto mb-3">'
+        "<table>", '<table class="table table-mdsm sv-vuln-table-zebra table-rounded table-auto mb-3">'
     )
     markdown_html = markdown_html.replace("<th ", '<th class="bg-base-300" ')
     markdown_html = markdown_html.replace("<th>", '<th class="bg-base-300">')
@@ -406,23 +406,28 @@ def style_md_converted_html(markdown_html, center_captions=False, with_color=Fal
 
 @app.route("/about")
 def about():
-    markdown_content = ""
+    readme_markdown_content = ""
     with open(README_FILE) as f:
-        markdown_content = f.read()
+        readme_markdown_content = f.read()
 
-    markdown_content = markdown_content[markdown_content.find("## About") :]
+    markdown_content = readme_markdown_content[readme_markdown_content.find("## About") :]
     markdown_content = markdown_content[: markdown_content.find("\n##")]
-    about_html = style_md_converted_html(markdown.markdown(markdown_content), True, True)
+    about_html = style_md_converted_html(markdown.markdown(markdown_content, extensions=['tables']), True, True)
+
+    markdown_content = readme_markdown_content[readme_markdown_content.find("## Modules") :]
+    markdown_content = markdown_content[: markdown_content.find("\n##")]
+    modules_html = style_md_converted_html(markdown.markdown(markdown_content, extensions=['tables']), True, True)
 
     markdown_content = ""
     with open(LICENSE_INFO_FILE) as f:
         markdown_content = f.read()
-    license_html = style_md_converted_html(markdown.markdown(markdown_content), True, True)
+    license_html = style_md_converted_html(markdown.markdown(markdown_content, extensions=['tables']), True, True)
 
     return render_template(
         "about.html",
         sv_version=SEARCH_VULNS_VERSION,
         about_html=about_html,
+        modules_html=modules_html,
         license_html=license_html,
     )
 
@@ -513,7 +518,7 @@ def news():
     with open(CHANGELOG_FILE) as f:
         markdown_content = f.read()
 
-    changelog_html = style_md_converted_html(markdown.markdown(markdown_content), False, True)
+    changelog_html = style_md_converted_html(markdown.markdown(markdown_content, extensions=['tables']), False, True)
     changelog_html = changelog_html.replace('<h1 class="', '<h1 class="text-center ')
     return render_template(
         "news.html", sv_version=SEARCH_VULNS_VERSION, news_html=changelog_html

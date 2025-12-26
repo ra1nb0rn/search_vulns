@@ -72,7 +72,7 @@ search_vulns' search engine is designed in a modular fashion. Therefore, new dat
 
 As this overview shows, modules can help in finding product IDs, vulnerabilities, extra information about vulnerabilities and extra information about the queried product. Examples of the latter two are exploits, CVSS or EPSS scores, or software recency information. Furthermore, modules can classify identified vulnerabilities as patched if they store and utilize special information related to the query, for example.
 
-Have a look at the template module to get started writing your own modules: [``src/search_vulns/modules/template/search_vulns_template.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/template/search_vulns_template.py).
+Have a look at the template module to get started with writing your own modules: [``src/search_vulns/modules/template/search_vulns_template.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/template/search_vulns_template.py).
 
 
 ## Installation
@@ -119,7 +119,7 @@ Thereafter, you can download the database files from GitHub as shown above or bu
 ```shell
 search_vulns --full-update
 ```
-Note, however, that you should supply API keys via a config file, e.g. [`src/search_vulns/config.json`](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/config.json) or as environment variables. The API keys are free and you just need to register with the [NVD](https://nvd.nist.gov/developers/request-an-api-key) or [VulnCheck](https://www.vulncheck.com/), for example.
+Note, however, that you should supply API keys via a config file, e.g. [`src/search_vulns/config.json`](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/config.json), or as environment variables. All currently used API keys are free and you just need to register with the [NVD](https://nvd.nist.gov/developers/request-an-api-key) or [VulnCheck](https://www.vulncheck.com/), for example.
 
 ### Dockerfile
 There's also a ``Dockerfile`` you can use:
