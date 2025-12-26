@@ -1,6 +1,30 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.9.0 - 2025-12-27
+### Added
+- Include Ubuntu and Red Hat security APIs for backpatches
+- Return EoL information for queried release branch, not overall
+- Update cpe_search with fixes and improvements
+- Vacuum SQLite databases after build to decrease size
+- Add decorated underline to CVSS badge to signal vector popup
+- Add CLI option to update selected modules in place
+- Improve equivalent CPE creation with subversions
+- Add logo
+- Improve README with logo, badges, navbar and module table
+- Enable GitHub workflow to publish new release assets to draft release
+
+### Changed
+- Update frontend to Tailwind 4 and DaisyUI 5
+- Some code reformatting and refactoring.
+
+### Fixed
+- Fix reference for vulnerabilities not found
+- Remove highlighting when searching by vuln ID
+- Detect and handle additional false information in NVD vuln data
+- Update and fix test cases
+
+
 ## v0.8.4 - 2025-11-29
 ### Added
 - Save linux pkg to CPE mapping during full install.
