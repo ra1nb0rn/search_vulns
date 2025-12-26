@@ -56,6 +56,10 @@ jobs:
               echo "Warning: file '$f' does not exist"
             fi
           done
+      - name: Get current search_vulns version tag
+        run:
+          CURRENT_SEARCH_VULNS_TAG="v$(search_vulns -V)"
+          echo "CURRENT_SEARCH_VULNS_TAG=$CURRENT_SEARCH_VULNS_TAG" >> $GITHUB_ENV
       - name: Get latest release tag
         run: |
           LATEST_TAG=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/ra1nb0rn/search_vulns/releases/latest | jq -r '.tag_name')
@@ -64,11 +68,19 @@ jobs:
             exit 1
           fi
           echo "LATEST_RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
+      - name: Set Draft or Production Release
+        run: |
+          if [[ "${{ env.LATEST_RELEASE_TAG }}" != "${{ env.CURRENT_SEARCH_VULNS_TAG }}" ]]; then
+            echo "RELEASE_IS_DRAFT=true" >> $GITHUB_ENV
+          else
+            echo "RELEASE_IS_DRAFT=false" >> $GITHUB_ENV
+          fi
       - name: Update resource files of latest release
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: ${{ env.LATEST_RELEASE_TAG }}
+          tag_name: ${{ env.CURRENT_SEARCH_VULNS_TAG }}
+          draft: ${{ env.RELEASE_IS_DRAFT }}
           files: |
             src/search_vulns/resources/productdb.db3
             src/search_vulns/resources/vulndb.db3
