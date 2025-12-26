@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="src/search_vulns/web_server_files/static/logo.svg" alt="search_vulns logo" width="300">
+  <img src="https://raw.githubusercontent.com/ra1nb0rn/search_vulns/refs/heads/master/src/search_vulns/web_server_files/static/logo.svg" alt="search_vulns logo" width="300">
 </p>
 
 <p align="center">
