@@ -1,32 +1,78 @@
-# search_vulns
+
+<p align="center">
+  <img src="src/search_vulns/web_server_files/static/misc/logo.svg" alt="search_vulns logo" width="300">
+</p>
+
+<p align="center">
 Search for known vulnerabilities in software using software titles or a CPE 2.3 string.
+</p>
+
+<p align="center">
+  <a href="https://github.com/ra1nb0rn/search_vulns/releases"><img src="https://img.shields.io/github/v/release/ra1nb0rn/search_vulns?color=blue" alt="search_vulns release"></a>
+  <a href="https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE"><img src="https://img.shields.io/github/license/ra1nb0rn/search_vulns" alt="License"></a>
+  <a href="https://img.shields.io/pypi/dm/search-vulns"><img src="https://img.shields.io/pypi/dm/search_vulns" alt="PyPI downloads"></a>
+  <a href="https://search-vulns.com"><img src="https://img.shields.io/website?url=https%3A%2F%2Fsearch-vulns.com&label=search-vulns.com" alt="search-vulns.com up"></a>
+  <a href="https://github.com/ra1nb0rn/search_vulns/graphs/contributors"><img src="https://img.shields.io/github/contributors/ra1nb0rn/search_vulns" alt="search_vulns contributors"></a>
+  <a href="https://github.com/ra1nb0rn/search_vulns/blob/master/pyproject.toml"><img src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fra1nb0rn%2Fsearch_vulns%2Frefs%2Fheads%2Fmaster%2Fpyproject.toml&query=project.requires-python&label=python&color=orange" alt="Python version"></a>
+</p>
+
+<p align="center">
+  <a href="#about">About</a>
+  &middot;
+  <a href="#quick-links">Quick Links</a>
+  &middot;
+  <a href="#modules">Modules</a>
+  &middot;
+  <a href="#installation">Installation</a>
+  &middot;
+  <a href="#usage">Usage</a>
+  &middot;
+  <a href="https://github.com/ra1nb0rn/search_vulns/wiki">Wiki</a>
+  &middot;
+  <a href="#license">License</a>
+</p>
+
+<hr>
+
 
 ## About
-*search_vulns* can be used to search for known vulnerabilities in software. To achieve this, the tool utilizes a locally built vulnerability database, currently containing:
+*search_vulns* can be used to search for known vulnerabilities in software. To achieve this, it utilizes a locally built database containing various data sources about products, vulnerabilities, exploits, software recency and more. Since search_vulns is designed in a modular fashion, new data sources and extensions can be integrated easily. A complete list of all current modules and included data sources is provided in the [*Modules*](#modules) section.
 
-* CVE information from the [National Vulnerability Database (NVD)](https://nvd.nist.gov/)
-* Enhanced NVD information from [VulnCheck NVD++](https://vulncheck.com/nvd2)
-* Exploit information from the [Exploit-DB (EDB)](https://www.exploit-db.com/)
-* Exploit information from [PoC-in-GitHub](https://github.com/nomi-sec/PoC-in-GitHub)
-* Vulnerability information from the [GitHub Security Advisory Database](https://github.com/github/advisory-database)
-* Software currency information from [endoflife.date](https://github.com/endoflife-date/endoflife.date)
-* Backpatch information from the [Debian Security Bug Tracker](https://security-tracker.debian.org/tracker/)
-* Backpatch information from the Ubuntu Security API via [*aquasecurity's* repository](https://github.com/aquasecurity/vuln-list)
-* Backpatch information from the Red Hat Security Data API via [*aquasecurity's* repository](https://github.com/aquasecurity/vuln-list-redhat)
+You can either provide product titles like *Apache 2.4.39* or a CPE 2.3 string like ``cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*`` as input. In addition, you can directly search for vulnerabilities like ``CVE-2023-1234`` or ``GHSA-xx68-jfcg-xmmf`` by using a comma-separated list of IDs.
 
-Since search_vulns is designed in a modular fashion, new data sources and extensions can be integrated easily.
-
-Using the *search_vulns* tool, this local information can be queried, either by providing software titles like 'Apache 2.4.39' or by providing a CPE 2.3 string like ``cpe:2.3:a:sudo_project:sudo:1.8.2:*:*:*:*:*:*:*``. You can also search for vulnerabilities like ``CVE-2023-1234`` or ``GHSA-xx68-jfcg-xmmf`` directly by using a comma-separated list of IDs.
-
-*search_vulns* can either be used as a CLI tool or via a web server. It is recommended to use the CLI tool for automated workflows that might be resource-constrained. Otherwise, using the web server is recommended, because it offers more features and flexibility. This includes the ability to achieve more complete results. Also, the presentation of results is clearer and results can be exported for further use.
+*search_vulns* can either be used as a CLI tool or via a web server. It is recommended to use the CLI tool for automated workflows that might be resource-constrained. Otherwise, using the web server is recommended, because it offers more features and flexibility. A public instance of the web server is available at [https://search-vulns.com](https://search-vulns.com).
 
 
 ## Quick Links
 * Public instance of the web server: [https://search-vulns.com](https://search-vulns.com)
-* [Black Hat Arsenal recorded demo](https://search-vulns.com/static/video/SearchVulnsBlackHatDemo.mp4)
+* [Recorded Demo for Black Hat Arsenal 2025](https://search-vulns.com/static/video/SearchVulnsBlackHatDemo.mp4)
+* [Our Talk at the German OWASP Day 2025](https://media.ccc.de/v/god2025-56473-the-surprising-complexity)
 * [The Surprising Complexity of Finding Known Vulnerabilities](https://search-vulns.com/blog-post/1) - A blog post detailing the challenges and motivations behind search_vulns.
 * [search_vulns: Simplifying the Surprising Complexity of Finding Known Vulnerabilities](https://search-vulns.com/blog-post/2) - A blog post introducing search_vulns and describing its features.
 * [search_vulns: A Deep Dive into its Technologies and Approaches](https://search-vulns.com/blog-post/3) - A blog post detailing how search_vulns works on a technical level, including its novel approaches.
+
+
+## Modules
+search_vulns' search engine is designed in a modular fashion. Therefore, new data sources can be integrated easily. The currently available modules and data sources are the following:
+
+| Module ID | Description |
+|----------|-------------|
+| [nvd.search_vulns_nvd](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/nvd/search_vulns_nvd.py) | Integrates CVE information and exploits from the [National Vulnerability (NVD) database](https://nvd.nist.gov/) |
+| [vulncheck.search_vulns_nvdpp](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/vulncheck/search_vulns_nvdpp.py) | Integrates additional enrichment of the CVE/NVD data via [VulnCheck's NVD++](https://www.vulncheck.com/nvd2) |
+| [ghsa.search_vulns_ghsa](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/ghsa/search_vulns_ghsa.py) | Integrates CVE and non-CVE vulnerabilties from the [GitHub Security Advisory (GHSA) database](https://github.com/github/advisory-database) |
+| [exploit_db.search_vulns_edb](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/exploit_db/search_vulns_edb.py) | Integrates publicly available exploits from the [Exploit-DB](https://www.exploit-db.com/) |
+| [poc_in_github.search_vulns_poc_in_github](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/poc_in_github/search_vulns_poc_in_github.py) | Integrates exploit information from [PoC-in-GitHub](https://github.com/nomi-sec/PoC-in-GitHub) |
+| [msf_exploits.search_vulns_msf_exploits](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/msf_exploits/search_vulns_msf_exploits.py) | Integrates information about exploits in the [Metasploit Framework](https://github.com/rapid7/metasploit-framework/) |
+| [end_of_life_date.search_vulns_eold](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/end_of_life_date/search_vulns_eold.py) | Integrates software recency information from [endoflife.date](https://endoflife.date/) |
+| [epss.search_vulns_epss](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/epss/search_vulns_epss.py) | Integrates [FIRST's EPSS scores](https://www.first.org/epss/) for CVEs |
+| [cpe_search.search_vulns_cpe_search](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/cpe_search/search_vulns_cpe_search.py) | Matches a users natural language query to a CPE string via [cpe_search](https://github.com/ra1nb0rn/cpe_search) and the [NVD's official dictionary](https://nvd.nist.gov/products/cpe) |
+| [linux_distro_backpatches.debian.<br>search_vulns_debian](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/linux_distro_backpatches/debian/search_vulns_debian.py) | Integrates backpatch information from the [Debian Security Bug Tracker](https://security-tracker.debian.org/tracker/) |
+| [linux_distro_backpatches.ubuntu.<br>search_vulns_ubuntu](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/linux_distro_backpatches/ubuntu/search_vulns_ubuntu.py) | Integrates backpatch information from the Ubuntu Security API via [*aquasecurity's* repository](https://github.com/aquasecurity/vuln-list) |
+| [linux_distro_backpatches.redhat.<br>search_vulns_redhat](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/linux_distro_backpatches/redhat/search_vulns_redhat.py) | Integrates backpatch information from the Red Hat Security Data API via [*aquasecurity's* repository](https://github.com/aquasecurity/vuln-list-redhat) |
+
+As this overview shows, modules can help in finding product IDs, vulnerabilities, extra information about vulnerabilities and extra information about the queried product. Examples of the latter two are exploits, CVSS or EPSS scores, or software recency information. Furthermore, modules can classify identified vulnerabilities as patched if they store and utilize special information related to the query, for example.
+
+Have a look at the template module to get started writing your own modules: [``src/search_vulns/modules/template/search_vulns_template.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/template/search_vulns_template.py).
 
 
 ## Installation
@@ -87,8 +133,9 @@ The port forwarding is optional, in case you do not intend on using the web serv
 ## Usage
 *search_vulns*'s usage information is shown in the following:
 ```
-usage: search_vulns [-h] [-u] [--full-update] [--full-install] [-a] [-f {txt,json}] [-o OUTPUT]
-                    [-q QUERY] [-c CONFIG] [-V] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
+usage: search_vulns [-h] [-u] [--full-update] [--full-update-module MODULE_ID [MODULE_ID ...]]
+                    [--full-install] [-a] [-f {txt,json}] [-o OUTPUT] [-q QUERY] [-c CONFIG]
+                    [-V] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
                     [--ignore-general-product-vulns] [--include-single-version-vulns]
                     [--use-created-product-ids] [--include-patched]
 
@@ -96,33 +143,37 @@ Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn
 
 options:
   -h, --help            show this help message and exit
-  -u, --update          Download the latest version of the the local vulnerability and software database
+  -u, --update          Download the latest version of the the local vulnerability and
+                        software database from GitHub repo
   --full-update         Fully (re)build the local vulnerability and software database
-  --full-install        Fully install search_vulns, including all dependencies (python packages, system
-                        packages etc.)
+  --full-update-module MODULE_ID [MODULE_ID ...]
+                        Fully (re)build the local database for the given module(s) in-place
+  --full-install        Fully install search_vulns, including all dependencies (python
+                        packages, system packages etc.)
   -a, --artifacts       Print JSON list of artifacts created during full update
   -f {txt,json}, --format {txt,json}
                         Output format, either 'txt' or 'json' (default: 'txt')
   -o OUTPUT, --output OUTPUT
                         File to write found vulnerabilities to
   -q QUERY, --query QUERY
-                        A query, either a software title like 'Apache 2.4.39', a product ID string (e.g.
-                        CPE 2.3) or a list of vuln IDs
+                        A query, either a software title like 'Apache 2.4.39', a product ID
+                        string (e.g. CPE 2.3) or a list of vuln IDs
   -c CONFIG, --config CONFIG
                         A config file to use (default: config.json)
   -V, --version         Print the version of search_vulns
   --cpe-search-threshold CPE_SEARCH_THRESHOLD
                         Similarity threshold used for retrieving a CPE via the cpe_search tool
   --ignore-general-product-vulns
-                        Ignore vulnerabilities that only affect a general product (i.e. without version)
+                        Ignore vulnerabilities that only affect a general product (i.e.
+                        without version)
   --include-single-version-vulns
-                        Include vulnerabilities that only affect one specific version of a product when
-                        querying a lower version
+                        Include vulnerabilities that only affect one specific version of a
+                        product when querying a lower version
   --use-created-product-ids
-                        If no matching product ID exists in the software database, automatically use
-                        matching ones created by search_vulns
-  --include-patched     Include vulnerabilities reported as (back)patched, e.g. by Debian Security
-                        Tracker, in results
+                        If no matching product ID exists in the software database,
+                        automatically use matching ones created by search_vulns
+  --include-patched     Include vulnerabilities reported as (back)patched, e.g. by Debian
+                        Security Tracker, in results
 ```
 Note that when querying software with ``-q`` you have to put the software information in quotes if it contains any spaces. Also, you can use ``-q`` multiple times to make multiple queries at once. For one, a query can be a software name / title like 'Apache 2.4.39' or 'Wordpress 5.7.2'. Furthermore, a query can also be a [CPE 2.3](https://csrc.nist.gov/projects/security-content-automation-protocol/specifications/cpe) string.
 
@@ -175,12 +226,6 @@ Here are some examples:
   $ search_vulns -q 'Nginx 1.20.1-22 RHEL 9.2' -f json --include-patched
   [...]
   ```
-
-
-## Modularity
-search_vulns' search engine is designed in a modular manner. Therefore, new databases can be integrated easily. For example, modules can help in finding product IDs, vulnerabilities, extra information about vulnerabilities and extra information about the queried product. Examples of the latter two are CVSS scores or software recency information. Furthermore, modules can classify identified vulnerabilities as patched if they store and utilize special information related to the query, for example.
-
-Have a look at the template module to get started writing your own modules: [``src/search_vulns/modules/template/search_vulns_template.py``](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/template/search_vulns_template.py).
 
 
 ## Running a Web Server
