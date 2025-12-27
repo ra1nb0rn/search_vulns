@@ -57,7 +57,7 @@ jobs:
             fi
           done
       - name: Get current search_vulns version tag
-        run:
+        run: |
           CURRENT_SEARCH_VULNS_TAG="v$(search_vulns -V)"
           echo "CURRENT_SEARCH_VULNS_TAG=$CURRENT_SEARCH_VULNS_TAG" >> $GITHUB_ENV
       - name: Get latest release tag
