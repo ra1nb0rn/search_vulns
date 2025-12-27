@@ -2,7 +2,6 @@ import logging
 import os
 import re
 import shutil
-import subprocess
 
 import ujson
 from cpe_search.cpe_search import add_cpes_to_db, search_cpes
@@ -18,6 +17,7 @@ from search_vulns.modules.utils import (
     compute_cosine_similarity,
     download_github_folder,
     get_database_connection,
+    split_pkg_name_with_version,
 )
 
 REQUIRES_BUILT_MODULES = ["cpe_search.search_vulns_cpe_search", "nvd.search_vulns_nvd"]
@@ -26,6 +26,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 GHSA_GITHUB_REPO = "https://github.com/github/advisory-database"
 GHSA_GITHUB_DIR = os.path.join(SCRIPT_DIR, "ghsa-database")
 GHSA_HARDCODED_MATCHES_FILE = os.path.join(SCRIPT_DIR, "ghsa_hardcoded_matches.json")
+ENDS_IN_VERSION_RE = re.compile(r".+(v\d+)$")
 DIFFICULT_PACKAGE_PREFIXES = [
     "github.com/go",
     "github.com/microsoft/go",
@@ -77,6 +78,19 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
             advisory_affected_pnames = set()
             for pkg in advisory["affected"]:
                 pname = pkg["package"]["name"].lower()
+
+                # sometimes, package contains name (e.g. GHSA-mw2c-vx6j-mg76 or GHSA-2fcv-qww3-9v6h)
+                possible_start_version, is_possible_start_version_in_fixed = "", False
+                ends_in_version_match = ENDS_IN_VERSION_RE.match(pname)
+                if ends_in_version_match:
+                    possible_start_version = ends_in_version_match.group(1)[
+                        1:
+                    ]  # strip starting "v"
+                else:
+                    possible_new_pname, possible_start_version = split_pkg_name_with_version(
+                        pname, 3
+                    )
+
                 ecosystem = pkg["package"]["ecosystem"].lower()
                 single_version_affected = False
                 affected_ranges = []
@@ -115,20 +129,34 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                             fixed = db_specific_fixed[1:].strip()
                             is_version_end_incl = False
 
-                    affected_ranges.append(
-                        (pname, ecosystem, introduced, fixed, is_version_end_incl)
-                    )
+                    if possible_start_version in fixed:
+                        is_possible_start_version_in_fixed = True
+
+                    affected_ranges.append((introduced, fixed, is_version_end_incl))
+
+                # remove version from package name
+                if is_possible_start_version_in_fixed and pname not in ghsa_hardcoded_matches:
+                    if ends_in_version_match:
+                        pname = pname.replace(ends_in_version_match.group(1), "")
+                    else:
+                        pname = possible_new_pname
+
                 for version in pkg.get("versions", []):  # usually just one entry or omitted
                     if (
                         not introduced or version == introduced
                     ):  # just a single version is affected
                         single_version_affected = True
                     ghsa_affects_map[ghsa_id].append((pname, ecosystem, version))
+
                 if (
                     not single_version_affected
                 ):  # only add range(s) if more than one version is affected
-                    for affected_range in affected_ranges:
-                        ghsa_affects_map[ghsa_id].append(affected_range)
+                    for introduced, fixed, is_version_end_incl in affected_ranges:
+                        if is_possible_start_version_in_fixed:
+                            if not introduced or introduced == "0":
+                                introduced = possible_start_version
+                        range_entry = (pname, ecosystem, introduced, fixed, is_version_end_incl)
+                        ghsa_affects_map[ghsa_id].append(range_entry)
 
             # get list of all CVE aliasses, retrieve all their affected CPEs
             # and try to match every product name to one of these CPEs

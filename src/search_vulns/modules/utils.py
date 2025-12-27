@@ -21,6 +21,7 @@ NUMERIC_VERSION_RE = re.compile(r"[\d\.]+")
 NON_ALPHANUMERIC_SPLIT_RE = re.compile(r"[^a-zA-Z]")
 SQLITE_TIMEOUT = 300
 VULN_ID_RE = re.compile(r"((?:(?<=^)|(?<=\s))([A-Za-z]+(?:[-_]\w+){2,})(?=\s|$))")
+VERSION_IN_NAME_RE = re.compile(r"([a-zA-Z\-_])+(\d[\d\.]*)$")
 
 
 def _is_cpe_version_start_end_matching(
@@ -410,3 +411,28 @@ def download_github_folder(repo_url, repo_folder, dest):
     if return_code != 0:
         return False
     return True
+
+
+def split_pkg_name_with_version(initial_pkg, version_max_length=1):
+    """
+    Split name in name and version, e.g. openssh097 -> openssh 0.9.7 and
+    similar for apache2, libssh2 or log4j1.2
+    """
+
+    version_in_name_match = VERSION_IN_NAME_RE.findall(initial_pkg)
+    pkg, start_version = initial_pkg, ""
+    if version_in_name_match:
+        new_pkg = initial_pkg.replace(version_in_name_match[0][-1], "")
+        if new_pkg.endswith("-") or new_pkg.endswith("_"):
+            new_pkg = new_pkg[:-1]
+        start_version = version_in_name_match[0][-1]
+        if "." not in start_version and len(start_version) > 1:
+            new_start_version, i = "", 0
+            while i < len(start_version):
+                new_start_version += start_version[i : i + version_max_length] + "."
+                i += version_max_length
+            new_start_version = new_start_version[:-1]  # remove last dot
+            start_version = new_start_version
+        pkg = new_pkg
+
+    return pkg, start_version

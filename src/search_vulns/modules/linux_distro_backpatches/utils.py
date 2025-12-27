@@ -10,7 +10,6 @@ UNNECESSARY_INFO_RE = re.compile(
     r"([+~]+(\d+|dfsg(\.\d)*|ds(\.\d)*|deb\d+u+\d+|debian\d+|git\+?[a-fA-F\d]+|r\d+|rc\d+|build[\w\.]+|esm\d|cs[\d\.]+))|(ubuntu[\d\.\~]+)|build[\w\.]+|\.STABLE\d+|\+stable[\w\~\-]+|pkg[\d\.]+|esm\d"
 )
 DECIMAL_COLON_START_RE = re.compile(r"^\d+:")
-VERSION_IN_NAME_RE = re.compile(r"([a-zA-Z\-_])+(\d[\d\.]*)$")
 SPLIT_QUERY_TERMS_RE = re.compile(r"[ _\-\.]")
 MATCH_VERSION_EPOCH_RE = re.compile(r"^\d+:")
 
@@ -56,31 +55,6 @@ def extract_vendor_version(version: str) -> str:
 
     # Strip any accidental whitespace
     return version.strip()
-
-
-def split_pkg_name_with_version(initial_pkg, version_max_length=1):
-    """
-    Split name in name and version, e.g. openssh097 -> openssh 0.9.7 and
-    similar for apache2, libssh2 or log4j1.2
-    """
-
-    version_in_name_match = VERSION_IN_NAME_RE.findall(initial_pkg)
-    pkg, start_version = initial_pkg, ""
-    if version_in_name_match:
-        new_pkg = initial_pkg.replace(version_in_name_match[0][-1], "")
-        if new_pkg.endswith("-") or new_pkg.endswith("_"):
-            new_pkg = new_pkg[:-1]
-        start_version = version_in_name_match[0][-1]
-        if "." not in start_version and len(start_version) > 1:
-            new_start_version, i = "", 0
-            while i < len(start_version):
-                new_start_version += start_version[i : i + version_max_length] + "."
-                i += version_max_length
-            new_start_version = new_start_version[:-1]  # remove last dot
-            start_version = new_start_version
-        pkg = new_pkg
-
-    return pkg, start_version
 
 
 def summarize_distro_backpatch(backpatch_info):

@@ -14,7 +14,6 @@ from search_vulns.modules.linux_distro_backpatches.utils import (
     get_clean_version,
     load_deb_pkg_cpe_map_from_file,
     split_deb_pkg_name,
-    split_pkg_name_with_version,
     strip_epoch_from_version,
     summarize_distro_backpatch,
 )
@@ -25,6 +24,7 @@ from search_vulns.modules.utils import (
     get_database_connection,
     get_versionless_cpes_of_nvd_cves,
     split_cpe,
+    split_pkg_name_with_version,
 )
 
 REQUIRES_BUILT_MODULES = [
