@@ -1,6 +1,11 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v0.9.1 - 2025-12-27
+### Fixed
+- Fixed GitHub action to update release assets
+
+
 ## v0.9.0 - 2025-12-27
 ### Added
 - Include Ubuntu and Red Hat security APIs for backpatches
