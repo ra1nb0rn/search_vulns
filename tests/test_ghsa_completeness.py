@@ -221,6 +221,16 @@ class TestSearches(unittest.TestCase):
                     "GHSA-jmp9-x22r-554x": "https://github.com/advisories/GHSA-jmp9-x22r-554x",
                 },
             },
+            "GHSA-7fch-4f2f-jcgm": {
+                "published": "2025-10-16 15:30:43",
+                "cvss_ver": "3.1",
+                "cvss": "4.3",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+                "aliases": {
+                    "CVE-2025-41254": "https://nvd.nist.gov/vuln/detail/CVE-2025-41254",
+                    "GHSA-7fch-4f2f-jcgm": "https://github.com/advisories/GHSA-7fch-4f2f-jcgm",
+                },
+            },
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id

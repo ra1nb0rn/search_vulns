@@ -16,6 +16,7 @@ from search_vulns.modules.utils import (
     SQLITE_TIMEOUT,
     compute_cosine_similarity,
     download_github_folder,
+    extend_short_cpe,
     get_database_connection,
     split_pkg_name_with_version,
 )
@@ -41,6 +42,15 @@ def cleanup():
         shutil.rmtree(GHSA_GITHUB_DIR)
 
 
+def get_hardcoded_match(pname, ghsa_hardcoded_matches, ghsa_hardcoded_matches_re):
+    if pname in ghsa_hardcoded_matches:
+        return ghsa_hardcoded_matches[pname]
+    for pkg_re, cpe in ghsa_hardcoded_matches_re:
+        if pkg_re.match(pname):
+            return cpe
+    return None
+
+
 def parse_ghsa_data(vulndb_cursor, productdb_config):
     """Parse all GitHub-reviewed GHSA entries"""
 
@@ -53,8 +63,20 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
     # retrieve hardcoded matches and store them in product DB
     with open(GHSA_HARDCODED_MATCHES_FILE) as f:
         ghsa_hardcoded_matches = ujson.loads(f.read())
+        for pkg_expression, cpe in ghsa_hardcoded_matches.items():
+            # ensure CPE is of proper length
+            if cpe:
+                ghsa_hardcoded_matches[pkg_expression] = extend_short_cpe(cpe)
     all_hardcoded_cpes = list(set(ghsa_hardcoded_matches.values()))
     add_cpes_to_db(all_hardcoded_cpes, {"DATABASE": productdb_config}, check_duplicates=True)
+
+    ghsa_hardcoded_matches_re = []
+    for pkg_expression in list(ghsa_hardcoded_matches):
+        if any(char in pkg_expression for char in "*?[]+^$"):
+            ghsa_hardcoded_matches_re.append(
+                (re.compile(pkg_expression), ghsa_hardcoded_matches[pkg_expression])
+            )
+            del ghsa_hardcoded_matches[pkg_expression]
 
     # only traverse reviewed advisories, since only those have information about affected software
     for dirpath, dirnames, files in os.walk(
@@ -135,12 +157,19 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                     affected_ranges.append((introduced, fixed, is_version_end_incl))
 
                 # remove version from package name
-                if is_possible_start_version_in_fixed and pname not in ghsa_hardcoded_matches:
-                    if ends_in_version_match:
-                        pname = pname.replace(ends_in_version_match.group(1), "")
+                if is_possible_start_version_in_fixed:
+                    hardcoded_match_cpe = get_hardcoded_match(
+                        pname, ghsa_hardcoded_matches, ghsa_hardcoded_matches_re
+                    )
+                    if hardcoded_match_cpe is not None and pname not in ghsa_hardcoded_matches:
+                        ghsa_hardcoded_matches[pname] = hardcoded_match_cpe
                     else:
-                        pname = possible_new_pname
+                        if ends_in_version_match:
+                            pname = pname.replace(ends_in_version_match.group(1), "")
+                        else:
+                            pname = possible_new_pname
 
+                # queue new vuln data to be put into DB
                 for version in pkg.get("versions", []):  # usually just one entry or omitted
                     if (
                         not introduced or version == introduced
@@ -181,8 +210,11 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                 if pname in pname_cpe_map:
                     continue
 
-                if pname in ghsa_hardcoded_matches:
-                    pname_cpe_map[pname] = (ghsa_hardcoded_matches[pname], 1)
+                hardcoded_match_cpe = get_hardcoded_match(
+                    pname, ghsa_hardcoded_matches, ghsa_hardcoded_matches_re
+                )
+                if hardcoded_match_cpe is not None:
+                    pname_cpe_map[pname] = (hardcoded_match_cpe, 1)
                 elif len(advisory_affected_pnames) == 1 and len(all_nvd_cpes) == 1:
                     pname_cpe_map[pname] = (next(iter(all_nvd_cpes)), 1)
                 else:

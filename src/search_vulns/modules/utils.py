@@ -436,3 +436,13 @@ def split_pkg_name_with_version(initial_pkg, version_max_length=1):
         pkg = new_pkg
 
     return pkg, start_version
+
+
+def extend_short_cpe(cpe):
+    """Extend a short CPE to full length."""
+    if cpe.endswith(":"):
+        cpe = cpe[:-1]
+    cpe_split = split_cpe(cpe)
+    if len(cpe_split) < 13:
+        cpe_split.extend(["*"] * (13 - len(cpe_split)))
+    return ":".join(cpe_split)

@@ -1,15 +1,13 @@
 {
     "jquery-rails": "cpe:2.3:a:rubyonrails:jquery-rails:*:*:*:*:*:*:*:*",
-    "Microsoft.AspNetCore.App.Runtime.win-arm": "cpe:2.3:a:microsoft:asp.net_core:*:*:*:*:*:*:*:*",
-    "Microsoft.AspNetCore.App.Runtime.win-arm64": "cpe:2.3:a:microsoft:asp.net_core:*:*:*:*:*:*:*:*",
-    "Microsoft.AspNetCore.App.Runtime.win-x64": "cpe:2.3:a:microsoft:asp.net_core:*:*:*:*:*:*:*:*",
-    "Microsoft.AspNetCore.App.Runtime.win-x86": "cpe:2.3:a:microsoft:asp.net_core:*:*:*:*:*:*:*:*",
+    "Microsoft\\.AspNetCore\\..*": "cpe:2.3:a:microsoft:asp.net_core:*:*:*:*:*:*:*:*",
     "jquery-mobile": "",
     "electron-native-notify": "",
     "axios-http": "",
     "pdfjs-dist": "cpe:2.3:a:mozilla:pdf.js:*:*:*:*:*:*:*:*",
     "react-pdf": "",
-    "org.springframework:spring-context": "cpe:2.3:a:vmware:spring_framework:",
+    "org\\.springframework:.*": "cpe:2.3:a:vmware:spring_framework:",
     "import-mysql": "",
-    "mysql-koa": ""
+    "mysql-koa": "",
+    "org\\.apache\\.tomcat\\..*": "cpe:2.3:a:apache:tomcat:"
 }
