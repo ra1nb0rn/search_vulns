@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-Search for known vulnerabilities in software using software titles or a CPE 2.3 string.
+A modular tool to search for known vulnerabilities, exploits and more across various data sources.
 </p>
 
 <p align="center">
