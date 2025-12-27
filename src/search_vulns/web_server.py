@@ -344,47 +344,48 @@ def style_md_converted_html(markdown_html, center_captions=False, with_color=Fal
     h_color_str = " text-primary" if with_color else ""
     a_color_str = " link-accent" if with_color else ""
     markdown_html = markdown_html.replace(
-        "<h1>", f'<h1 class="{ctr_str}text-2xl my-3 font-bold{h_color_str}">'
+        "<h1>", f'<h1 class="{ctr_str}text-2xl my-3 font-bold{h_color_str} h1-content">'
     )
     markdown_html = markdown_html.replace(
-        "<h2>", f'<h2 class="{ctr_str}text-xl mt-4 font-semibold{h_color_str}">'
+        "<h2>", f'<h2 class="{ctr_str}text-xl mt-4 font-semibold{h_color_str} h2-content">'
     )
     markdown_html = markdown_html.replace(
-        "<h3>", f'<h3 class="{ctr_str}text-lg mt-3 font-medium{h_color_str}">'
+        "<h3>", f'<h3 class="{ctr_str}text-lg mt-3 font-medium{h_color_str} h3-content">'
     )
     markdown_html = markdown_html.replace(
-        "<h4>", f'<h4 class="{ctr_str}text-base-lg mt-3 font-medium{h_color_str}">'
+        "<h4>", f'<h4 class="{ctr_str}text-base-lg mt-3 font-medium{h_color_str} h4-content">'
     )
     markdown_html = markdown_html.replace(
-        "<ul>", '<ul class="list-disc text-left ml-7 mb-3 mt-1">'
+        "<ul>", '<ul class="list-disc text-left ml-7 mb-3 mt-1 ul-content">'
     )
     markdown_html = markdown_html.replace(
-        "<ol>", '<ol class="list-decimal text-left ml-7 mb-3 mt-1">'
+        "<ol>", '<ol class="list-decimal text-left ml-7 mb-3 mt-1 ol-content">'
     )
     markdown_html = markdown_html.replace(
         "<pre><code>",
-        '<pre style="display: grid !important; grid-template-columns: repeat(1, minmax(0, 1fr)) !important; overflow-x: auto !important;"><code class="bg-base-300 p-2 rounded-lg">',
+        '<pre class="pre-content" style="display: grid !important; grid-template-columns: repeat(1, minmax(0, 1fr)) !important; overflow-x: auto !important;"><code class="bg-base-300 p-2 rounded-lg code-content">',
     )
     markdown_html = markdown_html.replace(
-        "<code>", '<code class="bg-base-300 p-1 rounded-lg dont-break-out">'
+        "<code>", '<code class="bg-base-300 p-1 rounded-lg dont-break-out code-content">'
     )
-    markdown_html = markdown_html.replace("<p>", '<p class="mb-3">')
+    markdown_html = markdown_html.replace("<p>", '<p class="mb-3 p-content">')
     markdown_html = markdown_html.replace(
-        "<table>", '<table class="table table-mdsm sv-vuln-table-zebra table-rounded table-auto mb-3">'
+        "<table>",
+        '<table class="table table-mdsm sv-vuln-table-zebra table-rounded table-auto mb-3 table-content">',
     )
-    markdown_html = markdown_html.replace("<th ", '<th class="bg-base-300" ')
-    markdown_html = markdown_html.replace("<th>", '<th class="bg-base-300">')
+    markdown_html = markdown_html.replace("<th ", '<th class="bg-base-300 th-content" ')
+    markdown_html = markdown_html.replace("<th>", '<th class="bg-base-300 th-content">')
     if "<a" in markdown_html:
         for a in MD_TO_HTML_A_REPLACE_RE.findall(markdown_html):
             if a[2]:
                 new_a = a[1] + a[2] + " link" + a_color_str
                 if "//" in a[4] or "?" in a[4]:
-                    new_a += " dont-break-out"
+                    new_a += " dont-break-out a-content"
                 new_a += a[3] + a[4] + "</a>"
             else:
                 new_a = a[5][:-1] + " " + 'class="link' + a_color_str
                 if "//" in a[6] or "?" in a[6]:
-                    new_a += " dont-break-out"
+                    new_a += " dont-break-out a-content"
                 new_a += '">' + a[6] + "</a>"
             markdown_html = markdown_html.replace(a[0], new_a)
     if "<h" in markdown_html:
@@ -412,16 +413,22 @@ def about():
 
     markdown_content = readme_markdown_content[readme_markdown_content.find("## About") :]
     markdown_content = markdown_content[: markdown_content.find("\n##")]
-    about_html = style_md_converted_html(markdown.markdown(markdown_content, extensions=['tables']), True, True)
+    about_html = style_md_converted_html(
+        markdown.markdown(markdown_content, extensions=["tables"]), True, True
+    )
 
     markdown_content = readme_markdown_content[readme_markdown_content.find("## Modules") :]
     markdown_content = markdown_content[: markdown_content.find("\n##")]
-    modules_html = style_md_converted_html(markdown.markdown(markdown_content, extensions=['tables']), True, True)
+    modules_html = style_md_converted_html(
+        markdown.markdown(markdown_content, extensions=["tables"]), True, True
+    )
 
     markdown_content = ""
     with open(LICENSE_INFO_FILE) as f:
         markdown_content = f.read()
-    license_html = style_md_converted_html(markdown.markdown(markdown_content, extensions=['tables']), True, True)
+    license_html = style_md_converted_html(
+        markdown.markdown(markdown_content, extensions=["tables"]), True, True
+    )
 
     return render_template(
         "about.html",
@@ -518,7 +525,9 @@ def news():
     with open(CHANGELOG_FILE) as f:
         markdown_content = f.read()
 
-    changelog_html = style_md_converted_html(markdown.markdown(markdown_content, extensions=['tables']), False, True)
+    changelog_html = style_md_converted_html(
+        markdown.markdown(markdown_content, extensions=["tables"]), False, True
+    )
     changelog_html = changelog_html.replace('<h1 class="', '<h1 class="text-center ')
     return render_template(
         "news.html", sv_version=SEARCH_VULNS_VERSION, news_html=changelog_html
