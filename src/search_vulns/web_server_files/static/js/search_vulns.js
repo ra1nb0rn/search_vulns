@@ -137,7 +137,7 @@ function createVulnTableRowHtml(idx, vuln) {
     var exploits, cvss, cvss_vector, cvss_version, cvss_badge_css, epss, epss_badge_css, exploit_url_show;
     var vuln_id_ref_map = vuln.aliases;
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
-    var isVulnUnconfirmed = false, backgroundColorClass = "";
+    var backgroundColorClass = "";
 
     if (selectedColumns.length < 1)
         return '';
@@ -146,12 +146,10 @@ function createVulnTableRowHtml(idx, vuln) {
         if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
             continue
         vuln_id_html += `<a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a><br>`;
-        if (vuln.match_reason != "vuln_id" && showGHSAVulns && vuln_id.startsWith('GHSA-') && vuln.id.startsWith('CVE-') && !vuln.matched_by.hasOwnProperty("ghsa"))
-            isVulnUnconfirmed = true;
     }
     vuln_id_html = vuln_id_html.slice(0, -4);  // strip trailing "<br>"
 
-    if (vuln.match_reason == "general_product_uncertain" || vuln.match_reason == "single_higher_version" || vuln.match_reason == "n_a" || isVulnUnconfirmed) {
+    if (vuln.match_reason == "general_product_uncertain" || vuln.match_reason == "single_higher_version" || vuln.match_reason == "n_a") {
         vuln_style_class += "uncertain-vuln text-base-content/75";
         backgroundColorClass = "bg-warning/15";
     }
@@ -177,13 +175,6 @@ function createVulnTableRowHtml(idx, vuln) {
             else
                 vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
             vuln_flag_html += `data-tooltip-target="tooltip-single-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-single-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects only a single higher version of the product and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
-        }
-        if (isVulnUnconfirmed) {
-            if (!vuln_flag_html)
-                vuln_flag_html += `<br><center><span class="vuln-flag-icon" `;
-            else
-                vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
-            vuln_flag_html += `data-tooltip-target="tooltip-unconfirmed-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-unconfirmed-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">The GHSA also tracks this vulnerability, but does not list the queried software as affected.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
         }
 
         if (vuln.cisa_known_exploited) {
