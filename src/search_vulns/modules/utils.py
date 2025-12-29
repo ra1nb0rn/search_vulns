@@ -1,8 +1,11 @@
 import math
 import re
 import shlex
+import sqlite3
 import subprocess
+import time
 from collections import Counter
+from typing import Tuple
 
 import requests
 
@@ -450,3 +453,28 @@ def extend_short_cpe(cpe):
     if len(cpe_split) < 13:
         cpe_split.extend(["*"] * (13 - len(cpe_split)))
     return ":".join(cpe_split)
+
+
+def execute_sql_query_retry_on_locked(
+    cursor, query, parameters: Tuple = None, max_tries=-1, timeout=1
+):
+    if isinstance(cursor, sqlite3.Cursor):
+        sql_op_error = sqlite3.OperationalError
+    else:
+        import mariadb
+
+        sql_op_error = mariadb.OperationalError
+
+    success = False
+    while max_tries != 0:
+        try:
+            if parameters:
+                cursor.execute(query, parameters)
+            else:
+                cursor.execute(query)
+            success = True
+            break
+        except sql_op_error:
+            max_tries -= 1
+            time.sleep(timeout)
+    return success

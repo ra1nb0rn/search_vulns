@@ -80,7 +80,7 @@ def create_ubuntu_release_codename_mapping(vulndb_config):
         return False, []
     releases_raw = ubuntu_api_initial_response.json()["releases"]
 
-    db_conn = get_database_connection(vulndb_config)
+    db_conn = get_database_connection(vulndb_config, sqlite_timeout=SQLITE_TIMEOUT)
     db_cursor = db_conn.cursor()
 
     # create codename-version table in vulndb

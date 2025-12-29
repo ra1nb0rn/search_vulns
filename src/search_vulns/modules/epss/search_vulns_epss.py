@@ -6,7 +6,7 @@ import requests
 
 from search_vulns.models.Severity import SeverityEPSS
 from search_vulns.models.Vulnerability import Vulnerability
-from search_vulns.modules.utils import get_database_connection
+from search_vulns.modules.utils import SQLITE_TIMEOUT, get_database_connection
 
 LOGGER = logging.getLogger()
 
@@ -25,7 +25,7 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
             return False, []
         epss_csv = str(gzip.decompress(resp.content), "utf-8")
 
-        db_conn = get_database_connection(vulndb_config)
+        db_conn = get_database_connection(vulndb_config, sqlite_timeout=SQLITE_TIMEOUT)
         db_cursor = db_conn.cursor()
 
         # create EPSS table in vulndb

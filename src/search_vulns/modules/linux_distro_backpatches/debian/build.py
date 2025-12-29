@@ -57,7 +57,7 @@ def download_debian_release_version_codename_data(vulndb_config):
             )
             return False
 
-        db_conn = get_database_connection(vulndb_config)
+        db_conn = get_database_connection(vulndb_config, sqlite_timeout=SQLITE_TIMEOUT)
         db_cursor = db_conn.cursor()
 
         # create codename-version table in vulndb
