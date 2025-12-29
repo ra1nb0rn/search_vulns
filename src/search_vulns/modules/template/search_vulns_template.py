@@ -5,30 +5,38 @@
 # Python files. A module can define various methods which
 # will be called by search_vulns' core.
 
-# absolute import necessary, since modules are loaded dynamically
-# from search_vulns.vulnerability import Vulnerability
+## Uncomment all of the following to get a working, empty module
+# from typing import Dict, List, Tuple
 
-### INFLUENCING MODULE ORDER ###
-# Declare which modules have to have been ran before this module is
-# invoked (see examples in other modules).
-# e.g. for build process:
+# # absolute imports are in part necessary, since modules are loaded dynamically
+# from search_vulns.models.SearchVulnsResult import (
+#     PotProductIDsResult,
+#     ProductIDsResult,
+#     SearchVulnsResult,
+# )
+# from search_vulns.models.Vulnerability import Vulnerability
+
+# ## INFLUENCING MODULE ORDER ###
+# # Declare which modules have to have been run before this module is
+# # invoked (see examples in other modules).
+# # e.g. for build process:
 # REQUIRES_BUILT_MODULES = ['ghsa.search_vulns_ghsa', 'cpe_search.search_vulns_cpe_search']
-# e.g. for search_vulns process:
-# REQUIRES_RAN_MODULES = ['ghsa.search_vulns_ghsa', 'cpe_search.search_vulns_cpe_search']
+# # e.g. for search_vulns process:
+# REQUIRES_RUN_MODULES = ['ghsa.search_vulns_ghsa', 'cpe_search.search_vulns_cpe_search']
 
 
-### INSTALLATION ###
+# ## INSTALLATION ###
 # def install():
 #     """
-#     This method will be called when search_vulns is installed.
+#     This method will be called when search_vulns is installed fully.
 #     When this method is called, the current working directory
 #     will be the one of the called module.
 #     """
 #     pass
 
 
-### DATA UPDATES ###
-# def update(productdb_config, vulndb_config, module_config, stop_update):
+# ## DATA UPDATES ###
+# def update(productdb_config, vulndb_config, module_config, stop_update) -> Tuple[bool, List[str]]:
 #     """
 #     Runs the soft update process for this module.
 
@@ -51,7 +59,7 @@
 #     return True, []
 
 
-# def full_update(productdb_config, vulndb_config, module_config, stop_update):
+# def full_update(productdb_config, vulndb_config, module_config, stop_update) -> Tuple[bool, List[str]]:
 #     """
 #     Runs the full update process for this module.
 
@@ -80,8 +88,8 @@
 #     return True, []
 
 
-### PREPROCESS QUERIES ###
-# def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, config):
+# ## PREPROCESS QUERIES ###
+# def preprocess_query(query, product_ids: ProductIDsResult, vuln_db_cursor, product_db_cursor, config) -> Tuple[str, Dict]:
 #     """
 #     Preprocess queries to extract other information and "clean up" query for other modules.
 #     Args:
@@ -99,10 +107,10 @@
 #     return query, {}
 
 
-### RETRIEVAL OF PRODUCT IDS ###
+# ## RETRIEVAL OF PRODUCT IDS ###
 # def search_product_ids(
-#     query, product_db_cursor, current_product_ids, is_product_id_query, config, extra_params
-# ):
+#     query, product_db_cursor, current_product_ids: ProductIDsResult, is_product_id_query, config, extra_params
+# ) -> Tuple[ProductIDsResult, PotProductIDsResult]:
 #     """
 #     Searches for product IDs based on the given query, provided product IDs and configuration.
 
@@ -126,8 +134,8 @@
 #     return {}, {}
 
 
-### SEARCHING FOR VULNERABILITIES ###
-# def search_vulns(query, product_ids, vuln_db_cursor, config, extra_params):
+# ## SEARCHING FOR VULNERABILITIES ###
+# def search_vulns(query, product_ids: ProductIDsResult, vuln_db_cursor, config, extra_params) -> Dict[str, Vulnerability]:
 #     """
 #     Search for vulnerabilities with this module's logic / engine.
 
@@ -149,15 +157,15 @@
 #     return {}
 
 
-### ADDING FURTHER INFORMATION ABOUT VULNERABILITIES ###
-# def add_extra_vuln_info(vulns: List[Vulnerability], vuln_db_cursor, config, extra_params):
+# ## ADDING FURTHER INFORMATION ABOUT VULNERABILITIES ###
+# def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
 #     """
 #     Add extra information for vulnerabilities. Can be used to add exploit information,
 #     tracking information, scores and more. The provided vulnerabilities should be modified
 #     directly in place.
 
 #     Args:
-#         vulns (list[Vulnerability]): A list of vulnerabilities to which information can be appended.
+#         vulns (dict[str, Vulnerability]): A dict of vulnerability ID and vuln data to which information can be appended.
 #         vuln_db_cursor (sqlite or mariadb cursor): Database cursor to query global vulnerability database.
 #         config (dict): This module's configuration from the global configuration file.
 #         extra_params (dict): Optional parameters that can modify how further information is provided.
@@ -166,12 +174,14 @@
 #     # This function allows the module to add further details about the identified vulnerabilities.
 #     # This information can include exploits, tracking information, scores and more.
 
+#     pass
 
-### ADDING FURTHER RESULT DATA APART FROM VULNERABILITIES ###
-# def postprocess_results(results, query, vuln_db_cursor, product_db_cursor, config, extra_params):
+
+# ## ADDING FURTHER RESULT DATA APART FROM VULNERABILITIES ###
+# def postprocess_results(results: SearchVulnsResult, query, vuln_db_cursor, product_db_cursor, config, extra_params):
 #     """
 #     Add additional results, which are not vulnerabilities, based on the query or
-#     retrieved product IDs.
+#     retrieved product IDs in place.
 
 #     Args:
 #         results (dict): The search_vulns results before becoming final.
@@ -180,13 +190,9 @@
 #         product_db_cursor (sqlite3 or mariadb cursor): Cursor for accessing the global product database.
 #         config (dict): This module's configuration from the global configuration file.
 #         extra_params (dict): Additional optional parameters that can modify the search logic or results.
-
-#     Returns:
-#         dict: A dict containing retrieved extra information, indexed by a key speciyfing what kind of
-#         information was added.
 #     """
 
 #     # Here, a module can return any other extra information retrieved for the query. This could be
 #     # information about a product's software life cycle or recency.
 
-#     return {}
+#     pass

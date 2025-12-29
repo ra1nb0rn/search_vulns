@@ -1,13 +1,18 @@
-import copy
 import importlib.util
 import json
 import os
 import threading
+from typing import Dict, Tuple
 
 from cpe_search.cpe_search import cpe_matches_query
 
+from .models.SearchVulnsResult import (
+    PotProductIDsResult,
+    ProductIDsResult,
+    SearchVulnsResult,
+)
+from .models.Vulnerability import MatchReason, Vulnerability
 from .modules.utils import get_database_connection
-from .vulnerability import MatchReason
 
 # general variables and settings
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -80,10 +85,12 @@ def _load_config(config_file=DEFAULT_CONFIG_FILE):
     return config
 
 
-def merge_module_vulns(all_module_vulns, modules_data_preference):
+def merge_module_vulns(
+    all_module_vulns: Dict[str, Dict[str, Vulnerability]], modules_data_preference
+):
     """Deduplicate vulnerabilities from different sources and combine aliases"""
 
-    merged_vulns = {}
+    merged_vulns: Dict[str, Vulnerability] = {}
     merge_order = modules_data_preference
     merge_order += sorted(list(set(all_module_vulns.keys()) - set(modules_data_preference)))
 
@@ -120,7 +127,7 @@ def merge_module_vulns(all_module_vulns, modules_data_preference):
                     tracked_alias_map[alias].append(alias)
             else:
                 old_vuln_id = merged_vulns[tracked_alias].id
-                merged_vulns[tracked_alias].merge_with_vulnerability(vuln)
+                merged_vulns[tracked_alias].merge_with(vuln)
                 new_vuln_id = merged_vulns[tracked_alias].id
 
                 # other vulnerability had a higher match_reason and vuln attributes were changed
@@ -183,7 +190,7 @@ def get_modules():
 
 def _search_vulns(
     query,
-    product_ids,
+    product_ids: ProductIDsResult,
     vuln_db_cursor,
     config,
     module_run_order,
@@ -195,6 +202,7 @@ def _search_vulns(
 
     all_module_vulns = {}
     search_vulns_modules = get_modules()
+
     for mid in module_run_order:
         module = search_vulns_modules[mid]
         if hasattr(module, "search_vulns") and callable(module.search_vulns):
@@ -225,8 +233,12 @@ def _search_vulns(
 
 
 def search_product_ids(
-    query, product_db_cursor, is_product_id_query, config, known_product_ids={}
-):
+    query,
+    product_db_cursor,
+    is_product_id_query,
+    config,
+    known_product_ids: ProductIDsResult = None,
+) -> Tuple[ProductIDsResult, PotProductIDsResult]:
     search_vulns_result = search_vulns(
         query,
         known_product_ids,
@@ -239,7 +251,7 @@ def search_product_ids(
         config,
         True,
     )
-    return search_vulns_result["product_ids"], search_vulns_result["pot_product_ids"]
+    return search_vulns_result.product_ids, search_vulns_result.pot_product_ids
 
 
 def _search_product_ids(
@@ -248,15 +260,17 @@ def _search_product_ids(
     is_product_id_query,
     config,
     module_run_order,
-    known_product_ids={},
+    known_product_ids: ProductIDsResult = None,
     extra_params={},
-):
+) -> Tuple[ProductIDsResult, PotProductIDsResult]:
     """Search for product IDs matching the query"""
 
     query = query.strip()
     search_vulns_modules = get_modules()
-    product_ids = copy.deepcopy(known_product_ids) if known_product_ids else {}
-    pot_product_ids = {}
+    product_ids = (
+        known_product_ids.model_copy(deep=True) if known_product_ids else ProductIDsResult()
+    )
+    pot_product_ids = PotProductIDsResult()
 
     for mid in module_run_order:
         module = search_vulns_modules[mid]
@@ -270,15 +284,8 @@ def _search_product_ids(
                 m_config,
                 extra_params,
             )
-            for key, value in new_ids.items():
-                if key not in product_ids:
-                    product_ids[key] = value
-                else:
-                    product_ids[key] = list(set(product_ids.get(key, []) + value))
-            for key, value in new_pot_ids.items():
-                if key not in pot_product_ids:
-                    pot_product_ids[key] = []
-                pot_product_ids[key] += value
+            product_ids.merge_with(new_ids)
+            pot_product_ids.merge_with(new_pot_ids)
 
     return product_ids, pot_product_ids
 
@@ -294,8 +301,8 @@ def _retrieve_module_run_order():
             module = search_vulns_modules[mid]
 
             module_requires = []
-            if hasattr(module, "REQUIRES_RAN_MODULES"):
-                module_requires = module.REQUIRES_RAN_MODULES
+            if hasattr(module, "REQUIRES_RUN_MODULES"):
+                module_requires = module.REQUIRES_RUN_MODULES
 
             if all(req_module in module_run_order for req_module in module_requires):
                 module_run_order.append(mid)
@@ -305,7 +312,7 @@ def _retrieve_module_run_order():
 
 def search_vulns(
     query,
-    known_product_ids=None,
+    known_product_ids: ProductIDsResult = None,
     vuln_db_cursor=None,
     product_db_cursor=None,
     is_product_id_query=False,
@@ -314,7 +321,7 @@ def search_vulns(
     include_patched=False,
     config=None,
     skip_vuln_search=False,
-):
+) -> SearchVulnsResult:
     """Search for known vulnerabilities based on the given query"""
 
     # create DB handle if not given
@@ -384,10 +391,9 @@ def search_vulns(
         vulns = {}
 
     # create results and post process results, e.g. to add non-vulnerability related information
-    results = {}
-    results["product_ids"] = product_ids
-    results["vulns"] = vulns
-    results["pot_product_ids"] = pot_product_ids
+    results = SearchVulnsResult(
+        product_ids=product_ids, pot_product_ids=pot_product_ids, vulns=vulns
+    )
 
     for mid in module_run_order:
         module = search_vulns_modules[mid]
@@ -405,11 +411,11 @@ def search_vulns(
     # remove patched vulns from results
     if not include_patched:
         del_vuln_ids = []
-        for vuln_id, vuln in results["vulns"].items():
+        for vuln_id, vuln in results.vulns.items():
             if vuln.is_patched():
                 del_vuln_ids.append(vuln_id)
         for vuln_id in del_vuln_ids:
-            del results["vulns"][vuln_id]
+            del results.vulns[vuln_id]
 
     if close_vuln_db_after:
         vuln_db_cursor.close()
@@ -423,7 +429,7 @@ def search_vulns(
 
 def check_and_try_sv_rerun_with_created_cpes(
     query,
-    sv_result,
+    sv_result: SearchVulnsResult,
     ignore_general_product_vulns,
     include_single_version_vulns,
     include_patched,
@@ -434,29 +440,25 @@ def check_and_try_sv_rerun_with_created_cpes(
 
     # check if result is good, i.e. vulns or product IDs were found
     all_product_ids = []
-    for pids in sv_result["product_ids"].values():
+    for pids in sv_result.product_ids.get_all():
         all_product_ids += pids
 
     is_good_result = True
-    if not sv_result["vulns"]:
+    if not sv_result.vulns:
         if not all_product_ids:
             is_good_result = False
         else:
             # small sanity check on retrieved CPE
-            check_str = sv_result["product_ids"]["cpe"][0][8:]
+            check_str = sv_result.product_ids.cpe[0][8:]
             if any(char.isdigit() for char in query) and not any(
                 char.isdigit() for char in check_str
             ):
                 is_good_result = False
 
     # if a good product ID couldn't be found, use a created one if configured and appropriate
-    if (
-        not is_good_result
-        and sv_result["pot_product_ids"].get("cpe", [])
-        and use_created_product_ids
-    ):
+    if not is_good_result and sv_result.pot_product_ids.cpe and use_created_product_ids:
         created_cpe = None
-        for pot_cpe in sv_result["pot_product_ids"]["cpe"]:
+        for pot_cpe in sv_result.pot_product_ids.cpe:
             if cpe_matches_query(pot_cpe[0], query):
                 created_cpe = pot_cpe[0]
                 is_good_result = True
@@ -476,15 +478,6 @@ def check_and_try_sv_rerun_with_created_cpes(
             )
 
     return is_good_result, sv_result
-
-
-def serialize_vulns_in_result(result):
-    """Serialize the vulnerabilities in the provided result."""
-
-    serial_vulns = {}
-    for vuln_id, vuln in result["vulns"].items():
-        serial_vulns[vuln_id] = vuln.to_dict()
-    result["vulns"] = serial_vulns
 
 
 def is_fully_installed():

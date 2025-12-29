@@ -2,12 +2,15 @@ import logging
 import os
 import re
 import shutil
-import subprocess
 
 import ujson
 from cpe_search.cpe_search import search_cpes
 
-from search_vulns.modules.utils import SQLITE_TIMEOUT, get_database_connection
+from search_vulns.modules.utils import (
+    SQLITE_TIMEOUT,
+    download_github_folder,
+    get_database_connection,
+)
 
 REQUIRES_BUILT_MODULES = ["cpe_search.search_vulns_cpe_search"]
 
@@ -140,12 +143,8 @@ def parse_eold_data(productdb_config, stop_update):
 def full_update(productdb_config, vulndb_config, module_config, stop_update):
     # download endoflife.date repo
     cleanup()
-    return_code = subprocess.call(
-        "git clone --depth 1 %s '%s'" % (EOLD_GITHUB_REPO, EOLD_GITHUB_DIR),
-        shell=True,
-        stderr=subprocess.DEVNULL,
-    )
-    if return_code != 0 or stop_update.is_set():
+    success = download_github_folder(EOLD_GITHUB_REPO, "/", EOLD_GITHUB_DIR)
+    if not success or stop_update.is_set():
         LOGGER.error("Could not download latest resources of endoflife.date")
         cleanup()
         return False, []

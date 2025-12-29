@@ -1,8 +1,11 @@
 import gzip
 import logging
+from typing import Dict
 
 import requests
 
+from search_vulns.models.Severity import SeverityEPSS
+from search_vulns.models.Vulnerability import Vulnerability
 from search_vulns.modules.utils import get_database_connection
 
 LOGGER = logging.getLogger()
@@ -51,7 +54,7 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
     return True, []
 
 
-def add_extra_vuln_info(vulns, vuln_db_cursor, config, extra_params):
+def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
     for vuln_id, vuln in vulns.items():
         vuln_cve_ids = set()
         if vuln_id.startswith("CVE-"):
@@ -71,4 +74,4 @@ def add_extra_vuln_info(vulns, vuln_db_cursor, config, extra_params):
                     epss = cur_epss
 
         if epss != -1:
-            vuln.set_epss(epss)
+            vuln.add_severity(SeverityEPSS(score=str(epss)))

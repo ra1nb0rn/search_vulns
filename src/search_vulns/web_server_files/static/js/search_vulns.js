@@ -65,24 +65,40 @@ function getCurrentVulnsSorted() {
     else if (curSortColIdx == 1) {  // CVSS
         if (curSortColAsc) {
             return vulns.sort(function (vuln1, vuln2) {
-                return parseFloat(vuln1.cvss) - parseFloat(vuln2.cvss);
+                if (!vuln1.severity.hasOwnProperty("cvss"))
+                    return -1;
+                if (!vuln2.severity.hasOwnProperty("cvss"))
+                    return 1;
+                return parseFloat(vuln1.severity.cvss.score) - parseFloat(vuln2.severity.cvss.score);
             });
         }
         else {
             return vulns.sort(function (vuln1, vuln2) {
-                return parseFloat(vuln2.cvss) - parseFloat(vuln1.cvss);
+                if (!vuln1.severity.hasOwnProperty("cvss"))
+                    return 1;
+                if (!vuln2.severity.hasOwnProperty("cvss"))
+                    return -1;
+                return parseFloat(vuln2.severity.cvss.score) - parseFloat(vuln1.severity.cvss.score);
             });
         }
     }
     else if (curSortColIdx == 2) {  // EPSS
         if (curSortColAsc) {
             return vulns.sort(function (vuln1, vuln2) {
-                return parseFloat(vuln1.epss) - parseFloat(vuln2.epss);
+                if (!vuln1.severity.hasOwnProperty("epss"))
+                    return -1;
+                if (!vuln2.severity.hasOwnProperty("epss"))
+                    return 1;
+                return parseFloat(vuln1.severity.epss.score) - parseFloat(vuln2.severity.epss.score);
             });
         }
         else {
             return vulns.sort(function (vuln1, vuln2) {
-                return parseFloat(vuln2.epss) - parseFloat(vuln1.epss);
+                if (!vuln1.severity.hasOwnProperty("epss"))
+                    return 1;
+                if (!vuln2.severity.hasOwnProperty("epss"))
+                    return -1;
+                return parseFloat(vuln2.severity.epss.score) - parseFloat(vuln1.severity.epss.score);
             });
         }
     }
@@ -118,7 +134,7 @@ function getCurrentVulnsSorted() {
 
 function createVulnTableRowHtml(idx, vuln) {
     var vuln_row_html = '', vuln_style_class = '', vuln_flag_html = '', vuln_id_html = '';
-    var exploits, cvss, cvss_badge_css, epss, epss_badge_css, exploit_url_show;
+    var exploits, cvss, cvss_vector, cvss_version, cvss_badge_css, epss, epss_badge_css, exploit_url_show;
     var vuln_id_ref_map = vuln.aliases;
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
     var isVulnUnconfirmed = false, backgroundColorClass = "";
@@ -130,7 +146,7 @@ function createVulnTableRowHtml(idx, vuln) {
         if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
             continue
         vuln_id_html += `<a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a><br>`;
-        if (vuln.match_reason != "vuln_id" && showGHSAVulns && vuln_id.startsWith('GHSA-') && vuln.id.startsWith('CVE-') && !vuln.match_sources.includes('ghsa'))
+        if (vuln.match_reason != "vuln_id" && showGHSAVulns && vuln_id.startsWith('GHSA-') && vuln.id.startsWith('CVE-') && !vuln.matched_by.hasOwnProperty("ghsa"))
             isVulnUnconfirmed = true;
     }
     vuln_id_html = vuln_id_html.slice(0, -4);  // strip trailing "<br>"
@@ -139,7 +155,7 @@ function createVulnTableRowHtml(idx, vuln) {
         vuln_style_class += "uncertain-vuln text-base-content/75";
         backgroundColorClass = "bg-warning/15";
     }
-    if (vuln.cisa_known_exploited) {
+    if (vuln.cisa_kev) {
         vuln_style_class += " exploited-vuln text-base-content";
         backgroundColorClass = "exploited-vuln-bg";
     }
@@ -192,40 +208,52 @@ function createVulnTableRowHtml(idx, vuln) {
     }
 
     if (selectedColumns.includes('cvss')) {
-        var cvss_vector = vuln.cvss_vec;
-        if (cvss_vector && !cvss_vector.startsWith('CVSS'))
-            cvss_vector = "CVSS:2.0/" + cvss_vector;
+        cvss_vector = "N/A";
+        cvss= "N/A";
+        cvss_badge_css = "";
 
-        cvss = parseFloat(vuln.cvss);
-        if (cvss >= 9.0)
-            cvss_badge_css = "badge-critical";
-        else if (cvss < 9.0 && cvss >= 7.0)
-            cvss_badge_css = "badge-high";
-        else if (cvss < 7.0 && cvss >= 4.0)
-            cvss_badge_css = "badge-medium";
-        else if (cvss < 4.0 && cvss >= 0)
-            cvss_badge_css = "badge-low";
+        if (vuln.severity.hasOwnProperty("cvss")) {
+            cvss_vector = vuln.severity.cvss.vector;
+            cvss_version = vuln.severity.cvss.version;
+            if (cvss_vector && !cvss_vector.startsWith('CVSS'))
+                cvss_vector = "CVSS:2.0/" + cvss_vector;
+
+            cvss = parseFloat(vuln.severity.cvss.score);
+            if (cvss >= 9.0)
+                cvss_badge_css = "badge-critical";
+            else if (cvss < 9.0 && cvss >= 7.0)
+                cvss_badge_css = "badge-high";
+            else if (cvss < 7.0 && cvss >= 4.0)
+                cvss_badge_css = "badge-medium";
+            else if (cvss < 4.0 && cvss >= 0)
+                cvss_badge_css = "badge-low";
+        }
 
         if (cvss_vector && cvss_badge_css)
-            vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="z-10 badge border-none badge-cvss ${cvss_badge_css} text-center ${vuln_style_class} underline decoration-dotted underline-offset-3 cursor-help py-3" tabindex="0">${vuln["cvss"]}&nbsp;(v${vuln["cvss_ver"]})</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs text-smxs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
+            vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="dropdown dropdown-hover"><div class="z-10 badge border-none badge-cvss ${cvss_badge_css} text-center ${vuln_style_class} underline decoration-dotted underline-offset-3 cursor-help py-3" tabindex="0">${cvss.toFixed(1)}&nbsp;(v${cvss_version})</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs text-smxs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>${cvss_vector}</b></span></div></div></div></td>`;
         else
             vuln_row_html += `<td class="text-nowrap whitespace-nowrap text-center"><div class="dropdown dropdown-hover"><div class="z-10 badge p-1.5 border-none badge-cvss badge-na text-center ${vuln_style_class}" tabindex="0">N / A</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-1 shadow bg-base-300 rounded-box"><div class="btn btn-ghost btn-xs text-smxs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>Not Available (N/A)</b></span></div></div></div></td>`;
     }
 
     if (selectedColumns.includes('epss')) {
-        epss = parseFloat(vuln.epss);
-        // set custom criticality thresholds
-        if (epss >= 0.8)
-            epss_badge_css = "badge-critical";
-        else if (epss < 0.8 && epss >= 0.5)
-            epss_badge_css = "badge-high";
-        else if (epss < 0.5 && epss >= 0.2)
-            epss_badge_css = "badge-medium";
-        else if (epss < 0.2 && epss >= 0)
-            epss_badge_css = "badge-low";
+        epss = "";
+        epss_badge_css = "";
+
+        if (vuln.severity.hasOwnProperty("epss")) {
+            epss = parseFloat(vuln.severity.epss.score);
+            // set custom criticality thresholds
+            if (epss >= 0.8)
+                epss_badge_css = "badge-critical";
+            else if (epss < 0.8 && epss >= 0.5)
+                epss_badge_css = "badge-high";
+            else if (epss < 0.5 && epss >= 0.2)
+                epss_badge_css = "badge-medium";
+            else if (epss < 0.2 && epss >= 0)
+                epss_badge_css = "badge-low";
+        }
 
         if (epss && epss_badge_css)
-            vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="z-10 badge p-1.5 border-none badge-cvss ${epss_badge_css} text-center ${vuln_style_class}" tabindex="0">${vuln["epss"]}</div></td>`;
+            vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="z-10 badge p-1.5 border-none badge-cvss ${epss_badge_css} text-center ${vuln_style_class}" tabindex="0">${epss}</div></td>`;
         else
             vuln_row_html += `<td class="text-nowrap whitespace-nowrap text-center"><div class="z-10 badge p-1.5 border-none badge-cvss badge-na text-center ${vuln_style_class}" tabindex="0">N / A</div></td>`;
     }
@@ -376,6 +404,7 @@ function createVulnsMarkDownTable() {
     var vulns = getCurrentVulnsSorted(), vuln_id_ref_map;
     var vulns_md = "";
     var has_exploits = false, cur_vuln_has_exploits = false;
+    var cvss_score, cvss_version;
     var exploit_url_show;
 
     for (var i = 0; i < vulns.length; i++) {
@@ -452,17 +481,29 @@ function createVulnsMarkDownTable() {
         if (selectedColumns.length < 1 || selectedColumns.includes("cve")) {
             vuln_id_ref_map = vulns[i].aliases;
             for (const vuln_id in vuln_id_ref_map) {
-                if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
+                if (vuln_id.startsWith("GHSA") && !showGHSAVulns)
                     continue
                 vulns_md += `[${vuln_id}](${htmlEntities(vuln_id_ref_map[vuln_id])})<br>`;
             }
             vulns_md = vulns_md.slice(0, -4);  // strip trailing "<br>"
             vulns_md += "|";
         }
-        if (selectedColumns.length < 1 || selectedColumns.includes("cvss"))
-            vulns_md += `${vulns[i]["cvss"]}&nbsp;(v${vulns[i]["cvss_ver"]})|`;
-        if (selectedColumns.length < 1 || selectedColumns.includes("epss"))
-            vulns_md += `${vulns[i]["epss"]}|`;
+        if (selectedColumns.length < 1 || selectedColumns.includes("cvss")) {
+            if (vulns[i].severity.hasOwnProperty("cvss")) {
+                cvss_score = vulns[i].severity.cvss.score;
+                cvss_version = vulns[i].severity.cvss.version;
+                vulns_md += `${cvss_score}&nbsp;(v${cvss_version})|`;
+            }
+            else
+                vulns_md += `N/A|`;
+        }
+        if (selectedColumns.length < 1 || selectedColumns.includes("epss")) {
+            if (vulns[i].severity.hasOwnProperty("epss")) {
+                vulns_md += `${vulns[i].severity.epss.score}|`;
+            }
+            else
+                vulns_md += `N/A|`;
+        }
         if (selectedColumns.length < 1 || selectedColumns.includes("descr")) {
             var description = htmlEntities(vulns[i]["description"].trim());
             description = description.replaceAll('\n', '<br>');
@@ -514,6 +555,7 @@ function createVulnsCSV() {
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
     var vulns = getCurrentVulnsSorted(), vuln_ids;
     var vulns_csv = "", vuln_ids = "";
+    var cvss_score, cvss_version;
     var has_exploits = false;
 
     for (var i = 0; i < vulns.length; i++) {
@@ -582,10 +624,22 @@ function createVulnsCSV() {
                 vulns_csv += `${escapeCSV(vuln_ids.join(', '))}`
             vulns_csv += ','
         }
-        if (selectedColumns.length < 1 || selectedColumns.includes('cvss'))
-            vulns_csv += `${escapeCSV(vulns[i]["cvss"] + ' (v' + vulns[i]["cvss_ver"] + ')')},`;
-        if (selectedColumns.length < 1 || selectedColumns.includes('cvss'))
-            vulns_csv += `${escapeCSV(vulns[i]["epss"])},`;
+        if (selectedColumns.length < 1 || selectedColumns.includes("cvss")) {
+            if (vulns[i].severity.hasOwnProperty("cvss")) {
+                cvss_score = vulns[i].severity.cvss.score;
+                cvss_version = vulns[i].severity.cvss.version;
+                vulns_csv += `${escapeCSV(cvss_score + ' (v' + cvss_version + ')')},`;
+            }
+            else
+                vulns_csv += `,`;
+        }
+        if (selectedColumns.length < 1 || selectedColumns.includes("epss")) {
+            if (vulns[i].severity.hasOwnProperty("epss")) {
+                vulns_csv += `${escapeCSV(vulns[i].severity.epss.score)},`;
+            }
+            else
+                vulns_csv += `,`;
+        }
         if (selectedColumns.length < 1 || selectedColumns.includes('descr'))
             vulns_csv += `${escapeCSV(vulns[i]["description"].trim())},`;
 
@@ -673,8 +727,8 @@ function searchVulns(query, url_query, recaptcha_response) {
             var productIDs = search_results.product_ids;
             productIDs = Object.values(productIDs).flatMap(pids => pids);
 
-            if (typeof Object.values(search_results)[0] !== "object") {
-                search_display_html = `<h5 class="text-error text-center">Warning: Could not find matching software for query '${htmlEntities(query)}'</h5>`;
+            if (productIDs.length < 1 && search_results.vulns.length < 1) {
+                search_display_html = `<h5 class="text-error text-center">Warning: Could not find matching product for query '${htmlEntities(query)}'</h5>`;
                 queryError = true;
             }
             else {
@@ -692,18 +746,19 @@ function searchVulns(query, url_query, recaptcha_response) {
                         });
                         search_display_html += '</ul></div></div>';
                     }
+
                     if (productIDs.length > 0 && productIDs[0].length > 0)  // if a product ID was shown, add closing parenthesis and <span>
                         search_display_html += `)</span>`;
                     search_display_html += `</h5></div></div>`;
                     curEOLData = {'query': query, 'version_status': search_results.version_status};
                     if (search_results.version_status) {
-                        if (search_results.version_status.status == 'eol') {
+                        if (search_results.version_status.status == 'EOL') {
                             search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is end of life. The latest version is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
                         }
-                        else if (search_results.version_status.status == 'outdated') {
+                        else if (search_results.version_status.status == 'OUTDATED') {
                             search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is out of date. The latest version is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
                         }
-                        else if (search_results.version_status.status == 'current') {
+                        else if (search_results.version_status.status == 'CURRENT') {
                             search_display_html += `<div class="row mt-1 mb-3 text-success text-smxs font-light">${htmlEntities(query)} is up to date (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle"><i class="fa-brands fa-markdown" onclick="copyToClipboardEOLProof(this)"></i></button></span></div>`;
                         }
                         else if (search_results.version_status.status == 'N/A') {
@@ -741,7 +796,7 @@ function searchVulns(query, url_query, recaptcha_response) {
             var hasVulns = renderSearchResults(true);
             if (!hasVulns && !queryError)
                 $('#vulns').html(noVulnsFoundHtml);
-                
+
             $("#related-queries-display").html(related_queries_html);
             $("#buttonSearchVulns").removeClass("btn-disabled");
             $("#buttonFilterVulns").removeClass("btn-disabled");
@@ -1120,7 +1175,7 @@ function retrieveProductIDSuggestions(url_query, recaptcha_response) {
                 $('#productIDSuggestions').html('<span class="text-error">An error occured, see console</span>');
             }
             else {
-                var allProductIDs = formatProductIDSuggestions(productIDInfos);
+                var allProductIDs = formatProductIDSuggestions(productIDInfos.pot_product_ids);
                 if (allProductIDs.length != 0) {
                     var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box w-full">';
                     for (var i = 0; i < allProductIDs.length; i++) {
@@ -1238,7 +1293,6 @@ function moveProductIDSuggestionUpDown(event) {
     if (curSelectedProductIDSuggestion > -1)
         $('#product-id-suggestion-' + curSelectedProductIDSuggestion).removeClass('my-menu-item-hover');
 
-    console.log(curSelectedProductIDSuggestion);
     if (event.keyCode == 38)
         curSelectedProductIDSuggestion--;
     else if (event.keyCode == 40)

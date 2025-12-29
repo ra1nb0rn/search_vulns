@@ -3,6 +3,7 @@
 import unittest
 
 from search_vulns.core import search_vulns
+from search_vulns.models.Vulnerability import DataSource
 
 
 class TestSearches(unittest.TestCase):
@@ -31,8 +32,8 @@ class TestSearches(unittest.TestCase):
         ]
         result_open, result_backpatched = [], []
 
-        for vuln_id, vuln in result["vulns"].items():
-            if vuln.reported_patched_by:
+        for vuln_id, vuln in result.vulns.items():
+            if DataSource.UBUNTU in vuln.reported_patched_by:
                 result_backpatched.append(vuln_id)
             else:
                 result_open.append(vuln_id)
@@ -67,8 +68,8 @@ class TestSearches(unittest.TestCase):
         ]
         result_open, result_backpatched = [], []
 
-        for vuln_id, vuln in result["vulns"].items():
-            if vuln.reported_patched_by:
+        for vuln_id, vuln in result.vulns.items():
+            if DataSource.UBUNTU in vuln.reported_patched_by:
                 result_backpatched.append(vuln_id)
             else:
                 result_open.append(vuln_id)
@@ -118,8 +119,8 @@ class TestSearches(unittest.TestCase):
         ]
         result_open, result_backpatched = [], []
 
-        for vuln_id, vuln in result["vulns"].items():
-            if vuln.reported_patched_by:
+        for vuln_id, vuln in result.vulns.items():
+            if DataSource.UBUNTU in vuln.reported_patched_by:
                 result_backpatched.append(vuln_id)
             else:
                 result_open.append(vuln_id)

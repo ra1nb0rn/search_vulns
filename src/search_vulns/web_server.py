@@ -23,8 +23,10 @@ from .core import (
     search_product_ids,
 )
 from .core import search_vulns as search_vulns_call
-from .core import (
-    serialize_vulns_in_result,
+from .models.SearchVulnsResult import (
+    PotProductIDsResult,
+    ProductIDsResult,
+    SearchVulnsResult,
 )
 from .modules.utils import get_database_connection
 
@@ -199,17 +201,20 @@ def product_id_suggestions():
         return f"Query length is limited to {MAX_QUERY_LENGTH} characters.", 413
 
     # try to retrieve results from cache and return early
-    if query_lower in PRODUCTID_SEARCH_CACHE and PRODUCTID_SEARCH_CACHE[query_lower][1]:
-        return jsonify(PRODUCTID_SEARCH_CACHE[query_lower][1])
+    if (
+        query_lower in PRODUCTID_SEARCH_CACHE
+        and PRODUCTID_SEARCH_CACHE[query_lower].product_ids
+    ):
+        return jsonify(PRODUCTID_SEARCH_CACHE[query_lower].model_dump(exclude_none=True))
 
     product_ids, productid_suggestions = search_product_ids(query, None, False, config, {})
 
-    if not productid_suggestions:
-        PRODUCTID_SEARCH_CACHE[query_lower] = {}, {}
-        return jsonify({})
-    else:
-        PRODUCTID_SEARCH_CACHE[query_lower] = product_ids, productid_suggestions
-        return jsonify(productid_suggestions)
+    result = SearchVulnsResult()
+    result.product_ids = product_ids
+    result.pot_product_ids = productid_suggestions
+    PRODUCTID_SEARCH_CACHE[query_lower] = result
+
+    return jsonify(result.model_dump(exclude_none=True))
 
 
 @app.route("/api/search-vulns")
@@ -231,7 +236,7 @@ def search_vulns():
         return f"Query length is limited to {MAX_QUERY_LENGTH} characters.", 413
 
     if url_query_string in VULN_RESULTS_CACHE:
-        return VULN_RESULTS_CACHE[url_query_string]
+        return jsonify(VULN_RESULTS_CACHE[url_query_string].model_dump(exclude_none=True))
 
     # set up retrieval settings
     ignore_general_product_vulns = request.args.get("ignore-general-product-vulns")
@@ -265,7 +270,7 @@ def search_vulns():
         use_created_product_ids = False
 
     # search for vulns either via previous cpe_search results or user's query
-    productids = PRODUCTID_SEARCH_CACHE.get(query.lower(), ({}, {}))[0]
+    productids = PRODUCTID_SEARCH_CACHE.get(query.lower(), SearchVulnsResult()).product_ids
 
     vulns = search_vulns_call(
         query,
@@ -279,7 +284,10 @@ def search_vulns():
         config,
     )
     query_lower = query.lower()
-    PRODUCTID_SEARCH_CACHE[query_lower] = vulns["product_ids"], vulns["pot_product_ids"]
+    product_id_cache_result = SearchVulnsResult()
+    product_id_cache_result.product_ids = vulns.product_ids
+    product_id_cache_result.pot_product_ids = vulns.pot_product_ids
+    PRODUCTID_SEARCH_CACHE[query_lower] = product_id_cache_result
 
     if use_created_product_ids:
         _, vulns = check_and_try_sv_rerun_with_created_cpes(
@@ -292,15 +300,10 @@ def search_vulns():
             config,
         )
 
-    if vulns is None:
-        vulns = {}
-    else:
-        # serialize vulns for response
-        serialize_vulns_in_result(vulns)
-
     VULN_RESULTS_CACHE[url_query_string] = vulns
 
-    return vulns
+    # serialize result for response
+    return jsonify(vulns.model_dump(exclude_none=True))
 
 
 @app.route("/api/version")

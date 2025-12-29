@@ -14,7 +14,7 @@ from cpe_search.database_wrapper_functions import (
 from tqdm import tqdm
 
 from ..cpe_version import CPEVersion
-from ..vulnerability import MatchReason
+from ..models.Vulnerability import MatchReason
 
 CPE_COMPARISON_STOP_CHARS_RE = re.compile(r"[\+\-\_\~]")
 NUMERIC_VERSION_RE = re.compile(r"[\d\.]+")
@@ -399,10 +399,14 @@ def download_github_folder(repo_url, repo_folder, dest):
     if repo_url != repo_url_esc or repo_folder != repo_folder_esc or dest != dest_esc:
         return False
 
+    sparse_checkout_cmd = ""
+    if repo_folder and repo_folder not in ("/", "."):
+        sparse_checkout_cmd = "git sparse-checkout set --no-cone '%s' && " % repo_folder_esc
+
     return_code = subprocess.call(
         "git clone -n --depth=1 --filter=tree:0 '%s' '%s' && " % (repo_url_esc, dest_esc)
         + "cd '%s' && " % dest_esc
-        + "git sparse-checkout set --no-cone '%s' && " % repo_folder_esc
+        + sparse_checkout_cmd
         + "git checkout",
         shell=True,
         stdout=subprocess.DEVNULL,

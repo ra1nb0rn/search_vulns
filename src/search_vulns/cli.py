@@ -13,7 +13,6 @@ from .core import (
     get_version,
     is_fully_installed,
     search_vulns,
-    serialize_vulns_in_result,
 )
 
 # define ANSI color escape sequences
@@ -47,7 +46,7 @@ def print_vulns(vulns, to_string=False):
 
     out_string = ""
     vuln_ids_sorted = sorted(
-        list(vulns), key=lambda vuln_Id: float(vulns[vuln_Id].cvss), reverse=True
+        list(vulns), key=lambda vuln_Id: vulns[vuln_Id].get_cvss_score(), reverse=True
     )
     for vuln_id in vuln_ids_sorted:
         vuln_node = vulns[vuln_id]
@@ -61,18 +60,25 @@ def print_vulns(vulns, to_string=False):
                 " ("
                 + MAGENTA
                 + "CVSSv"
-                + vuln_node.cvss_ver
+                + vuln_node.get_cvss_version()
                 + "/"
-                + str(vuln_node.cvss)
+                + str(vuln_node.get_cvss_score())
                 + SANE
                 + ")"
             )
-            if vuln_node.cisa_known_exploited:
+            if vuln_node.cisa_kev:
                 print_str += " (" + RED + "Actively exploited" + SANE + ")"
         else:
             print_str = vuln_node.id
-            print_str += " (" "CVSSv" + vuln_node.cvss_ver + "/" + str(vuln_node.cvss) + ")"
-            if vuln_node.cisa_known_exploited:
+            print_str += (
+                " ("
+                "CVSSv"
+                + vuln_node.get_cvss_version()
+                + "/"
+                + str(vuln_node.get_cvss_score())
+                + ")"
+            )
+            if vuln_node.cisa_kev:
                 print_str += " (Actively exploited)"
         print_str += ": " + description + "\n"
 
@@ -88,7 +94,8 @@ def print_vulns(vulns, to_string=False):
                     print_str += len("Exploits:  ") * " " + edb_link + "\n"
 
         print_str += "Reference: " + vuln_node.aliases[vuln_node.id]
-        print_str += ", " + vuln_node.published.split(" ")[0]
+        if vuln_node.published:
+            print_str += ", " + vuln_node.published.strftime("%Y-%m-%d")
         if not to_string:
             printit(print_str)
         else:
@@ -314,9 +321,7 @@ def main():
             args.use_created_product_ids,
             config,
         )
-        all_product_ids = []
-        for pids in sv_result["product_ids"].values():
-            all_product_ids += pids
+        all_product_ids = sv_result.product_ids.get_all()
 
         if not is_good_result:
             if args.format.lower() == "txt":
@@ -338,27 +343,26 @@ def main():
                 out_string += "/".join(all_product_ids) + ")\n"
 
         # "sort" vulnerabilities by CVSS score
-        if sv_result["vulns"]:
+        if sv_result.vulns:
             vuln_ids_sorted = sorted(
-                list(sv_result["vulns"]),
-                key=lambda vuln_id: float(sv_result["vulns"][vuln_id].cvss),
+                list(sv_result.vulns),
+                key=lambda vuln_id: sv_result.vulns[vuln_id].get_cvss_score(),
                 reverse=True,
             )
             sorted_vulns = {}
             for vuln_id in vuln_ids_sorted:
-                sorted_vulns[vuln_id] = sv_result["vulns"][vuln_id]
-            sv_result["vulns"] = sorted_vulns
+                sorted_vulns[vuln_id] = sv_result.vulns[vuln_id]
+            sv_result.vulns = sorted_vulns
 
         # prepare output
         if args.format.lower() == "txt":
             # print found vulnerabilities
             if not args.output:
-                print_vulns(sv_result["vulns"])
+                print_vulns(sv_result.vulns)
             else:
-                out_string += print_vulns(sv_result["vulns"], to_string=True)
+                out_string += print_vulns(sv_result.vulns, to_string=True)
         else:
-            # serialize vulns for json output
-            serialize_vulns_in_result(sv_result)
+            sv_result = sv_result.model_dump(exclude_none=True)
 
         all_vulns[query] = sv_result
 

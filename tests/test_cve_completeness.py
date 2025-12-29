@@ -36,9 +36,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-58674",
             "CVE-2025-58246",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_apache_2425(self):
@@ -135,9 +133,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-66200",
             "CVE-2025-58098",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_proftpd_133c(self):
@@ -162,9 +158,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2024-48651",
             "CVE-2010-20103",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_thingsboard_340(self):
@@ -186,9 +180,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-34282",
             "CVE-2025-34281",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_redis_323(self):
@@ -221,9 +213,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-46818",
             "CVE-2025-49844",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_piwik_045(self):
@@ -247,9 +237,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2013-1844",
             "CVE-2023-6923",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_vmware_spring_framework_5326(self):
@@ -269,9 +257,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-22233",
             "CVE-2024-38808",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_zulip_48(self):
@@ -291,9 +277,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2022-31168",
             "CVE-2025-25195",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_zulip_server_general(self):
@@ -340,9 +324,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-27149",
             "CVE-2025-52559",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_electron_1317(self):
@@ -361,9 +343,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2024-46993",
             "CVE-2025-55305",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_hitachi_replication_manager_86500(self):
@@ -371,9 +351,7 @@ class TestSearches(unittest.TestCase):
         query = "cpe:2.3:a:hitachi:replication_manager:8.6.5-00:*:*:*:*:*:*:*"
         result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = ["CVE-2022-4146", "CVE-2020-36695", "CVE-2019-17360"]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_handlebars_js_300(self):
@@ -387,9 +365,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2019-20920",
             "CVE-2015-8861",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_proftpd_135f(self):
@@ -409,9 +385,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2023-48795",
             "CVE-2024-48651",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_xorg_xorg_server_1100901(self):
@@ -500,9 +474,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-26597",
             "CVE-2023-5380",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_trendmicro_dsa_20_0_u1558(self):
@@ -524,9 +496,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-30642",
             "CVE-2024-36358",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_vmware_esxi_802(self):
@@ -546,9 +516,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-22226",
             "CVE-2024-37086",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_openstack_glance(self):
@@ -583,9 +551,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2012-4573",
             "CVE-2024-32498",
         ]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_simplednsplus(self):
@@ -593,9 +559,7 @@ class TestSearches(unittest.TestCase):
         query = "simpledns simple dns plus"
         result = search_vulns(query=query)
         expected_cves = ["CVE-2008-3208"]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_search_portainer_2_19_0(self):
@@ -603,9 +567,7 @@ class TestSearches(unittest.TestCase):
         query = "cpe:2.3:a:portainer:portainer:2.19.0:*:*:*:*:*:*:*"
         result = search_vulns(query=query, is_product_id_query=True)
         expected_cves = ["CVE-2024-33661", "CVE-2024-33662", "CVE-2025-49593"]
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
 
     def test_apache_oracle_http(self):
@@ -614,16 +576,12 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = "cpe:2.3:a:apache:http_server:11.1.1.9.0:*:*:*:*:*:*:*"
         result = search_vulns(query=query)
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertIn("CVE-2013-2566", result_cves)
 
         query = "cpe:2.3:a:apache:http_server:*:*:*:*:*:*:*:*"
         result = search_vulns(query=query)
-        result_cves = [
-            vuln_id for vuln_id in result["vulns"].keys() if vuln_id.startswith("CVE-")
-        ]
+        result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertNotIn("CVE-2013-2566", result_cves)
 
 

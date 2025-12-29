@@ -1,9 +1,12 @@
 import re
 from threading import Lock
+from typing import Dict, Tuple
 
 from cpe_search.cpe_search import MATCH_CPE_23_RE
 from univers.versions import RpmVersion
 
+from search_vulns.models.SearchVulnsResult import ProductIDsResult, SearchVulnsResult
+from search_vulns.models.Vulnerability import DataSource, Match, MatchReason
 from search_vulns.modules.linux_distro_backpatches.redhat.build import (
     REQUIRES_BUILT_MODULES,
     full_update,
@@ -12,6 +15,7 @@ from search_vulns.modules.linux_distro_backpatches.utils import strip_epoch_from
 from search_vulns.modules.utils import get_cpe_product_prefix, split_cpe
 
 INIT_LOCK = Lock()
+VULN_REF_BASE_URL = "https://access.redhat.com/security/cve/"
 MATCH_REDHAT_QUERY_RE = re.compile(
     r"(\(?(Red\s*hat\s*enterprise\s*linux|\.?redhat|red\s*hat|\.el|\.?rhel)\)?)\s*([\d_\.]{0,3})|(\.rpm$)",
     re.IGNORECASE,
@@ -26,7 +30,9 @@ DEDUP_VERSION_ZEROES_RE = re.compile(r"0+(\d)")
 #############################################################################################
 
 
-def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, config):
+def preprocess_query(
+    query, product_ids: ProductIDsResult, vuln_db_cursor, product_db_cursor, config
+) -> Tuple[str, Dict]:
     query_lower = query.lower()
     query_no_redhat = None
     extra_params = {}
@@ -66,14 +72,14 @@ def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, conf
                 r"\1", redhat_full_version
             )  # e.g. Keycloak 26.2.10.redhat-00002
 
-    elif query or (product_ids and product_ids.get("cpe", [])):
+    elif query or product_ids.cpe:
         # retrieve Redhat information from CPEs if available
         # for simplicity, assume the same product version and Redhat release across all CPEs
         cpes, new_cpes = [], []
         if query:
             cpes.append(query)
-        if product_ids and product_ids.get("cpe", []):
-            cpes += product_ids["cpe"]
+        if product_ids:
+            cpes += product_ids.cpe
 
         for cpe in cpes:
             cpe_parts = split_cpe(cpe)
@@ -94,8 +100,8 @@ def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, conf
             extra_params["redhat_orig_query"] = query
             query_no_redhat = new_cpes[0]
             del new_cpes[0]
-        if new_cpes:
-            product_ids["cpe"] = new_cpes
+        if new_cpes and product_ids:
+            product_ids.cpe = new_cpes
 
     # store Red Hat specifics for postprocess and return adapted query
     if is_redhat_query:
@@ -111,7 +117,7 @@ def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, conf
 
 
 def postprocess_results(
-    results, query, vuln_db_cursor, product_db_cursor, config, extra_params
+    results: SearchVulnsResult, query, vuln_db_cursor, product_db_cursor, config, extra_params
 ):
     # only run if query was a Redhat query
     if "redhat_orig_query" not in extra_params:
@@ -125,8 +131,8 @@ def postprocess_results(
         redhat_release = "999"
 
     # go over vulnerabilities and mark them as patched if that is the case
-    if "product_ids" in results and results["product_ids"].get("cpe", []):
-        for vuln_id, vuln in results["vulns"].items():
+    if results.product_ids.cpe:
+        for vuln_id, vuln in results.vulns.items():
             cve_ids = set()
             if vuln_id.startswith("CVE-"):
                 cve_ids.add(vuln_id)
@@ -137,7 +143,7 @@ def postprocess_results(
             is_patched = False
             for cve_id in cve_ids:
                 # assumption: all product IDs have same version
-                for cpe in results["product_ids"]["cpe"]:
+                for cpe in results.product_ids.cpe:
                     cpe_prefix = get_cpe_product_prefix(cpe)
                     vuln_db_cursor.execute(
                         "SELECT redhat_release_version, version_start, version_fixed FROM redhat_backpatches JOIN redhat_pkg_cpes ON redhat_backpatches.cpe_prefix_id = redhat_pkg_cpes.cpe_prefix_id WHERE cve_id = ? AND cpe_prefix = ?",
@@ -151,6 +157,9 @@ def postprocess_results(
                         for bp in backpatch_info
                         if not bp[1] or redhat_full_version.startswith(bp[1])
                     ]
+
+                    if backpatch_info:
+                        vuln.add_tracked_by(DataSource.REDHAT, VULN_REF_BASE_URL + cve_id)
 
                     # sort by redhat release
                     backpatch_info.sort(key=lambda bp_info: float(bp_info[0]))
@@ -185,13 +194,16 @@ def postprocess_results(
                         break
 
             if is_patched:
-                vuln.set_patched("redhat")
+                vuln.set_patched(DataSource.REDHAT)
+            else:
+                vuln_match = Match(match_reason=MatchReason.VERSION_IN_RANGE, confidence=1)
+                vuln.add_matched_by(DataSource.REDHAT, vuln_match)
 
     # modify product IDs and potential product IDs in result to use original Redhat information
     for pid_type in ("product_ids", "pot_product_ids"):
-        if pid_type in results and "cpe" in results[pid_type]:
+        if getattr(results, pid_type).cpe:
             new_cpes = []
-            for cpe_info in results[pid_type]["cpe"]:
+            for cpe_info in getattr(results, pid_type).cpe:
                 # insert redhat details into last field of CPE
                 if isinstance(cpe_info, tuple):
                     cpe, match_score = cpe_info
@@ -220,4 +232,4 @@ def postprocess_results(
                     new_cpes.append(new_cpe)
 
             if new_cpes:
-                results[pid_type]["cpe"] = new_cpes
+                getattr(results, pid_type).cpe = new_cpes

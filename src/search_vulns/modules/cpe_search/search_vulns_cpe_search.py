@@ -1,4 +1,5 @@
 from threading import Lock
+from typing import Tuple
 
 import ujson
 from cpe_search.cpe_search import (
@@ -9,6 +10,7 @@ from cpe_search.cpe_search import (
 from cpe_search.database_wrapper_functions import *
 
 from search_vulns.cpe_version import CPEVersion
+from search_vulns.models.SearchVulnsResult import PotProductIDsResult, ProductIDsResult
 
 # implement update procedures in separate file
 from search_vulns.modules.cpe_search.build import full_update, update
@@ -199,18 +201,23 @@ def get_equivalent_cpes(cpe, product_db_cursor):
 
 
 def search_product_ids(
-    query, product_db_cursor, current_product_ids, is_product_id_query, config, extra_params
-):
+    query: str,
+    product_db_cursor,
+    current_product_ids: ProductIDsResult,
+    is_product_id_query,
+    config,
+    extra_params,
+) -> Tuple[ProductIDsResult, ProductIDsResult]:
     # if given query is not already a CPE, try to retrieve a CPE that matches
     # the query or create alternative CPEs that could match the query
 
     query = query.strip()
     if not query:
-        return {"cpe": []}, {"cpe": []}
+        return ProductIDsResult(), PotProductIDsResult()
 
     # if CPEs were already provided as product IDs, do not run
-    if current_product_ids.get("cpe", []):
-        return {}, {}
+    if current_product_ids.cpe:
+        return ProductIDsResult(), PotProductIDsResult()
 
     # perform CPE search if needed
     cpe, pot_cpes, cpe_search_results = None, [], []
@@ -242,4 +249,7 @@ def search_product_ids(
     if not all_product_ids:
         all_product_ids = {"cpe": []}
 
-    return all_product_ids, {"cpe": pot_cpes}
+    product_ids = ProductIDsResult.from_cpes(all_product_ids["cpe"])
+    pot_product_ids = PotProductIDsResult.from_cpes(pot_cpes)
+
+    return product_ids, pot_product_ids

@@ -3,6 +3,7 @@
 import unittest
 
 from search_vulns.core import search_vulns
+from search_vulns.models.Vulnerability import DataSource
 
 
 class TestSearches(unittest.TestCase):
@@ -61,31 +62,42 @@ class TestSearches(unittest.TestCase):
         expected_not_matching = {}
         actual_ghsa_vulns = []
         actual_not_matching = {}
-        for vuln_id, vuln in result["vulns"].items():
-            vuln = vuln.to_dict()
+        for vuln_id, vuln in result.vulns.items():
             if vuln_id.startswith("CVE-"):
-                if "ghsa" in vuln["match_sources"]:
+                if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln["aliases"])
-                    for alias in vuln["aliases"]:
+                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
-                    for alias in vuln["aliases"]:
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_not_matching[vuln_id] = alias
             elif vuln_id.startswith("GHSA-"):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
-                self.assertEqual(vuln["published"], expected_vulns[vuln_id]["published"])
-                self.assertEqual(vuln["cvss_ver"], expected_vulns[vuln_id]["cvss_ver"])
-                self.assertEqual(vuln["cvss"], expected_vulns[vuln_id]["cvss"])
-                self.assertEqual(vuln["cvss_vec"], expected_vulns[vuln_id]["cvss_vec"])
-                self.assertEqual(vuln["aliases"], expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    vuln.serialize_published(vuln.published),
+                    expected_vulns[vuln_id]["published"],
+                )
+                if vuln.severity.get("cvss"):
+                    self.assertEqual(
+                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                    )
+                else:
+                    self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
+                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
-                        sorted(vuln["exploits"]), sorted(expected_vulns[vuln_id]["exploits"])
+                        sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
                     )
         self.assertEqual(sorted(actual_ghsa_vulns), sorted(expected_ghsa_vulns))
         self.assertEqual(actual_not_matching, expected_not_matching)
@@ -108,33 +120,9 @@ class TestSearches(unittest.TestCase):
             "CVE-2021-44565": "GHSA-44cg-qcpr-fwjh",
             "CVE-2023-0994": "GHSA-prjg-28jg-m3p5",
             "CVE-2023-2202": "GHSA-g66v-3v62-g375",
-            "GHSA-f8hp-grmr-pp7j": {
-                "published": "2023-05-02 18:30:20",
-                "cvss_ver": "3.1",
-                "cvss": "5.4",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
-                "aliases": {
-                    "CVE-2023-29918": "https://nvd.nist.gov/vuln/detail/CVE-2023-29918",
-                    "GHSA-f8hp-grmr-pp7j": "https://github.com/advisories/GHSA-f8hp-grmr-pp7j",
-                },
-                "sources": ["ghsa"],
-                "exploits": [
-                    "https://www.exploit-db.com/exploits/51622",
-                    "https://docs.google.com/document/d/1JAhJOlfKKD5Y5zEKo0_8a3A-nQ7Dz_GIMmlXmOvXV48/edit?usp=sharing",
-                ],
-            },
-            "GHSA-287r-574x-f4h4": {
-                "published": "2022-02-02 00:01:46",
-                "cvss_ver": "3.1",
-                "cvss": "6.1",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
-                "aliases": {
-                    "CVE-2021-45416": "https://nvd.nist.gov/vuln/detail/CVE-2021-45416",
-                    "GHSA-287r-574x-f4h4": "https://github.com/advisories/GHSA-287r-574x-f4h4",
-                },
-                "sources": ["ghsa"],
-            },
+            "CVE-2023-29918": "GHSA-f8hp-grmr-pp7j",
             "CVE-2024-3138": "GHSA-r32g-w9cv-9fgc",
+            "CVE-2021-45416": "GHSA-287r-574x-f4h4",
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
@@ -143,32 +131,42 @@ class TestSearches(unittest.TestCase):
         expected_not_matching = {}
         actual_ghsa_vulns = []
         actual_not_matching = {}
-
-        for vuln_id, vuln in result["vulns"].items():
-            vuln = vuln.to_dict()
+        for vuln_id, vuln in result.vulns.items():
             if vuln_id.startswith("CVE-"):
-                if "ghsa" in vuln["match_sources"]:
+                if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln["aliases"])
-                    for alias in vuln["aliases"]:
+                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
-                    for alias in vuln["aliases"]:
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_not_matching[vuln_id] = alias
             elif vuln_id.startswith("GHSA-"):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
-                self.assertEqual(vuln["published"], expected_vulns[vuln_id]["published"])
-                self.assertEqual(vuln["cvss_ver"], expected_vulns[vuln_id]["cvss_ver"])
-                self.assertEqual(vuln["cvss"], expected_vulns[vuln_id]["cvss"])
-                self.assertEqual(vuln["cvss_vec"], expected_vulns[vuln_id]["cvss_vec"])
-                self.assertEqual(vuln["aliases"], expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    vuln.serialize_published(vuln.published),
+                    expected_vulns[vuln_id]["published"],
+                )
+                if vuln.severity.get("cvss"):
+                    self.assertEqual(
+                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                    )
+                else:
+                    self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
+                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
-                        sorted(vuln["exploits"]), sorted(expected_vulns[vuln_id]["exploits"])
+                        sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
                     )
         self.assertEqual(sorted(actual_ghsa_vulns), sorted(expected_ghsa_vulns))
         self.assertEqual(actual_not_matching, expected_not_matching)
@@ -240,31 +238,42 @@ class TestSearches(unittest.TestCase):
         actual_ghsa_vulns = []
         actual_not_matching = {}
 
-        for vuln_id, vuln in result["vulns"].items():
-            vuln = vuln.to_dict()
+        for vuln_id, vuln in result.vulns.items():
             if vuln_id.startswith("CVE-"):
-                if "ghsa" in vuln["match_sources"]:
+                if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln["aliases"])
-                    for alias in vuln["aliases"]:
+                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
-                    for alias in vuln["aliases"]:
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_not_matching[vuln_id] = alias
             elif vuln_id.startswith("GHSA-"):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
-                self.assertEqual(vuln["published"], expected_vulns[vuln_id]["published"])
-                self.assertEqual(vuln["cvss_ver"], expected_vulns[vuln_id]["cvss_ver"])
-                self.assertEqual(vuln["cvss"], expected_vulns[vuln_id]["cvss"])
-                self.assertEqual(vuln["cvss_vec"], expected_vulns[vuln_id]["cvss_vec"])
-                self.assertEqual(vuln["aliases"], expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    vuln.serialize_published(vuln.published),
+                    expected_vulns[vuln_id]["published"],
+                )
+                if vuln.severity.get("cvss"):
+                    self.assertEqual(
+                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                    )
+                else:
+                    self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
+                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
-                        sorted(vuln["exploits"]), sorted(expected_vulns[vuln_id]["exploits"])
+                        sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
                     )
         self.assertEqual(sorted(actual_ghsa_vulns), sorted(expected_ghsa_vulns))
         self.assertEqual(actual_not_matching, expected_not_matching)
@@ -287,31 +296,42 @@ class TestSearches(unittest.TestCase):
         actual_ghsa_vulns = []
         actual_not_matching = {}
 
-        for vuln_id, vuln in result["vulns"].items():
-            vuln = vuln.to_dict()
+        for vuln_id, vuln in result.vulns.items():
             if vuln_id.startswith("CVE-"):
-                if "ghsa" in vuln["match_sources"]:
+                if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln["aliases"])
-                    for alias in vuln["aliases"]:
+                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
-                    for alias in vuln["aliases"]:
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_not_matching[vuln_id] = alias
             elif vuln_id.startswith("GHSA-"):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
-                self.assertEqual(vuln["published"], expected_vulns[vuln_id]["published"])
-                self.assertEqual(vuln["cvss_ver"], expected_vulns[vuln_id]["cvss_ver"])
-                self.assertEqual(vuln["cvss"], expected_vulns[vuln_id]["cvss"])
-                self.assertEqual(vuln["cvss_vec"], expected_vulns[vuln_id]["cvss_vec"])
-                self.assertEqual(vuln["aliases"], expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    vuln.serialize_published(vuln.published),
+                    expected_vulns[vuln_id]["published"],
+                )
+                if vuln.severity.get("cvss"):
+                    self.assertEqual(
+                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                    )
+                else:
+                    self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
+                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
-                        sorted(vuln["exploits"]), sorted(expected_vulns[vuln_id]["exploits"])
+                        sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
                     )
         self.assertEqual(sorted(actual_ghsa_vulns), sorted(expected_ghsa_vulns))
         self.assertEqual(actual_not_matching, expected_not_matching)
@@ -346,31 +366,42 @@ class TestSearches(unittest.TestCase):
         actual_ghsa_vulns = []
         actual_not_matching = {}
 
-        for vuln_id, vuln in result["vulns"].items():
-            vuln = vuln.to_dict()
+        for vuln_id, vuln in result.vulns.items():
             if vuln_id.startswith("CVE-"):
-                if "ghsa" in vuln["match_sources"]:
+                if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln["aliases"])
-                    for alias in vuln["aliases"]:
+                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
-                    for alias in vuln["aliases"]:
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_not_matching[vuln_id] = alias
             elif vuln_id.startswith("GHSA-"):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
-                self.assertEqual(vuln["published"], expected_vulns[vuln_id]["published"])
-                self.assertEqual(vuln["cvss_ver"], expected_vulns[vuln_id]["cvss_ver"])
-                self.assertEqual(vuln["cvss"], expected_vulns[vuln_id]["cvss"])
-                self.assertEqual(vuln["cvss_vec"], expected_vulns[vuln_id]["cvss_vec"])
-                self.assertEqual(vuln["aliases"], expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    vuln.serialize_published(vuln.published),
+                    expected_vulns[vuln_id]["published"],
+                )
+                if vuln.severity.get("cvss"):
+                    self.assertEqual(
+                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                    )
+                else:
+                    self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
+                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
-                        sorted(vuln["exploits"]), sorted(expected_vulns[vuln_id]["exploits"])
+                        sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
                     )
         self.assertEqual(sorted(actual_ghsa_vulns), sorted(expected_ghsa_vulns))
         self.assertEqual(actual_not_matching, expected_not_matching)
@@ -623,31 +654,42 @@ class TestSearches(unittest.TestCase):
         actual_ghsa_vulns = []
         actual_not_matching = {}
 
-        for vuln_id, vuln in result["vulns"].items():
-            vuln = vuln.to_dict()
+        for vuln_id, vuln in result.vulns.items():
             if vuln_id.startswith("CVE-"):
-                if "ghsa" in vuln["match_sources"]:
+                if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln["aliases"])
-                    for alias in vuln["aliases"]:
+                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
-                    for alias in vuln["aliases"]:
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_not_matching[vuln_id] = alias
             elif vuln_id.startswith("GHSA-"):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
-                self.assertEqual(vuln["published"], expected_vulns[vuln_id]["published"])
-                self.assertEqual(vuln["cvss_ver"], expected_vulns[vuln_id]["cvss_ver"])
-                self.assertEqual(vuln["cvss"], expected_vulns[vuln_id]["cvss"])
-                self.assertEqual(vuln["cvss_vec"], expected_vulns[vuln_id]["cvss_vec"])
-                self.assertEqual(vuln["aliases"], expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    vuln.serialize_published(vuln.published),
+                    expected_vulns[vuln_id]["published"],
+                )
+                if vuln.severity.get("cvss"):
+                    self.assertEqual(
+                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                    )
+                else:
+                    self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
+                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
-                        sorted(vuln["exploits"]), sorted(expected_vulns[vuln_id]["exploits"])
+                        sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
                     )
         self.assertEqual(sorted(actual_ghsa_vulns), sorted(expected_ghsa_vulns))
         self.assertEqual(actual_not_matching, expected_not_matching)
@@ -667,39 +709,12 @@ class TestSearches(unittest.TestCase):
                     "GHSA-cq42-vhv7-xr7p": "https://github.com/advisories/GHSA-cq42-vhv7-xr7p",
                 },
             },
-            "GHSA-4vc8-pg5c-vg4x": {
-                "published": "2024-06-12 19:41:05",
-                "cvss_ver": "3.1",
-                "cvss": "3.7",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
-                "aliases": {
-                    "CVE-2021-3754": "https://nvd.nist.gov/vuln/detail/CVE-2021-3754",
-                    "GHSA-4vc8-pg5c-vg4x": "https://github.com/advisories/GHSA-4vc8-pg5c-vg4x",
-                },
-            },
+            "CVE-2021-3754": "GHSA-4vc8-pg5c-vg4x",
             "CVE-2024-7260": "GHSA-g4gc-rh26-m3p5",
             "CVE-2024-4629": "GHSA-gc7q-jgjv-vjr2",
             "CVE-2024-7341": "GHSA-5rxp-2rhr-qwqv",
-            "GHSA-w97f-w3hq-36g2": {
-                "published": "2024-09-10 18:30:44",
-                "cvss_ver": "3.1",
-                "cvss": "6.5",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
-                "aliases": {
-                    "CVE-2023-6841": "https://nvd.nist.gov/vuln/detail/CVE-2023-6841",
-                    "GHSA-w97f-w3hq-36g2": "https://github.com/advisories/GHSA-w97f-w3hq-36g2",
-                },
-            },
-            "GHSA-w8gr-xwp4-r9f7": {
-                "published": "2024-10-14 20:55:22",
-                "cvss_ver": "3.1",
-                "cvss": "6.1",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
-                "aliases": {
-                    "CVE-2024-8883": "https://nvd.nist.gov/vuln/detail/CVE-2024-8883",
-                    "GHSA-w8gr-xwp4-r9f7": "https://github.com/advisories/GHSA-w8gr-xwp4-r9f7",
-                },
-            },
+            "CVE-2023-6841": "GHSA-w97f-w3hq-36g2",
+            "CVE-2024-8883": "GHSA-w8gr-xwp4-r9f7",
             "GHSA-93ww-43rr-79v3": {
                 "published": "2024-11-25 19:40:46",
                 "cvss_ver": "3.1",
@@ -754,32 +769,12 @@ class TestSearches(unittest.TestCase):
                     "GHSA-5jfq-x6xp-7rw2": "https://github.com/advisories/GHSA-5jfq-x6xp-7rw2",
                 },
             },
-            "GHSA-xhpr-465j-7p9q": {
-                "published": "2025-07-30 13:16:47",
-                "cvss_ver": "3.1",
-                "cvss": "5.4",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:H/I:L/A:N",
-                "cisa_known_exploited": False,
-                "aliases": {
-                    "CVE-2025-7365": "https://nvd.nist.gov/vuln/detail/CVE-2025-7365",
-                    "GHSA-xhpr-465j-7p9q": "https://github.com/advisories/GHSA-xhpr-465j-7p9q",
-                },
-            },
+            "CVE-2025-7365": "GHSA-xhpr-465j-7p9q",
             "CVE-2025-9162": "GHSA-8hxp-qmph-w5gq",
             "CVE-2025-10044": "GHSA-27gc-wj6x-9w55",
             "CVE-2025-12110": "GHSA-895x-rfqp-jh5c",
             "CVE-2025-12390": "GHSA-rg35-5v25-mqvp",
-            "GHSA-m4j5-5x4r-2xp9": {
-                "published": "2025-09-17 20:24:07",
-                "cvss_ver": "3.1",
-                "cvss": "5.3",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
-                "cisa_known_exploited": False,
-                "aliases": {
-                    "CVE-2025-8419": "https://nvd.nist.gov/vuln/detail/CVE-2025-8419",
-                    "GHSA-m4j5-5x4r-2xp9": "https://github.com/advisories/GHSA-m4j5-5x4r-2xp9",
-                },
-            },
+            "CVE-2025-8419": "GHSA-m4j5-5x4r-2xp9",
             "CVE-2025-11419": "GHSA-q8hq-4h99-fj7x",
             "CVE-2025-10939": "GHSA-vjr8-56p3-fmqq",
             "CVE-2025-11429": "GHSA-64w3-5q9m-68xf",
@@ -823,31 +818,42 @@ class TestSearches(unittest.TestCase):
 
         actual_ghsa_vulns = []
         actual_not_matching = {}
-        for vuln_id, vuln in result["vulns"].items():
-            vuln = vuln.to_dict()
+        for vuln_id, vuln in result.vulns.items():
             if vuln_id.startswith("CVE-"):
-                if "ghsa" in vuln["match_sources"]:
+                if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln["aliases"])
-                    for alias in vuln["aliases"]:
+                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
-                    for alias in vuln["aliases"]:
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_not_matching[vuln_id] = alias
             elif vuln_id.startswith("GHSA-"):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
-                self.assertEqual(vuln["published"], expected_vulns[vuln_id]["published"])
-                self.assertEqual(vuln["cvss_ver"], expected_vulns[vuln_id]["cvss_ver"])
-                self.assertEqual(vuln["cvss"], expected_vulns[vuln_id]["cvss"])
-                self.assertEqual(vuln["cvss_vec"], expected_vulns[vuln_id]["cvss_vec"])
-                self.assertEqual(vuln["aliases"], expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    vuln.serialize_published(vuln.published),
+                    expected_vulns[vuln_id]["published"],
+                )
+                if vuln.severity.get("cvss"):
+                    self.assertEqual(
+                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                    )
+                else:
+                    self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
+                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
-                        sorted(vuln["exploits"]), sorted(expected_vulns[vuln_id]["exploits"])
+                        sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
                     )
         self.assertEqual(sorted(actual_ghsa_vulns), sorted(expected_ghsa_vulns))
         self.assertEqual(sorted(actual_not_matching), sorted(expected_not_matching))
@@ -872,31 +878,42 @@ class TestSearches(unittest.TestCase):
         actual_ghsa_vulns = []
         actual_not_matching = {}
 
-        for vuln_id, vuln in result["vulns"].items():
-            vuln = vuln.to_dict()
+        for vuln_id, vuln in result.vulns.items():
             if vuln_id.startswith("CVE-"):
-                if "ghsa" in vuln["match_sources"]:
+                if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln["aliases"])
-                    for alias in vuln["aliases"]:
+                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
-                    for alias in vuln["aliases"]:
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_not_matching[vuln_id] = alias
             elif vuln_id.startswith("GHSA-"):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
-                self.assertEqual(vuln["published"], expected_vulns[vuln_id]["published"])
-                self.assertEqual(vuln["cvss_ver"], expected_vulns[vuln_id]["cvss_ver"])
-                self.assertEqual(vuln["cvss"], expected_vulns[vuln_id]["cvss"])
-                self.assertEqual(vuln["cvss_vec"], expected_vulns[vuln_id]["cvss_vec"])
-                self.assertEqual(vuln["aliases"], expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    vuln.serialize_published(vuln.published),
+                    expected_vulns[vuln_id]["published"],
+                )
+                if vuln.severity.get("cvss"):
+                    self.assertEqual(
+                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                    )
+                else:
+                    self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
+                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
-                        sorted(vuln["exploits"]), sorted(expected_vulns[vuln_id]["exploits"])
+                        sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
                     )
         self.assertEqual(sorted(actual_ghsa_vulns), sorted(expected_ghsa_vulns))
         self.assertEqual(actual_not_matching, expected_not_matching)
@@ -928,31 +945,42 @@ class TestSearches(unittest.TestCase):
         actual_ghsa_vulns = []
         actual_not_matching = {}
 
-        for vuln_id, vuln in result["vulns"].items():
-            vuln = vuln.to_dict()
+        for vuln_id, vuln in result.vulns.items():
             if vuln_id.startswith("CVE-"):
-                if "ghsa" in vuln["match_sources"]:
+                if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln["aliases"])
-                    for alias in vuln["aliases"]:
+                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
-                    for alias in vuln["aliases"]:
+                    for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             actual_not_matching[vuln_id] = alias
             elif vuln_id.startswith("GHSA-"):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
-                self.assertEqual(vuln["published"], expected_vulns[vuln_id]["published"])
-                self.assertEqual(vuln["cvss_ver"], expected_vulns[vuln_id]["cvss_ver"])
-                self.assertEqual(vuln["cvss"], expected_vulns[vuln_id]["cvss"])
-                self.assertEqual(vuln["cvss_vec"], expected_vulns[vuln_id]["cvss_vec"])
-                self.assertEqual(vuln["aliases"], expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    vuln.serialize_published(vuln.published),
+                    expected_vulns[vuln_id]["published"],
+                )
+                if vuln.severity.get("cvss"):
+                    self.assertEqual(
+                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                    )
+                    self.assertEqual(
+                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                    )
+                else:
+                    self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
+                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
-                        sorted(vuln["exploits"]), sorted(expected_vulns[vuln_id]["exploits"])
+                        sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
                     )
         self.assertEqual(sorted(actual_ghsa_vulns), sorted(expected_ghsa_vulns))
         self.assertEqual(actual_not_matching, expected_not_matching)

@@ -3,6 +3,8 @@
 import unittest
 
 from search_vulns.core import search_vulns
+from search_vulns.models.SearchVulnsResult import VersionStatus
+from search_vulns.models.Vulnerability import DataSource
 
 
 class TestSearches(unittest.TestCase):
@@ -15,8 +17,8 @@ class TestSearches(unittest.TestCase):
         expected_backpatched = ["CVE-2023-44487"]
         result_open, result_backpatched = [], []
 
-        for vuln_id, vuln in result["vulns"].items():
-            if vuln.reported_patched_by:
+        for vuln_id, vuln in result.vulns.items():
+            if DataSource.DEBIAN in vuln.reported_patched_by:
                 result_backpatched.append(vuln_id)
             else:
                 result_open.append(vuln_id)
@@ -56,8 +58,8 @@ class TestSearches(unittest.TestCase):
         ]
         result_open, result_backpatched = [], []
 
-        for vuln_id, vuln in result["vulns"].items():
-            if vuln.reported_patched_by:
+        for vuln_id, vuln in result.vulns.items():
+            if DataSource.DEBIAN in vuln.reported_patched_by:
                 result_backpatched.append(vuln_id)
             else:
                 result_open.append(vuln_id)
@@ -65,11 +67,11 @@ class TestSearches(unittest.TestCase):
         self.assertEqual(set(expected_backpatched), set(result_backpatched))
         self.assertEqual(set(expected_open), set(result_open))
         expected_version_result = {
-            "status": "current",
+            "status": VersionStatus.CURRENT,
             "latest": "7.88.1-10",
-            "ref": "https://security-tracker.debian.org/tracker/source-package/curl",
+            "reference": "https://security-tracker.debian.org/tracker/source-package/curl",
         }
-        self.assertEqual(result["version_status"], expected_version_result)
+        self.assertEqual(result.version_status.model_dump(), expected_version_result)
 
     def test_search_squid(self):
         self.maxDiff = None
@@ -95,8 +97,8 @@ class TestSearches(unittest.TestCase):
         ]
         result_open, result_backpatched = [], []
 
-        for vuln_id, vuln in result["vulns"].items():
-            if vuln.reported_patched_by:
+        for vuln_id, vuln in result.vulns.items():
+            if DataSource.DEBIAN in vuln.reported_patched_by:
                 result_backpatched.append(vuln_id)
             else:
                 result_open.append(vuln_id)
@@ -108,21 +110,21 @@ class TestSearches(unittest.TestCase):
         query = "cpe:2.3:a:apache:http_server:2.4.60:*:*:*:*:*:*:debian_11"
         result = search_vulns(query=query, include_patched=True)
         expected_version_result = {
-            "status": "outdated",
+            "status": VersionStatus.OUTDATED,
             "latest": "2.4.62-1",
-            "ref": "https://security-tracker.debian.org/tracker/source-package/apache2",
+            "reference": "https://security-tracker.debian.org/tracker/source-package/apache2",
         }
-        self.assertEqual(result["version_status"], expected_version_result)
+        self.assertEqual(result.version_status.model_dump(), expected_version_result)
 
     def test_search_log4j12_eol(self):
         query = "cpe:2.3:a:apache:log4j:1.2.17-10:*:*:*:*:*:*:debian_11"
         result = search_vulns(query=query, include_patched=True)
         expected_version_result = {
-            "status": "current",
+            "status": VersionStatus.CURRENT,
             "latest": "1.2.17-10",
-            "ref": "https://security-tracker.debian.org/tracker/source-package/apache-log4j1.2",
+            "reference": "https://security-tracker.debian.org/tracker/source-package/apache-log4j1.2",
         }
-        self.assertEqual(result["version_status"], expected_version_result)
+        self.assertEqual(result.version_status.model_dump(), expected_version_result)
 
 
 if __name__ == "__main__":

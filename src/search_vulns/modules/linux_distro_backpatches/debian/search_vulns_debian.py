@@ -1,10 +1,17 @@
 import re
 from threading import Lock
+from typing import Dict, Tuple
 
 from cpe_search.cpe_search import MATCH_CPE_23_RE
 from univers.versions import DebianVersion
 
-from search_vulns.cpe_version import CPEVersion
+from search_vulns.models.SearchVulnsResult import (
+    ProductIDsResult,
+    SearchVulnsResult,
+    VersionStatus,
+    VersionStatusResult,
+)
+from search_vulns.models.Vulnerability import DataSource, Match, MatchReason
 from search_vulns.modules.linux_distro_backpatches.debian.build import (
     REQUIRES_BUILT_MODULES,
     full_update,
@@ -16,6 +23,7 @@ from search_vulns.modules.linux_distro_backpatches.utils import (
 )
 from search_vulns.modules.utils import get_cpe_product_prefix, split_cpe
 
+VULN_REF_BASE_URL = "https://security-tracker.debian.org/tracker/"
 CODENAME_RELEASE_NUMBER_MAP = {}
 RELEASE_NUMBER_CODENAME_MAP = {}
 LATEST_DEBIAN_RELEASE = -1
@@ -48,7 +56,9 @@ def init(vulndb_cursor):
     INIT_LOCK.release()
 
 
-def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, config):
+def preprocess_query(
+    query, product_ids: ProductIDsResult, vuln_db_cursor, product_db_cursor, config
+) -> Tuple[str, Dict]:
 
     # setup Debian codes names and release numbers
     init(vuln_db_cursor)
@@ -162,12 +172,12 @@ def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, conf
         if extra_params:
             return query_no_debian, extra_params
 
-    elif query or (product_ids and product_ids.get("cpe", [])):
+    elif query or product_ids.cpe:
         cpes, new_cpes = [], []
         if query:
             cpes.append(query)
-        if product_ids and product_ids.get("cpe", []):
-            cpes += product_ids["cpe"]
+        if product_ids:
+            cpes += product_ids.cpe
 
         for cpe in cpes:
             cpe_parts = split_cpe(cpe)
@@ -226,8 +236,8 @@ def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, conf
         if query:
             query = new_cpes[0]
             del new_cpes[0]
-        if new_cpes:
-            product_ids["cpe"] = new_cpes
+        if new_cpes and product_ids:
+            product_ids.cpe = new_cpes
 
         return query, extra_params
 
@@ -235,7 +245,7 @@ def preprocess_query(query, product_ids, vuln_db_cursor, product_db_cursor, conf
 
 
 def postprocess_results(
-    results, query, vuln_db_cursor, product_db_cursor, config, extra_params
+    results: SearchVulnsResult, query, vuln_db_cursor, product_db_cursor, config, extra_params
 ):
     # only run if query was a Debian query
     if "debian_orig_query" not in extra_params:
@@ -258,8 +268,8 @@ def postprocess_results(
     debian_subversion = extra_params.get("debian_subversion", "")
 
     # go over vulnerabilities and mark them as patched if that is the case
-    if "product_ids" in results and results["product_ids"].get("cpe", []):
-        for vuln_id, vuln in results["vulns"].items():
+    if results.product_ids.cpe:
+        for vuln_id, vuln in results.vulns.items():
             cve_ids = set()
             if vuln_id.startswith("CVE-"):
                 cve_ids.add(vuln_id)
@@ -270,7 +280,7 @@ def postprocess_results(
             is_patched = False
             for cve_id in cve_ids:
                 # assumption: all product IDs have same version
-                for cpe in results["product_ids"]["cpe"]:
+                for cpe in results.product_ids.cpe:
                     cpe_prefix = get_cpe_product_prefix(cpe)
                     vuln_db_cursor.execute(
                         "SELECT debian_release_version, version_start, version_fixed FROM debian_backpatches JOIN debian_pkg_cpes ON debian_backpatches.cpe_prefix_id = debian_pkg_cpes.cpe_prefix_id WHERE cve_id = ? AND cpe_prefix = ?",
@@ -284,6 +294,9 @@ def postprocess_results(
                         for bp in backpatch_info
                         if not bp[1] or debian_subversion.startswith(bp[1])
                     ]
+
+                    if backpatch_info:
+                        vuln.add_tracked_by(DataSource.DEBIAN, VULN_REF_BASE_URL + cve_id)
 
                     # sort by debian release
                     backpatch_info.sort(key=lambda bp_info: float(bp_info[0]))
@@ -311,13 +324,16 @@ def postprocess_results(
                     break
 
             if is_patched:
-                vuln.set_patched("debian")
+                vuln.set_patched(DataSource.DEBIAN)
+            else:
+                vuln_match = Match(match_reason=MatchReason.VERSION_IN_RANGE, confidence=1)
+                vuln.add_matched_by(DataSource.DEBIAN, vuln_match)
 
     # modify product IDs and potential product IDs in result to use original Debian information
     for pid_type in ("product_ids", "pot_product_ids"):
-        if pid_type in results and "cpe" in results[pid_type]:
+        if getattr(results, pid_type).cpe:
             new_cpes = []
-            for cpe_info in results[pid_type]["cpe"]:
+            for cpe_info in getattr(results, pid_type).cpe:
                 # insert debian patch version into CPE
                 if isinstance(cpe_info, tuple):
                     cpe, match_score = cpe_info
@@ -350,15 +366,15 @@ def postprocess_results(
                     new_cpes.append(new_cpe)
 
             if new_cpes:
-                results[pid_type]["cpe"] = new_cpes
+                getattr(results, pid_type).cpe = new_cpes
 
     # remove outdated and EoL information
-    if "version_status" in results:
-        del results["version_status"]
+    if results.version_status.status:
+        results.version_status.status = VersionStatusResult()
 
     # set outdated information
-    if vuln_db_cursor and "product_ids" in results and results["product_ids"].get("cpe", []):
-        cpes = results["product_ids"].get("cpe", [])
+    if vuln_db_cursor and results.product_ids.cpe:
+        cpes = results.product_ids.cpe
         cpes_prefixes = [get_cpe_product_prefix(cpe) for cpe in cpes]
 
         # query information
@@ -399,22 +415,21 @@ def postprocess_results(
             eol_ref = f"https://security-tracker.debian.org/tracker/source-package/{pkg}{version_start}"
             version_status = None
             if not debian_subversion:
-                version_status = {
-                    "status": "N/A",
-                    "latest": str(latest_version),
-                    "ref": eol_ref,
-                }
+                version_status = VersionStatusResult(
+                    status=VersionStatus.N_A, latest=str(latest_version), reference=eol_ref
+                )
             else:
                 if DebianVersion(debian_subversion) < DebianVersion(latest_version):
-                    version_status = {
-                        "status": "outdated",
-                        "latest": str(latest_version),
-                        "ref": eol_ref,
-                    }
+                    version_status = VersionStatusResult(
+                        status=VersionStatus.OUTDATED,
+                        latest=str(latest_version),
+                        reference=eol_ref,
+                    )
                 else:
-                    version_status = {
-                        "status": "current",
-                        "latest": str(latest_version),
-                        "ref": eol_ref,
-                    }
-            results["version_status"] = version_status
+                    version_status = VersionStatusResult(
+                        status=VersionStatus.CURRENT,
+                        latest=str(latest_version),
+                        reference=eol_ref,
+                    )
+
+            results.version_status = version_status

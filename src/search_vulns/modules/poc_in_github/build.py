@@ -1,12 +1,14 @@
-import csv
 import logging
 import os
 import shutil
-import subprocess
 
 import ujson
 
-from search_vulns.modules.utils import SQLITE_TIMEOUT, get_database_connection
+from search_vulns.modules.utils import (
+    SQLITE_TIMEOUT,
+    download_github_folder,
+    get_database_connection,
+)
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 POC_IN_GITHUB_REPO = "https://github.com/nomi-sec/PoC-in-GitHub.git"
@@ -22,12 +24,9 @@ def cleanup():
 def full_update(productdb_config, vulndb_config, module_config, stop_update):
     # download PoC in GitHub Repo
     cleanup()
-    return_code = subprocess.call(
-        "git clone --depth 1 %s '%s'" % (POC_IN_GITHUB_REPO, POC_IN_GITHUB_DIR),
-        shell=True,
-        stderr=subprocess.DEVNULL,
-    )
-    if return_code != 0:
+    success = download_github_folder(POC_IN_GITHUB_REPO, "/", POC_IN_GITHUB_DIR)
+
+    if not success:
         LOGGER.error("Could not download latest resources of PoC-in-GitHub")
         cleanup()
         return False, []

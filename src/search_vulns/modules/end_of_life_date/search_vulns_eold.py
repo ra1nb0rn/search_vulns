@@ -1,6 +1,11 @@
 import datetime
 
 from search_vulns.cpe_version import CPEVersion
+from search_vulns.models.SearchVulnsResult import (
+    SearchVulnsResult,
+    VersionStatus,
+    VersionStatusResult,
+)
 from search_vulns.modules.end_of_life_date.build import (
     REQUIRES_BUILT_MODULES,
     full_update,
@@ -8,20 +13,20 @@ from search_vulns.modules.end_of_life_date.build import (
 
 
 def postprocess_results(
-    results, query, vuln_db_cursor, product_db_cursor, config, extra_params
+    results: SearchVulnsResult, query, vuln_db_cursor, product_db_cursor, config, extra_params
 ):
     """Retrieve information from endoflife.date whether the provided version is eol or outdated"""
 
-    product_ids = results.get("product_ids")
+    product_ids = results.product_ids
     if not product_ids or not vuln_db_cursor:
         return
     # skip if another module has already provided a version status
     if "version_status" in results:
         return
 
-    version_status = {}
-    for cpe in product_ids["cpe"]:
-        if version_status:
+    version_status = VersionStatusResult()
+    for cpe in product_ids.cpe:
+        if version_status.status:
             break
         cpe_split = cpe.split(":")
         cpe_prefix, query_version = ":".join(cpe_split[:5]) + ":", CPEVersion(cpe_split[5])
@@ -64,62 +69,58 @@ def postprocess_results(
             eol_ref = "https://endoflife.date/" + release[0]
             if not query_version:  # no query version --> return general information
                 if is_queried_release_eol:
-                    version_status = {
-                        "status": "eol",
-                        "latest": str(release_end),
-                        "ref": eol_ref,
-                    }
+                    version_status = VersionStatusResult(
+                        status=VersionStatus.EOL, latest=str(release_end), reference=eol_ref
+                    )
                 else:
-                    version_status = {
-                        "status": "N/A",
-                        "latest": str(release_end),
-                        "ref": eol_ref,
-                    }
+                    version_status = VersionStatusResult(
+                        status=VersionStatus.N_A, latest=str(release_end), reference=eol_ref
+                    )
             else:  # determine version status of query version
                 if (
                     str(release_end).startswith(str(release_start))
                     and query_version < release_start
                 ):
                     if is_lower_release_eol:
-                        version_status = {
-                            "status": "eol",
-                            "latest": latest_release,
-                            "ref": eol_ref,
-                        }
+                        version_status = VersionStatusResult(
+                            status=VersionStatus.EOL,
+                            latest=str(latest_release),
+                            reference=eol_ref,
+                        )
                     else:
                         if queried_release_branch_idx + 1 < len(eol_releases):
                             release_end = CPEVersion(eol_releases[i + 1][2])
-                        version_status = {
-                            "status": "current",
-                            "latest": str(release_end),
-                            "ref": eol_ref,
-                        }
+                        version_status = VersionStatusResult(
+                            status=VersionStatus.CURRENT,
+                            latest=str(release_end),
+                            reference=eol_ref,
+                        )
                 else:
                     if query_version >= release_end:
                         if is_queried_release_eol:
-                            version_status = {
-                                "status": "eol",
-                                "latest": latest_release,
-                                "ref": eol_ref,
-                            }
+                            version_status = VersionStatusResult(
+                                status=VersionStatus.EOL,
+                                latest=str(latest_release),
+                                reference=eol_ref,
+                            )
                         else:
-                            version_status = {
-                                "status": "current",
-                                "latest": str(release_end),
-                                "ref": eol_ref,
-                            }
+                            version_status = VersionStatusResult(
+                                status=VersionStatus.CURRENT,
+                                latest=str(release_end),
+                                reference=eol_ref,
+                            )
                     elif query_version < release_end:
                         if is_queried_release_eol:
-                            version_status = {
-                                "status": "eol",
-                                "latest": latest_release,
-                                "ref": eol_ref,
-                            }
+                            version_status = VersionStatusResult(
+                                status=VersionStatus.EOL,
+                                latest=str(latest_release),
+                                reference=eol_ref,
+                            )
                         else:
-                            version_status = {
-                                "status": "outdated",
-                                "latest": str(release_end),
-                                "ref": eol_ref,
-                            }
+                            version_status = VersionStatusResult(
+                                status=VersionStatus.OUTDATED,
+                                latest=str(release_end),
+                                reference=eol_ref,
+                            )
 
-    results["version_status"] = version_status
+    results.version_status = version_status
