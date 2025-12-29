@@ -34,6 +34,10 @@
     color: oklch(var(--color-expl));
 }
 
+.bg-exploited {
+    background-color: oklch(var(--color-expl)) / 0.15;
+}
+
 .vuln-flag-icon {
     font-size: 0.95rem;
 }

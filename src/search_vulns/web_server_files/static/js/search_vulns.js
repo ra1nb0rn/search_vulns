@@ -137,7 +137,7 @@ function createVulnTableRowHtml(idx, vuln) {
     var exploits, cvss, cvss_vector, cvss_version, cvss_badge_css, epss, epss_badge_css, exploit_url_show;
     var vuln_id_ref_map = vuln.aliases;
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
-    var backgroundColorClass = "";
+    var backgroundColorClass = "", vuln_icons_html="";
 
     if (selectedColumns.length < 1)
         return '';
@@ -168,32 +168,16 @@ function createVulnTableRowHtml(idx, vuln) {
     if (selectedColumns.includes('cve')) {
         vuln_row_html += `<td class="text-nowrap whitespace-nowrap pr-2 relative">` + vuln_id_html;
         if (vuln.match_reason == "general_product_uncertain")
-            vuln_flag_html += `<br><center><span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects the queried software in general and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
-        if (vuln.match_reason == "single_higher_version") {
-            if (!vuln_flag_html)
-                vuln_flag_html += `<br><center><span class="vuln-flag-icon" `;
-            else
-                vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
-            vuln_flag_html += `data-tooltip-target="tooltip-single-${idx}" data-tooltip-placement="bottom"><i class="fas fa-info-circle text-warning"></i></span><div id="tooltip-single-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects only a single higher version of the product and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
-        }
-
-        if (vuln.cisa_known_exploited) {
-            if (!vuln_flag_html)
-                vuln_flag_html += `<br><center><span class="vuln-flag-icon" `;
-            else
-                vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
-            vuln_flag_html += `data-tooltip-target="tooltip-exploit-${idx}" data-tooltip-placement="bottom"><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${vuln["id"]}&field_date_added_wrapper=all&sort_by=field_date_added&items_per_page=20" target="_blank"><i class="fa-solid fa-skull text-exploited"></i></a></span><div id="tooltip-exploit-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability has been exploited in the wild according to CISA.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
-        }
-        if (vuln.reported_patched_by.length > 0) {
-            if (!vuln_flag_html)
-                vuln_flag_html += `<br><center><span class="vuln-flag-icon" `;
-            else
-                vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
-            vuln_flag_html += `data-tooltip-target="tooltip-patched-${idx}" data-tooltip-placement="bottom"><i class="fa-solid fa-shield text-info"></i></span><div id="tooltip-patched-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability was reported (back)patched for the queried version and environment.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
-        }
+            vuln_flag_html += `<span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-warning/15 text-warning"><i class="fa-solid fa-asterisk text-xs"></i></span></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects the queried software in general and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+        if (vuln.match_reason == "single_higher_version")
+            vuln_flag_html += `<span class="vuln-flag-icon" data-tooltip-target="tooltip-single-${idx}" data-tooltip-placement="bottom"><span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-warning/15 text-warning"><i class="fa-solid fa-arrow-up text-xs"></i></span></span><div id="tooltip-single-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects only a single higher version of the product and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+        if (vuln.cisa_kev)
+            vuln_flag_html += `<span class="vuln-flag-icon" data-tooltip-target="tooltip-exploit-${idx}" data-tooltip-placement="bottom"><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${vuln["id"]}&field_date_added_wrapper=all&sort_by=field_date_added&items_per_page=20" target="_blank"><span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-exploited text-exploited"><i class="fa-solid fa-skull text-xs text-exploited"></i></i></a></span><div id="tooltip-exploit-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability has been exploited in the wild according to CISA.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+        if (vuln.reported_patched_by.length > 0)
+            vuln_flag_html += `<span class="vuln-flag-icon" data-tooltip-target="tooltip-patched-${idx}" data-tooltip-placement="bottom"><span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-info/15 text-info"><i class="fa-solid fa-shield text-xs"></i></span><div id="tooltip-patched-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability was reported (back)patched for the queried version and environment.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
 
         if (vuln_flag_html)
-            vuln_flag_html += '</center>';
+            vuln_flag_html = `<div class="flex mt-1 w-full gap-2 justify-center">${vuln_flag_html}</div>`;
 
         vuln_row_html += vuln_flag_html + "</td>";
     }
