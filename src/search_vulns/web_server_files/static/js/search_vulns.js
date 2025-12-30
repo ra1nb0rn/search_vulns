@@ -198,7 +198,7 @@ function createVulnTableRowHtml(idx, vuln) {
                 vuln_flag_html += `<br><center><span class="vuln-flag-icon" `;
             else
                 vuln_flag_html += '<span class="ml-2 vuln-flag-icon" ';
-            vuln_flag_html += `data-tooltip-target="tooltip-patched-${idx}" data-tooltip-placement="bottom"><i class="fa-solid fa-shield text-info"></i></span><div id="tooltip-patched-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability was reported (back)patched for the queried version and environment.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+            vuln_flag_html += `data-tooltip-target="tooltip-patched-${idx}" data-tooltip-placement="bottom"><a href="${vuln.tracked_by[vuln.reported_patched_by[0]]}"><i class="fa-solid fa-shield text-info"></i></a></span><div id="tooltip-patched-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability was reported (back)patched for the queried version and environment.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
         }
 
         if (vuln_flag_html)
