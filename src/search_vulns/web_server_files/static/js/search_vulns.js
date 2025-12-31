@@ -137,18 +137,20 @@ function createVulnTableRowHtml(idx, vuln) {
     var exploits, cvss, cvss_vector, cvss_version, cvss_badge_css, epss, epss_badge_css, exploit_url_show;
     var vuln_id_ref_map = vuln.aliases;
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
-    var backgroundColorClass = "", vuln_icons_html="";
+    var trackCount, vulnConfidence, source_badge_color = "", source_badge_icon = "", source_ref_icon = "";
+    var badge_text_style = "", backgroundColorClass = "";
 
     if (selectedColumns.length < 1)
         return '';
 
+    // set up references
     for (const vuln_id in vuln_id_ref_map) {
         if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
             continue
-        vuln_id_html += `<a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a><br>`;
+        vuln_id_html += `<div class="w-full mb-0.3"><a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a></div>`;
     }
-    vuln_id_html = vuln_id_html.slice(0, -4);  // strip trailing "<br>"
 
+    // set up row highlighting
     if (vuln.match_reason == "general_product_uncertain" || vuln.match_reason == "single_higher_version" || vuln.match_reason == "n_a") {
         vuln_style_class += "uncertain-vuln text-base-content/75";
         backgroundColorClass = "bg-warning/15";
@@ -164,22 +166,89 @@ function createVulnTableRowHtml(idx, vuln) {
     vuln_style_class += " " + backgroundColorClass;
 
     vuln_row_html += `<tr class="${vuln_style_class} border-none">`;
-
     if (selectedColumns.includes('cve')) {
-        vuln_row_html += `<td class="text-nowrap whitespace-nowrap pr-2 relative">` + vuln_id_html;
-        if (vuln.match_reason == "general_product_uncertain")
+        vuln_row_html += `<td class="text-nowrap whitespace-nowrap relative pr-1 source-badge-cell align-top">` + vuln_id_html;
+
+        // set up icons
+        if (vuln.match_reason == "general_product_uncertain") {
             vuln_flag_html += `<span class="vuln-flag-icon" data-tooltip-target="tooltip-general-${idx}" data-tooltip-placement="bottom"><span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-warning/15 text-warning"><i class="fa-solid fa-asterisk text-xs"></i></span></span><div id="tooltip-general-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects the queried software in general and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
-        if (vuln.match_reason == "single_higher_version")
+            source_badge_color = "warning";
+        }
+        if (vuln.match_reason == "single_higher_version") {
             vuln_flag_html += `<span class="vuln-flag-icon" data-tooltip-target="tooltip-single-${idx}" data-tooltip-placement="bottom"><span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-warning/15 text-warning"><i class="fa-solid fa-arrow-up text-xs"></i></span></span><div id="tooltip-single-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability affects only a single higher version of the product and could be a false positive.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+            source_badge_color = "warning";
+        }
         if (vuln.cisa_kev)
             vuln_flag_html += `<span class="vuln-flag-icon" data-tooltip-target="tooltip-exploit-${idx}" data-tooltip-placement="bottom"><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${vuln["id"]}&field_date_added_wrapper=all&sort_by=field_date_added&items_per_page=20" target="_blank"><span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-exploited text-exploited"><i class="fa-solid fa-skull text-xs text-exploited"></i></i></a></span><div id="tooltip-exploit-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability has been exploited in the wild according to CISA.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
-        if (vuln.reported_patched_by.length > 0)
+        if (vuln.reported_patched_by.length > 0) {
             vuln_flag_html += `<span class="vuln-flag-icon" data-tooltip-target="tooltip-patched-${idx}" data-tooltip-placement="bottom"><span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-info/15 text-info"><i class="fa-solid fa-shield text-xs"></i></span><div id="tooltip-patched-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability was reported (back)patched for the queried version and environment.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
+            source_badge_color = "info";
+            source_badge_icon = "fa-solid fa-shield";
+            badge_text_style = "text-base-content/30 group-hover:text-info-content/30";
+        }
 
         if (vuln_flag_html)
-            vuln_flag_html = `<div class="flex mt-1 w-full gap-2 justify-center">${vuln_flag_html}</div>`;
+            vuln_flag_html = `<div class="mt-1 w-full flex flex-row gap-1 justify-center">${vuln_flag_html}</div>`;
+        vuln_row_html += vuln_flag_html;
 
-        vuln_row_html += vuln_flag_html + "</td>";
+        // set up badge with tracking references
+        trackCount = Object.keys(vuln.tracked_by).length;
+        if (vuln.match_reason == 'vuln_id')
+            vulnConfidence = trackCount
+        else
+            vulnConfidence = Object.values(vuln.matched_by).reduce((sum, vuln_match) => sum + (vuln_match.confidence || 0), 0);
+
+        if (vulnConfidence / trackCount < 0.3)
+            source_badge_color = "error";  // overwrite warning colors from hints above
+        else if (source_badge_color.length < 1) {
+            if (vulnConfidence / trackCount >= 0.8)
+                source_badge_color = "success";
+            else
+                source_badge_color = "warning";
+        }
+
+        if (source_badge_icon.length < 1)
+            source_badge_icon = "fa-solid fa-crosshairs";
+
+        var source_badge_html = `
+        <div class="w-full text-center absolute bottom-1 text-center source-badge-div">
+            <div class="dropdown dropdown-center dropdown-right dropdown-hover">
+                <span
+                    class="group badge source-badge px-2 py-2.2 mr-0.5 border-1 bg-base-200 border-${source_badge_color} hover:text-${source_badge_color}-content hover:bg-${source_badge_color} hover:border-base-300 hover:border-1 cursor-default text-sm text-${source_badge_color}">
+                    <i class="${source_badge_icon}"></i><span class="${badge_text_style}">${vulnConfidence}<span class="text-xs">&nbsp;/&nbsp;</span>${trackCount}</span>
+                </span>
+                <div tabindex="0" class="dropdown-content z-[1] shadow-2xl bg-base-200 rounded-box w-fit px-3 py-2 border border-5 border-base-300 space-y-1">
+        `;
+
+        Object.keys(vuln.tracked_by).sort().forEach(source => {
+            source_ref_icon = ""
+            if (vuln.match_reason == "vuln_id")
+                source_ref_icon = '<i class="fa-regular fa-circle-check text-success text-lg"></i>';
+            else if (source in vuln.matched_by) {
+                if (vuln.matched_by[source].match_reason == "general_product_uncertain" ||
+                    vuln.matched_by[source].match_reason == "single_higher_version") {
+                    source_ref_icon = '<i class="fa-regular fa-circle-check text-warning text-lg"></i>';
+                }
+                else
+                    source_ref_icon = '<i class="fa-regular fa-circle-check text-success text-lg"></i>';
+            }
+            else if (vuln.reported_patched_by.includes(source))
+                source_ref_icon = '<i class="fa-solid fa-shield text-info text-lg"></i>';
+            else
+                source_ref_icon = '<i class="fa-regular fa-circle-xmark text-error text-lg"></i>';
+            source_badge_html += `
+                <div class="flex items-center gap-3 w-full whitespace-nowrap">
+                    ${source_ref_icon}
+                    <span>
+                        <a class="link link-primary" href="${vuln.tracked_by[source]}" target="_blank">${vuln.tracked_by[source]}</a>
+                    </span>
+                </div>
+            `;
+        });
+
+        source_badge_html += `</div></div></div>`;
+        vuln_row_html += source_badge_html;
+        vuln_row_html += "</div></td>";
     }
 
     if (selectedColumns.includes('cvss')) {
@@ -258,6 +327,32 @@ function createVulnTableRowHtml(idx, vuln) {
     return vuln_row_html;
 }
 
+function resizeSearchVulnsTable() {
+    const vulnsTables = document.querySelectorAll(".sv-vuln-table-zebra");
+    if (vulnsTables) {
+        vulnsTables.forEach(vulnTable => {
+            vulnTable.querySelectorAll(".source-badge-cell").forEach(td => {
+                let totalContentHeight = 0;
+                const children = Array.from(td.children);
+                children.forEach(el => {
+                    const style = getComputedStyle(el);
+                    const marginTop = parseFloat(style.marginTop);
+                    const marginBottom = parseFloat(style.marginBottom);
+                    const childSum = el.offsetHeight + marginTop + marginBottom;
+                    totalContentHeight += childSum;
+                });
+
+                const padding =
+                    parseFloat(getComputedStyle(td).paddingTop) +
+                    parseFloat(getComputedStyle(td).paddingBottom);
+                const badgeHeight = td.querySelector(".source-badge").offsetHeight;
+                td.style.height = (totalContentHeight + padding + badgeHeight * 0.18) + "px";
+            });
+            vulnTable.classList.remove("invisible");
+        });
+    }
+}
+
 function renderSearchResults(reloadFilterDropdown) {
     var sortIconVulnId = iconUnsorted, sortFunctionVulnId = "reorderVulns(0, false)";
     var sortIconCVSS = iconUnsorted, sortFunctionCVSS = "reorderVulns(1, false)";
@@ -313,7 +408,7 @@ function renderSearchResults(reloadFilterDropdown) {
         return false;
     }
     
-    vulns_html = '<table class="table table-mdsm sv-vuln-table-zebra table-rounded table-auto">';
+    vulns_html = '<table class="table table-mdsm sv-vuln-table-zebra table-rounded table-auto invisible">';
     vulns_html += '<thead>';
     vulns_html += '<tr>'
     if (selectedColumns.includes('cve')) {
@@ -359,8 +454,13 @@ function renderSearchResults(reloadFilterDropdown) {
         filter_vulns_html += `<div class="form-control filter-vulns ${margin_html}"><label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm"><span class="label-text text-nowrap whitespace-nowrap text-base-content flex-1 min-w-0 text-left">${vulns[i]["id"]}</span><input type="checkbox" class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeFilterVulns()" ${checked_html} /></label></div>`;
     }
     vulns_html += "</tbody></table>";
-    if (has_vulns)
+    if (has_vulns) {
         $("#vulns").html(vulns_html);
+        // wait for next animation frame and the resize table with the dynamic source badge
+        requestAnimationFrame(() => {
+            resizeSearchVulnsTable();
+        });
+    }
 
     if (reloadFilterDropdown)
         $('#filterVulnsDropdown').html(filter_vulns_html);  // set Vuln filter HTML
@@ -1355,6 +1455,8 @@ queryInput.on('keydown', function (event) {
 });
 
 // focus on query input field at the beginning
-window.onload = function () {
+window.addEventListener("load", function () {
     queryInput.focus();
-}
+});
+// resize vuln table on screen resize
+window.addEventListener("resize", resizeSearchVulnsTable);

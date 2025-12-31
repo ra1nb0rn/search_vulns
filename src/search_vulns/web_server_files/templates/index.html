@@ -29,7 +29,8 @@
                 class="dropdown-content z-[1] p-2 shadow-2xl bg-base-200 rounded-box w-70 mt-2 p-3 border border-5 border-base-300">
                 <div class="form-control">
                     <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Ignore general vulns &nbsp;
+                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Ignore general vulns
+                            &nbsp;
                             <div class="tooltip"
                                 data-tip="Some vulnerabilities in the used data set do not contain information about the affected version. These are often False Positives and showing them can be disabled here.">
                                 <i class="fas fa-info-circle text-content"></i>
@@ -41,18 +42,21 @@
                 </div>
                 <div class="form-control mt-3">
                     <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Only EDB exploits &nbsp;<div
-                                class="tooltip"
+                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Only EDB exploits
+                            &nbsp;
+                            <div class="tooltip"
                                 data-tip="Only show references to exploits from the official Exploit-DB. Exploit code from the EDB is usually advanced and readily usable.">
                                 <i class="fas fa-info-circle text-content"></i>
-                            </div></span>
+                            </div>
+                        </span>
                         <input id="onlyEdbExploitsConfig" type="checkbox"
                             class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeSearchConfig(this)" />
                     </label>
                 </div>
                 <div class="form-control mt-3">
                     <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Show single version vulns
+                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Show single version
+                            vulns
                             &nbsp;
                             <div class="tooltip"
                                 data-tip="Some vulnerabilities only seem to affect a specific version of a product. This could be an error in the data set and returning vulnerabilities for lower versions can be enabled here.">
@@ -65,9 +69,9 @@
                 </div>
                 <div class="form-control mt-3">
                     <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Show GHSA vulns &nbsp;<span
-                                class="text-warning">beta <i class="fa-solid fa-flask"></i></i></i></span> &nbsp;<div
-                                class="tooltip tooltip-bottom"
+                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Show GHSA vulns
+                            &nbsp;<span class="text-warning">beta <i class="fa-solid fa-flask"></i></i></i></span>
+                            &nbsp;<div class="tooltip tooltip-bottom"
                                 data-tip="Show results of the GitHub Security Avisory Database. This may show non-CVE vulnerabilities and highlight discrepancies between the GHSA and the NVD.">
                                 <i class="fas fa-info-circle text-content"></i>
                             </div></span>
@@ -77,19 +81,22 @@
                 </div>
                 <div class="form-control mt-3">
                     <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Show Patched &nbsp;<span
-                                class="text-warning">beta <i class="fa-solid fa-flask"></i></i></i></span> &nbsp;<div
-                                class="tooltip tooltip-bottom"
+                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Show Patched
+                            &nbsp;<span class="text-warning">beta <i class="fa-solid fa-flask"></i></i></i></span>
+                            &nbsp;
+                            <div class="tooltip tooltip-bottom"
                                 data-tip="Show vulnerabilities considered (back)patched when additional environment information is provided.">
                                 <i class="fas fa-info-circle text-content"></i>
-                            </div></span>
+                            </div>
+                        </span>
                         <input id="showPatchedVulnsConfig" type="checkbox"
                             class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeSearchConfig(this)" />
                     </label>
                 </div>
                 <div class="form-control mt-3">
                     <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Display table filtering
+                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Display table
+                            filtering
                             &nbsp;
                             <div class="tooltip tooltip-bottom"
                                 data-tip="Choose whether the filtering of vulnerabilities and table columns should be displayed or only affect the export.">
