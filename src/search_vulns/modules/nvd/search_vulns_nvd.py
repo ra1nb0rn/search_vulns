@@ -179,7 +179,9 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
             count = vuln_db_cursor.fetchone()
             if count and int(count[0]) > 0:
                 # add track reference
-                vuln.add_tracked_by(DataSource.NVD, VULN_TRACK_BASE_URL + vuln_id)
+                vuln.add_tracked_by(
+                    DataSource.NVD, VULN_TRACK_BASE_URL + next(iter(vuln_cve_ids))
+                )
 
 
 def postprocess_results(
