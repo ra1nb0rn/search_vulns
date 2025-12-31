@@ -140,7 +140,7 @@ def postprocess_results(
                 if alias_id.startswith("CVE-"):
                     cve_ids.add(alias_id)
 
-            is_patched = False
+            is_patched, is_tracked_by = False, False
             for cve_id in cve_ids:
                 # assumption: all product IDs have same version
                 for cpe in results.product_ids.cpe:
@@ -160,6 +160,7 @@ def postprocess_results(
 
                     if backpatch_info:
                         vuln.add_tracked_by(DataSource.REDHAT, VULN_REF_BASE_URL + cve_id)
+                        is_tracked_by = True
 
                     # sort by redhat release
                     backpatch_info.sort(key=lambda bp_info: float(bp_info[0]))
@@ -195,7 +196,7 @@ def postprocess_results(
 
             if is_patched:
                 vuln.set_patched(DataSource.REDHAT)
-            else:
+            elif is_tracked_by:
                 vuln_match = Match(match_reason=MatchReason.VERSION_IN_RANGE, confidence=1)
                 vuln.add_matched_by(DataSource.REDHAT, vuln_match)
 
