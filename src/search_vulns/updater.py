@@ -142,7 +142,7 @@ def is_version_outdated():
 
 
 def insert_update_timestamp_into_vulndb(config):
-    """Insert the current time as last update timestamp into vulndb."""
+    """Insert the current time as last update timestamp into vulndb"""
 
     db_config = config["DATABASE_CONNECTION"]
     db_config["NAME"] = config["VULN_DATABASE"]["NAME"]
