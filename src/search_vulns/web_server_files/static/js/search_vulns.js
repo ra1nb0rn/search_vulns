@@ -66,40 +66,40 @@ function getCurrentVulnsSorted() {
     else if (curSortColIdx == 1) {  // CVSS
         if (curSortColAsc) {
             return vulns.sort(function (vuln1, vuln2) {
-                if (!vuln1.severity.hasOwnProperty("cvss"))
+                if (!vuln1.severity.hasOwnProperty("CVSS"))
                     return -1;
-                if (!vuln2.severity.hasOwnProperty("cvss"))
+                if (!vuln2.severity.hasOwnProperty("CVSS"))
                     return 1;
-                return parseFloat(vuln1.severity.cvss.score) - parseFloat(vuln2.severity.cvss.score);
+                return parseFloat(vuln1.severity.CVSS.score) - parseFloat(vuln2.severity.CVSS.score);
             });
         }
         else {
             return vulns.sort(function (vuln1, vuln2) {
-                if (!vuln1.severity.hasOwnProperty("cvss"))
+                if (!vuln1.severity.hasOwnProperty("CVSS"))
                     return 1;
-                if (!vuln2.severity.hasOwnProperty("cvss"))
+                if (!vuln2.severity.hasOwnProperty("CVSS"))
                     return -1;
-                return parseFloat(vuln2.severity.cvss.score) - parseFloat(vuln1.severity.cvss.score);
+                return parseFloat(vuln2.severity.CVSS.score) - parseFloat(vuln1.severity.CVSS.score);
             });
         }
     }
     else if (curSortColIdx == 2) {  // EPSS
         if (curSortColAsc) {
             return vulns.sort(function (vuln1, vuln2) {
-                if (!vuln1.severity.hasOwnProperty("epss"))
+                if (!vuln1.severity.hasOwnProperty("EPSS"))
                     return -1;
-                if (!vuln2.severity.hasOwnProperty("epss"))
+                if (!vuln2.severity.hasOwnProperty("EPSS"))
                     return 1;
-                return parseFloat(vuln1.severity.epss.score) - parseFloat(vuln2.severity.epss.score);
+                return parseFloat(vuln1.severity.EPSS.score) - parseFloat(vuln2.severity.EPSS.score);
             });
         }
         else {
             return vulns.sort(function (vuln1, vuln2) {
-                if (!vuln1.severity.hasOwnProperty("epss"))
+                if (!vuln1.severity.hasOwnProperty("EPSS"))
                     return 1;
-                if (!vuln2.severity.hasOwnProperty("epss"))
+                if (!vuln2.severity.hasOwnProperty("EPSS"))
                     return -1;
-                return parseFloat(vuln2.severity.epss.score) - parseFloat(vuln1.severity.epss.score);
+                return parseFloat(vuln2.severity.EPSS.score) - parseFloat(vuln1.severity.EPSS.score);
             });
         }
     }
@@ -267,13 +267,13 @@ function createVulnTableRowHtml(idx, vuln) {
         cvss= "N/A";
         cvss_badge_css = "";
 
-        if (vuln.severity.hasOwnProperty("cvss")) {
-            cvss_vector = vuln.severity.cvss.vector;
-            cvss_version = vuln.severity.cvss.version;
+        if (vuln.severity.hasOwnProperty("CVSS")) {
+            cvss_vector = vuln.severity.CVSS.vector;
+            cvss_version = vuln.severity.CVSS.version;
             if (cvss_vector && !cvss_vector.startsWith('CVSS'))
                 cvss_vector = "CVSS:2.0/" + cvss_vector;
 
-            cvss = parseFloat(vuln.severity.cvss.score);
+            cvss = parseFloat(vuln.severity.CVSS.score);
             if (cvss >= 9.0)
                 cvss_badge_css = "badge-critical";
             else if (cvss < 9.0 && cvss >= 7.0)
@@ -294,8 +294,8 @@ function createVulnTableRowHtml(idx, vuln) {
         epss = "";
         epss_badge_css = "";
 
-        if (vuln.severity.hasOwnProperty("epss")) {
-            epss = parseFloat(vuln.severity.epss.score);
+        if (vuln.severity.hasOwnProperty("EPSS")) {
+            epss = parseFloat(vuln.severity.EPSS.score);
             // set custom criticality thresholds
             if (epss >= 0.8)
                 epss_badge_css = "badge-critical";
@@ -581,17 +581,17 @@ function createVulnsMarkDownTable() {
             vulns_md += "|";
         }
         if (selectedColumns.length < 1 || selectedColumns.includes("cvss")) {
-            if (vulns[i].severity.hasOwnProperty("cvss")) {
-                cvss_score = vulns[i].severity.cvss.score;
-                cvss_version = vulns[i].severity.cvss.version;
+            if (vulns[i].severity.hasOwnProperty("CVSS")) {
+                cvss_score = vulns[i].severity.CVSS.score;
+                cvss_version = vulns[i].severity.CVSS.version;
                 vulns_md += `${cvss_score}&nbsp;(v${cvss_version})|`;
             }
             else
                 vulns_md += `N/A|`;
         }
         if (selectedColumns.length < 1 || selectedColumns.includes("epss")) {
-            if (vulns[i].severity.hasOwnProperty("epss")) {
-                vulns_md += `${vulns[i].severity.epss.score}|`;
+            if (vulns[i].severity.hasOwnProperty("EPSS")) {
+                vulns_md += `${vulns[i].severity.EPSS.score}|`;
             }
             else
                 vulns_md += `N/A|`;
@@ -721,17 +721,17 @@ function createVulnsCSV() {
             vulns_csv += ','
         }
         if (selectedColumns.length < 1 || selectedColumns.includes("cvss")) {
-            if (vulns[i].severity.hasOwnProperty("cvss")) {
-                cvss_score = vulns[i].severity.cvss.score;
-                cvss_version = vulns[i].severity.cvss.version;
+            if (vulns[i].severity.hasOwnProperty("CVSS")) {
+                cvss_score = vulns[i].severity.CVSS.score;
+                cvss_version = vulns[i].severity.CVSS.version;
                 vulns_csv += `${escapeCSV(cvss_score + ' (v' + cvss_version + ')')},`;
             }
             else
                 vulns_csv += `,`;
         }
         if (selectedColumns.length < 1 || selectedColumns.includes("epss")) {
-            if (vulns[i].severity.hasOwnProperty("epss")) {
-                vulns_csv += `${escapeCSV(vulns[i].severity.epss.score)},`;
+            if (vulns[i].severity.hasOwnProperty("EPSS")) {
+                vulns_csv += `${escapeCSV(vulns[i].severity.EPSS.score)},`;
             }
             else
                 vulns_csv += `,`;
@@ -849,16 +849,16 @@ function searchVulns(query, url_query, recaptcha_response) {
                     curEOLData = {'query': query, 'version_status': search_results.version_status};
                     if (search_results.version_status) {
                         if (search_results.version_status.status == 'EOL') {
-                            search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is end of life. The latest version is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
+                            search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is end of life. The latest version is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.reference)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
                         }
                         else if (search_results.version_status.status == 'OUTDATED') {
-                            search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is out of date. The latest version is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
+                            search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is out of date. The latest version is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.reference)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
                         }
                         else if (search_results.version_status.status == 'CURRENT') {
-                            search_display_html += `<div class="row mt-1 mb-3 text-success text-smxs font-light">${htmlEntities(query)} is up to date (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle"><i class="fa-brands fa-markdown" onclick="copyToClipboardEOLProof(this)"></i></button></span></div>`;
+                            search_display_html += `<div class="row mt-1 mb-3 text-success text-smxs font-light">${htmlEntities(query)} is up to date (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.reference)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle"><i class="fa-brands fa-markdown" onclick="copyToClipboardEOLProof(this)"></i></button></span></div>`;
                         }
                         else if (search_results.version_status.status == 'N/A') {
-                            search_display_html += `<div class="row mt-1 mb-3 text-base-content text-smxs font-light">The latest version of ${htmlEntities(query)} is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.ref)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
+                            search_display_html += `<div class="row mt-1 mb-3 text-base-content text-smxs font-light">The latest version of ${htmlEntities(query)} is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.reference)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
                         }
                     }
                 }
@@ -894,11 +894,9 @@ function searchVulns(query, url_query, recaptcha_response) {
                 $('#vulns').html(noVulnsFoundHtml);
 
             $("#related-queries-display").html(related_queries_html);
-            $("#buttonSearchVulns").removeClass("btn-disabled");
             $("#buttonFilterVulns").removeClass("btn-disabled");
             $("#buttonManageColumns").removeClass("btn-disabled");
             $("#buttonExportResults").removeClass("btn-disabled");
-            $("#buttonSearchVulns").html('<i class="fa-solid fa-magnifying-glass"></i><span class="max-md:hidden">Search Vulns</span>');
             currentlySearchingVulns = false;
         },
         error: function (jXHR, textStatus, errorThrown) {
@@ -915,11 +913,9 @@ function searchVulns(query, url_query, recaptcha_response) {
 
             $("#vulns").html(`<h5 class="text-error w-full text-center">${errorMsg}</h5>`);
 
-            $("#buttonSearchVulns").removeClass("btn-disabled");
             $("#buttonFilterVulns").removeClass("btn-disabled");
             $("#buttonManageColumns").removeClass("btn-disabled");
             $("#buttonExportResults").removeClass("btn-disabled");
-            $("#buttonSearchVulns").html('<i class="fa-solid fa-magnifying-glass"></i> Search Vulns');
             currentlySearchingVulns = false;
         }
     });
@@ -932,7 +928,7 @@ function searchVulnsAction(actionElement) {
     if (query === undefined)
         query = '';
 
-    if (actionElement.id.startsWith('product-id-suggestion')) {
+    if (actionElement != undefined && actionElement.id.startsWith('product-id-suggestion')) {
         queryEnc = encodeURIComponent($(actionElement).html());
         isGoodProductID = false;
     }
@@ -955,8 +951,6 @@ function searchVulnsAction(actionElement) {
     isGoodProductID = true;  // reset for subsequent query that wasn't initiated via URL
 
     history.pushState({}, null, new_url);  // update URL
-    $("#buttonSearchVulns").html('<span class="loading loading-spinner"></span><span class="max-md:hidden">Searching</span>');
-    $("#buttonSearchVulns").addClass("btn-disabled");
     $("#buttonFilterVulns").addClass("btn-disabled");
     $("#buttonManageColumns").addClass("btn-disabled");
     $("#buttonExportResults").addClass("btn-disabled");
@@ -967,7 +961,7 @@ function searchVulnsAction(actionElement) {
 
     $("#search-display").html("");
     $("#related-queries-display").html("");
-    $("#vulns").html('<div class="row mt-3 justify-content-center align-items-center"><h5 class="spinner-border text-primary" style="width: 3rem; height: 3rem"></h5></div>');
+    $("#vulns").html('<div class="text-lg flex items-center justify-center">Searching for vulnerabilities<span class="loading loading-spinner text-accent ml-3"></span></div>');
     curSortColIdx = 1;
     curSortColAsc = false;
     curVulnData = {};
@@ -998,16 +992,16 @@ function copyToClipboardEOLProof(clickedButton) {
     var markdownProof = '';
     if (curEOLData.version_status) {
         if (curEOLData.version_status.status == 'eol') {
-            markdownProof = `${htmlEntities(curEOLData.query)} is end of life. The latest version is ${htmlEntities(curEOLData.version_status.latest)} (see [here](${htmlEntities(curEOLData.version_status.ref)})).`;
+            markdownProof = `${htmlEntities(curEOLData.query)} is end of life. The latest version is ${htmlEntities(curEOLData.version_status.latest)} (see [here](${htmlEntities(curEOLData.version_status.reference)})).`;
         }
         else if (curEOLData.version_status.status == 'outdated') {
-            markdownProof = `${htmlEntities(curEOLData.query)} is out of date. The latest version is ${htmlEntities(curEOLData.version_status.latest)} (see [here](${htmlEntities(curEOLData.version_status.ref)})).`;
+            markdownProof = `${htmlEntities(curEOLData.query)} is out of date. The latest version is ${htmlEntities(curEOLData.version_status.latest)} (see [here](${htmlEntities(curEOLData.version_status.reference)})).`;
         }
         else if (curEOLData.version_status.status == 'current') {
-            markdownProof = `${htmlEntities(curEOLData.query)} is up to date (see [here](${htmlEntities(curEOLData.version_status.ref)})).`;
+            markdownProof = `${htmlEntities(curEOLData.query)} is up to date (see [here](${htmlEntities(curEOLData.version_status.reference)})).`;
         }
         else if (curEOLData.version_status.status == 'N/A') {
-            markdownProof = `The latest version of ${htmlEntities(curEOLData.query)} is ${htmlEntities(curEOLData.version_status.latest)} (see [here](${htmlEntities(curEOLData.version_status.ref)})).`;
+            markdownProof = `The latest version of ${htmlEntities(curEOLData.query)} is ${htmlEntities(curEOLData.version_status.latest)} (see [here](${htmlEntities(curEOLData.version_status.reference)})).`;
         }
     }
     navigator.clipboard.writeText(markdownProof);
@@ -1231,7 +1225,7 @@ function initQuery() {
             isGoodProductID = false;
 
         if (init_query !== null)
-            $("#buttonSearchVulns").click();
+            searchVulnsAction();
     }
 }
 
@@ -1308,7 +1302,6 @@ function retrieveProductIDSuggestions(url_query, recaptcha_response) {
             setTimeout(function () {
                 suggestedQueriesJustOpened = false;
             }, 400);
-            $("#buttonSearchVulns").removeClass("btn-disabled");
         },
         error: function (jXHR, textStatus, errorThrown) {
             var errorMsg;
@@ -1325,17 +1318,14 @@ function retrieveProductIDSuggestions(url_query, recaptcha_response) {
             else {
                 $('#productIDSuggestions').html('<span class="text-error">' + htmlEntities(errorMsg) + '</span>');
             }
-
-            $("#buttonSearchVulns").removeClass("btn-disabled");
         }
     });
 }
 
 function doneTypingQuery () {
     // user paused or finished typing query --> retrieve and show product ID suggestions
-    $('#productIDSuggestions').html('<div class="loading loading-spinner"></div>');
+    $('#productIDSuggestions').html('Searching for products and IDs<div class="loading loading-spinner ml-2"></div>');
     $('#productIDSuggestions').removeClass('hidden');
-    $("#buttonSearchVulns").addClass("btn-disabled");
 
     var query = $('#query').val();
     if (query === undefined)
@@ -1344,7 +1334,6 @@ function doneTypingQuery () {
     // no product ID suggestions for vuln IDs search
     if (query.trim().startsWith('CVE') || query.trim().startsWith('GHSA')){
         $('#productIDSuggestions').html('');
-        $("#buttonSearchVulns").removeClass("btn-disabled");
         return;
     }
 
@@ -1390,15 +1379,15 @@ function ensureSuggestionVisible(suggestionElement) {
 $("#query").keypress(function (event) {
     var keycode = (event.keyCode ? event.keyCode : event.which);
     if (keycode == "13") {
-        if (!$("#productIDSuggestions").hasClass("hidden") || !$("#buttonSearchVulns").hasClass("btn-disabled")) {
+        if (!$("#productIDSuggestions").hasClass("hidden")) {
             var highlightedProductIDSuggestion = null;
-            if ($("#productIDSuggestions").find('ul') != null) {
+            if ($("#productIDSuggestions").find('ul').length > 0) {
                 highlightedProductIDSuggestion = $("#productIDSuggestions").find('.my-menu-item-hover');
+                if (!highlightedProductIDSuggestion || curSelectedProductIDSuggestion == -1)
+                    searchVulnsAction();
+                else
+                    document.getElementById('product-id-suggestion-' + curSelectedProductIDSuggestion).click();
             }
-            if (!highlightedProductIDSuggestion || curSelectedProductIDSuggestion == -1)
-                $("#buttonSearchVulns").click();
-            else
-                document.getElementById('product-id-suggestion-' + curSelectedProductIDSuggestion).click();
         }
     }
 });

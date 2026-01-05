@@ -45,6 +45,7 @@
     --radius-md: 0.375rem;
     --radius-lg: 0.5rem;
     --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
     --default-transition-duration: 150ms;
     --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     --default-font-family: var(--font-sans);
@@ -2589,6 +2590,9 @@
   .ml-2 {
     margin-left: calc(var(--spacing) * 2);
   }
+  .ml-3 {
+    margin-left: calc(var(--spacing) * 3);
+  }
   .ml-6 {
     margin-left: calc(var(--spacing) * 6);
   }
@@ -3304,6 +3308,9 @@
       }
     }
   }
+  .text-accent {
+    color: var(--color-accent);
+  }
   .text-base-content {
     color: var(--color-base-content);
   }
@@ -3333,9 +3340,6 @@
   }
   .text-info {
     color: var(--color-info);
-  }
-  .text-primary {
-    color: var(--color-primary);
   }
   .text-success {
     color: var(--color-success);
@@ -3659,14 +3663,14 @@
       display: none;
     }
   }
-  .max-md\:w-fit {
-    @media (width < 48rem) {
-      width: fit-content;
-    }
-  }
   .sm\:mr-1 {
     @media (width >= 40rem) {
       margin-right: calc(var(--spacing) * 1);
+    }
+  }
+  .sm\:mr-2 {
+    @media (width >= 40rem) {
+      margin-right: calc(var(--spacing) * 2);
     }
   }
   .sm\:ml-1 {
@@ -3699,9 +3703,9 @@
       margin-right: calc(var(--spacing) * 2);
     }
   }
-  .md\:mr-4 {
+  .md\:mr-3 {
     @media (width >= 48rem) {
-      margin-right: calc(var(--spacing) * 4);
+      margin-right: calc(var(--spacing) * 3);
     }
   }
   .md\:flex {
@@ -3712,11 +3716,6 @@
   .md\:hidden {
     @media (width >= 48rem) {
       display: none;
-    }
-  }
-  .md\:w-40 {
-    @media (width >= 48rem) {
-      width: calc(var(--spacing) * 40);
     }
   }
   .md\:max-w-8xl {
@@ -3750,11 +3749,6 @@
       transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
     }
   }
-  .lg\:mr-5 {
-    @media (width >= 64rem) {
-      margin-right: calc(var(--spacing) * 5);
-    }
-  }
   .lg\:max-w-6\.5xl {
     @media (width >= 64rem) {
       max-width: var(--spacing-6_5xl);
@@ -3773,16 +3767,6 @@
   .lg\:min-w-36 {
     @media (width >= 64rem) {
       min-width: calc(var(--spacing) * 36);
-    }
-  }
-  .xl\:mr-6 {
-    @media (width >= 80rem) {
-      margin-right: calc(var(--spacing) * 6);
-    }
-  }
-  .\32 xl\:ml-2 {
-    @media (width >= 96rem) {
-      margin-left: calc(var(--spacing) * 2);
     }
   }
   .\32 xl\:max-w-8xl {
