@@ -125,9 +125,9 @@ class PotProductIDsResult(BaseModel):
 
 
 class VersionStatus(str, Enum):
-    EOL = "eol"
-    CURRENT = "current"
-    OUTDATED = "outdated"
+    EOL = "EOL"
+    CURRENT = "CURRENT"
+    OUTDATED = "OUTDATED"
     N_A = "N/A"
 
 

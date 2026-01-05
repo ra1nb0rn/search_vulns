@@ -4,6 +4,7 @@ import unittest
 
 from search_vulns.core import search_vulns
 from search_vulns.models.Vulnerability import DataSource
+from search_vulns.models.Severity import SeverityType
 
 
 class TestSearches(unittest.TestCase):
@@ -82,15 +83,15 @@ class TestSearches(unittest.TestCase):
                     vuln.serialize_published(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
-                if vuln.severity.get("cvss"):
+                if SeverityType.CVSS in vuln.severity:
                     self.assertEqual(
-                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                        vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                        vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                        vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
@@ -151,15 +152,15 @@ class TestSearches(unittest.TestCase):
                     vuln.serialize_published(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
-                if vuln.severity.get("cvss"):
+                if SeverityType.CVSS in vuln.severity:
                     self.assertEqual(
-                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                        vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                        vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                        vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
@@ -258,15 +259,15 @@ class TestSearches(unittest.TestCase):
                     vuln.serialize_published(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
-                if vuln.severity.get("cvss"):
+                if SeverityType.CVSS in vuln.severity:
                     self.assertEqual(
-                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                        vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                        vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                        vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
@@ -316,15 +317,15 @@ class TestSearches(unittest.TestCase):
                     vuln.serialize_published(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
-                if vuln.severity.get("cvss"):
+                if SeverityType.CVSS in vuln.severity:
                     self.assertEqual(
-                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                        vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                        vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                        vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
@@ -386,15 +387,15 @@ class TestSearches(unittest.TestCase):
                     vuln.serialize_published(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
-                if vuln.severity.get("cvss"):
+                if SeverityType.CVSS in vuln.severity:
                     self.assertEqual(
-                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                        vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                        vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                        vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
@@ -674,15 +675,15 @@ class TestSearches(unittest.TestCase):
                     vuln.serialize_published(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
-                if vuln.severity.get("cvss"):
+                if SeverityType.CVSS in vuln.severity:
                     self.assertEqual(
-                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                        vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                        vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                        vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
@@ -838,15 +839,15 @@ class TestSearches(unittest.TestCase):
                     vuln.serialize_published(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
-                if vuln.severity.get("cvss"):
+                if SeverityType.CVSS in vuln.severity:
                     self.assertEqual(
-                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                        vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                        vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                        vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
@@ -898,15 +899,15 @@ class TestSearches(unittest.TestCase):
                     vuln.serialize_published(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
-                if vuln.severity.get("cvss"):
+                if SeverityType.CVSS in vuln.severity:
                     self.assertEqual(
-                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                        vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                        vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                        vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
@@ -965,15 +966,15 @@ class TestSearches(unittest.TestCase):
                     vuln.serialize_published(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
-                if vuln.severity.get("cvss"):
+                if SeverityType.CVSS in vuln.severity:
                     self.assertEqual(
-                        vuln.severity["cvss"].version, expected_vulns[vuln_id]["cvss_ver"]
+                        vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].score, expected_vulns[vuln_id]["cvss"]
+                        vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
                     )
                     self.assertEqual(
-                        vuln.severity["cvss"].vector, expected_vulns[vuln_id]["cvss_vec"]
+                        vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")

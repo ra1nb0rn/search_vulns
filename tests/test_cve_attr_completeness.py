@@ -4,6 +4,7 @@ import unittest
 
 from search_vulns.core import search_vulns
 from search_vulns.models.Vulnerability import DataSource
+from search_vulns.models.Severity import SeverityType
 
 
 class TestSearches(unittest.TestCase):
@@ -170,11 +171,11 @@ class TestSearches(unittest.TestCase):
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
-                    vuln.severity["cvss"].version, expected_attrs[vuln_id]["cvss_ver"]
+                    vuln.severity[SeverityType.CVSS].version, expected_attrs[vuln_id]["cvss_ver"]
                 )
-                self.assertEqual(vuln.severity["cvss"].score, expected_attrs[vuln_id]["cvss"])
+                self.assertEqual(vuln.severity[SeverityType.CVSS].score, expected_attrs[vuln_id]["cvss"])
                 self.assertEqual(
-                    vuln.severity["cvss"].vector, expected_attrs[vuln_id]["cvss_vec"]
+                    vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
                     vuln.cisa_kev,
@@ -883,11 +884,11 @@ class TestSearches(unittest.TestCase):
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
-                    vuln.severity["cvss"].version, expected_attrs[vuln_id]["cvss_ver"]
+                    vuln.severity[SeverityType.CVSS].version, expected_attrs[vuln_id]["cvss_ver"]
                 )
-                self.assertEqual(vuln.severity["cvss"].score, expected_attrs[vuln_id]["cvss"])
+                self.assertEqual(vuln.severity[SeverityType.CVSS].score, expected_attrs[vuln_id]["cvss"])
                 self.assertEqual(
-                    vuln.severity["cvss"].vector, expected_attrs[vuln_id]["cvss_vec"]
+                    vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
                     vuln.cisa_kev,
@@ -988,11 +989,11 @@ class TestSearches(unittest.TestCase):
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
-                    vuln.severity["cvss"].version, expected_attrs[vuln_id]["cvss_ver"]
+                    vuln.severity[SeverityType.CVSS].version, expected_attrs[vuln_id]["cvss_ver"]
                 )
-                self.assertEqual(vuln.severity["cvss"].score, expected_attrs[vuln_id]["cvss"])
+                self.assertEqual(vuln.severity[SeverityType.CVSS].score, expected_attrs[vuln_id]["cvss"])
                 self.assertEqual(
-                    vuln.severity["cvss"].vector, expected_attrs[vuln_id]["cvss_vec"]
+                    vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
                     vuln.cisa_kev,
@@ -1119,11 +1120,11 @@ class TestSearches(unittest.TestCase):
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
-                    vuln.severity["cvss"].version, expected_attrs[vuln_id]["cvss_ver"]
+                    vuln.severity[SeverityType.CVSS].version, expected_attrs[vuln_id]["cvss_ver"]
                 )
-                self.assertEqual(vuln.severity["cvss"].score, expected_attrs[vuln_id]["cvss"])
+                self.assertEqual(vuln.severity[SeverityType.CVSS].score, expected_attrs[vuln_id]["cvss"])
                 self.assertEqual(
-                    vuln.severity["cvss"].vector, expected_attrs[vuln_id]["cvss_vec"]
+                    vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
                     vuln.cisa_kev,
@@ -1425,11 +1426,11 @@ class TestSearches(unittest.TestCase):
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
-                    vuln.severity["cvss"].version, expected_attrs[vuln_id]["cvss_ver"]
+                    vuln.severity[SeverityType.CVSS].version, expected_attrs[vuln_id]["cvss_ver"]
                 )
-                self.assertEqual(vuln.severity["cvss"].score, expected_attrs[vuln_id]["cvss"])
+                self.assertEqual(vuln.severity[SeverityType.CVSS].score, expected_attrs[vuln_id]["cvss"])
                 self.assertEqual(
-                    vuln.severity["cvss"].vector, expected_attrs[vuln_id]["cvss_vec"]
+                    vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
                     vuln.cisa_kev,
@@ -1486,11 +1487,11 @@ class TestSearches(unittest.TestCase):
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
-                    vuln.severity["cvss"].version, expected_attrs[vuln_id]["cvss_ver"]
+                    vuln.severity[SeverityType.CVSS].version, expected_attrs[vuln_id]["cvss_ver"]
                 )
-                self.assertEqual(vuln.severity["cvss"].score, expected_attrs[vuln_id]["cvss"])
+                self.assertEqual(vuln.severity[SeverityType.CVSS].score, expected_attrs[vuln_id]["cvss"])
                 self.assertEqual(
-                    vuln.severity["cvss"].vector, expected_attrs[vuln_id]["cvss_vec"]
+                    vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
                     vuln.cisa_kev,

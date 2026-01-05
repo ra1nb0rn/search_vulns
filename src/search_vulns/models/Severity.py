@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class SeverityType(str, Enum):
-    CVSS = "cvss"
-    EPSS = "epss"
+    CVSS = "CVSS"
+    EPSS = "EPSS"
 
     def __str__(self) -> str:
         return str(self.value)
