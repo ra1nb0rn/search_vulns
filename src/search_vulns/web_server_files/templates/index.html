@@ -26,7 +26,7 @@
             <div tabindex="0" role="button" class="btn btn-neutral rounded-btn text-base"><i
                     class="fa-solid fa-gear"></i></div>
             <div tabindex="0"
-                class="dropdown-content z-[1] p-2 shadow-2xl bg-base-200 rounded-box w-70 mt-2 p-3 border border-5 border-base-300">
+                class="dropdown-content z-[1] shadow-2xl bg-base-200 rounded-box w-70 mt-2 p-3 border border-5 border-base-300">
                 <div class="form-control">
                     <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
                         <span class="label-text text-base-content flex-1 min-w-0 text-left">Ignore general vulns
@@ -105,6 +105,25 @@
                         </span>
                         <input id="showTableFilteringConfig" type="checkbox"
                             class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeSearchConfig(this)" />
+                    </label>
+                </div>
+                <div class="form-control mt-3">
+                    <label class="label cursor-pointer flex items-center min-w-0 text-sm w-full">
+                        <span class="label-text text-base-content text-left mr-2">
+                            Min Match Score
+                            &nbsp;
+                            <div class="tooltip tooltip-bottom">
+                                <div class="tooltip-content">
+                                    Choose the ratio of how many data sources should report the software as affected out of all data sources tracking the vulnerability (<i class="fa-solid fa-crosshairs"></i>).
+                                </div>
+                                <i class="fas fa-info-circle text-content"></i>
+                            </div>
+                        </span>
+                        <div class="">
+                            <input id="minMatchScoreSlider" type="range" min="0" max="1" value="1" class="range range-xs" step="0.01" oninput="onMinMatchScoreSliderInput(this)" onchange="onMinMatchScoreSliderChange(this)"/>
+                            <div id="minMatchScoreLabel" class="text-xs py-1">
+                            </div>
+                        </div>
                     </label>
                 </div>
             </div>

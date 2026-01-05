@@ -11,8 +11,9 @@ var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
 var exportIcon = `<i class="fa-solid fa-clipboard"></i>`, exportIconSuccess = `<i class="fa-solid fa-clipboard-check text-success"></i>`;
 var curSortColIdx = 1, curSortColAsc = false, searchIgnoreNextKeyup = false;
 var doneTypingQueryTimer, queryInput = $('#query'), doneTypingQueryInterval = 600;  //time in ms
-let arrowKeyUpDownInterval = null, arrowKeyUpDownIntervalTime = 100, arrowKeyUpDownHoldDetectionTimer = null, arrowKeyUpDownHoldDetectionTime = 150;
+var arrowKeyUpDownInterval = null, arrowKeyUpDownIntervalTime = 100, arrowKeyUpDownHoldDetectionTimer = null, arrowKeyUpDownHoldDetectionTime = 150;
 var curSelectedProductIDSuggestion = -1, suggestedQueriesJustOpened = false;
+var minMatchScore = 0;
 
 
 function htmlEntities(text) {
@@ -130,6 +131,16 @@ function getCurrentVulnsSorted() {
             });
         }
     }
+}
+
+function computeVulnMatchScore(vuln) {
+    var vulnConfidence;
+    var trackCount = Object.keys(vuln.tracked_by).length;
+    if (vuln.match_reason == 'vuln_id')
+        vulnConfidence = trackCount
+    else
+        vulnConfidence = Object.values(vuln.matched_by).reduce((sum, vuln_match) => sum + (vuln_match.confidence || 0), 0);
+    return vulnConfidence / trackCount;
 }
 
 function createVulnTableRowHtml(idx, vuln) {
@@ -440,6 +451,8 @@ function renderSearchResults(reloadFilterDropdown) {
             continue;
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
+        if (computeVulnMatchScore(vulns[i]) < minMatchScore)
+            continue;
 
         has_vulns = true;
         var checked_html = "", margin_html = "";
@@ -492,6 +505,8 @@ function createVulnsMarkDownTable() {
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
+            continue;
+        if (computeVulnMatchScore(vulns[i]) < minMatchScore)
             continue;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
@@ -549,6 +564,8 @@ function createVulnsMarkDownTable() {
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
+            continue;
+        if (computeVulnMatchScore(vulns[i]) < minMatchScore)
             continue;
 
         cur_vuln_has_exploits = false;
@@ -644,6 +661,8 @@ function createVulnsCSV() {
             continue;
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
+        if (computeVulnMatchScore(vulns[i]) < minMatchScore)
+            continue;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
             if (!onlyShowEDBExploits || reduceToEDBUrls(vulns[i].exploits).length > 0) {
@@ -685,6 +704,8 @@ function createVulnsCSV() {
         if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
             continue;
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
+            continue;
+        if (computeVulnMatchScore(vulns[i]) < minMatchScore)
             continue;
 
         if (selectedColumns.length < 1 || selectedColumns.includes('cve')) {
@@ -1116,6 +1137,18 @@ function changeFilterVulns(filterVulnsButton) {
         renderSearchResults();
 }
 
+function onMinMatchScoreSliderInput(slider) {
+    document.getElementById("minMatchScoreLabel").innerText = Number(slider.value).toFixed(2);
+}
+
+function onMinMatchScoreSliderChange(slider) {
+    minMatchScore = Number(slider.value);
+    document.getElementById("minMatchScoreLabel").innerText = minMatchScore.toFixed(2);
+    localStorage.setItem('minMatchScore', minMatchScore);
+    if (!$.isEmptyObject(curVulnData))
+        renderSearchResults();
+}
+
 function setupConfigFromLocalstorage() {
     if (localStorage.getItem('ignoreGeneralProductVulns') === null) {
         localStorage.setItem('ignoreGeneralProductVulns', 'false');
@@ -1135,7 +1168,10 @@ function setupConfigFromLocalstorage() {
     if (localStorage.getItem('showTableFiltering') === null) {
         localStorage.setItem('showTableFiltering', 'true');
     }
-    
+    if (localStorage.getItem('minMatchScore') === null) {
+        localStorage.setItem('minMatchScore', 0);
+    }
+
     if (localStorage.getItem('ignoreGeneralProductVulns') == 'true') {
         ignoreGeneralProductVulns = true;
         document.getElementById("generalVulnsConfig").checked = true;
@@ -1160,7 +1196,11 @@ function setupConfigFromLocalstorage() {
         showTableFiltering = true;
         document.getElementById("showTableFilteringConfig").checked = true;
     }
-    
+    minMatchScore = Number(localStorage.getItem('minMatchScore'));
+    document.getElementById("minMatchScoreSlider").value = minMatchScore;
+    document.getElementById("minMatchScoreLabel").innerText = minMatchScore.toFixed(2);
+
+
     if (localStorage.getItem('vulnTableColumns') === null) {
         localStorage.setItem('vulnTableColumns', '["cve", "cvss", "descr", "expl"]');
     }
