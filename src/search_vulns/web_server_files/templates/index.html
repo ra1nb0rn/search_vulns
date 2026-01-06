@@ -65,7 +65,6 @@
                 <div class="form-control mt-3">
                     <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
                         <span class="label-text text-base-content flex-1 min-w-0 text-left">Show GHSA vulns
-                            &nbsp;<span class="text-warning">beta <i class="fa-solid fa-flask"></i></i></i></span>
                             &nbsp;<div class="tooltip tooltip-bottom"
                                 data-tip="Show results of the GitHub Security Avisory Database. This may show non-CVE vulnerabilities and highlight discrepancies between the GHSA and the NVD.">
                                 <i class="fas fa-info-circle text-content"></i>
@@ -77,7 +76,6 @@
                 <div class="form-control mt-3">
                     <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
                         <span class="label-text text-base-content flex-1 min-w-0 text-left">Show Patched
-                            &nbsp;<span class="text-warning">beta <i class="fa-solid fa-flask"></i></i></i></span>
                             &nbsp;
                             <div class="tooltip tooltip-bottom"
                                 data-tip="Show vulnerabilities considered (back)patched when additional environment information is provided.">
@@ -109,13 +107,17 @@
                             &nbsp;
                             <div class="tooltip tooltip-bottom">
                                 <div class="tooltip-content">
-                                    Choose the ratio of how many data sources should report the software as affected out of all data sources tracking the vulnerability (<i class="fa-solid fa-crosshairs"></i>).
+                                    Choose the ratio of how many data sources should report the software as affected out
+                                    of all data sources tracking the vulnerability (<i
+                                        class="fa-solid fa-crosshairs"></i>).
                                 </div>
                                 <i class="fas fa-info-circle text-content"></i>
                             </div>
                         </span>
                         <div class="">
-                            <input id="minMatchScoreSlider" type="range" min="0" max="1" value="1" class="range range-xs" step="0.01" oninput="onMinMatchScoreSliderInput(this)" onchange="onMinMatchScoreSliderChange(this)"/>
+                            <input id="minMatchScoreSlider" type="range" min="0" max="1" value="1"
+                                class="range range-xs" step="0.01" oninput="onMinMatchScoreSliderInput(this)"
+                                onchange="onMinMatchScoreSliderChange(this)" />
                             <div id="minMatchScoreLabel" class="text-xs py-1">
                             </div>
                         </div>
