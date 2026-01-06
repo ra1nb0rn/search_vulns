@@ -805,7 +805,7 @@ function buildTextualReprFromCPE(cpe) {
 }
 
 
-function searchVulns(query, url_query, recaptcha_response) {
+function searchVulns(query, product_id, url_query, recaptcha_response) {
     var headers = {}
     if (recaptcha_response !== undefined)
         headers = {'Recaptcha-Response': recaptcha_response}
@@ -820,7 +820,7 @@ function searchVulns(query, url_query, recaptcha_response) {
         data: url_query,
         success: function (search_results) {
             var search_display_html = "", related_queries_html = '', queryError = false;
-            var productIDs = search_results.product_ids;
+            var productIDs = search_results.product_ids, productIDIndex = 0;
             productIDs = Object.values(productIDs).flatMap(pids => pids);
 
             if (productIDs.length < 1 && search_results.vulns.length < 1) {
@@ -831,20 +831,25 @@ function searchVulns(query, url_query, recaptcha_response) {
                 if ((productIDs != undefined && productIDs.length != 0) || Object.keys(search_results.vulns).length != 0) {
                     curVulnData = search_results.vulns;
                     search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)}`;
-                    if (productIDs.length > 0 && productIDs[0].length > 0)  // show product ID (when searching for just vuln IDs there is none)
-                        search_display_html += `<span class="nowrap whitespace-nowrap"> (${htmlEntities(productIDs[0])}`;
-                    if (productIDs.length > 1) {  // query has equivalent product IDs
-                        search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div><div class="dropdown-content translate-x-2.5 z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-fit" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent product IDs that were included into your search: <div class="tooltip tooltip-top text-wrap ml-1" data-tip="Sometimes there are multiple IDs for one product, e.g. because of a rebranding."><i class="fas fa-info-circle text-content"></i></div></h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
-                        productIDs.shift();  // remove first element, i.e. the primarily matched product ID
-                        productIDs = productIDs.sort();
-                        productIDs.forEach(function (curProductID) {
-                            search_display_html += `<li class="mt-1">${htmlEntities(curProductID)}</li>`;
-                        });
-                        search_display_html += '</ul></div></div>';
-                    }
+                    // show product ID (when searching for just vuln IDs there is none)
+                    if (productIDs.length > 0 && productIDs[0].length > 0) {
+                        if (product_id != undefined)
+                            productIDIndex = productIDs.indexOf(product_id);
+                        if (productIDIndex < 0)
+                            productIDIndex = 0;
+                        search_display_html += `<span class="nowrap whitespace-nowrap"> (${htmlEntities(productIDs[productIDIndex])}`;
 
-                    if (productIDs.length > 0 && productIDs[0].length > 0)  // if a product ID was shown, add closing parenthesis and <span>
+                        if (productIDs.length > 1) {
+                            search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div><div class="dropdown-content translate-x-2.5 z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-fit" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent product IDs that were included into your search: <div class="tooltip tooltip-top text-wrap ml-1" data-tip="Sometimes there are multiple IDs for one product, e.g. because of a rebranding."><i class="fas fa-info-circle text-content"></i></div></h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
+                            productIDs.splice(productIDIndex, 1);
+                            productIDs = productIDs.sort();
+                            productIDs.forEach(function (curProductID) {
+                                search_display_html += `<li class="mt-1">${htmlEntities(curProductID)}</li>`;
+                            });
+                            search_display_html += '</ul></div></div>';
+                        }
                         search_display_html += `)</span>`;
+                    }
                     search_display_html += `</h5></div></div>`;
                     curEOLData = {'query': query, 'version_status': search_results.version_status};
                     if (search_results.version_status) {
@@ -924,12 +929,13 @@ function searchVulns(query, url_query, recaptcha_response) {
 function searchVulnsAction(actionElement) {
     clearTimeout(doneTypingQueryTimer);
 
-    var query = $('#query').val(), queryEnc;
+    var query = $('#query').val(), queryEnc, productID;
     if (query === undefined)
         query = '';
 
     if (actionElement != undefined && actionElement.id.startsWith('product-id-suggestion')) {
-        queryEnc = encodeURIComponent($(actionElement).html());
+        productID = $(actionElement).html();
+        queryEnc = encodeURIComponent(productID);
         isGoodProductID = false;
     }
     else {
@@ -970,12 +976,12 @@ function searchVulnsAction(actionElement) {
     if (typeof grecaptcha !== 'undefined') {
         grecaptcha.ready(function() {
             grecaptcha.execute().then(function(recaptcha_response) {
-                searchVulns(query, url_query, recaptcha_response);
+                searchVulns(query, productID, url_query, recaptcha_response);
             });
         });
     }
     else {
-        searchVulns(query, url_query);
+        searchVulns(query, productID, url_query);
     }
 }
 
