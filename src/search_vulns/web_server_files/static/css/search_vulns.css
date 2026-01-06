@@ -156,12 +156,6 @@
     }
 }
 
-.source-badge-div {
-    left: 50%;
-    transform: translate(-50%, 0%);
-    z-index: 2;
-}
-
 
 /* Force hover on menu item (copied from DaisyUI menu-focus with higher transparency) */
 .my-menu-item-hover {

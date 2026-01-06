@@ -199,8 +199,7 @@ function createVulnTableRowHtml(idx, vuln) {
         }
 
         if (vuln_flag_html)
-            vuln_flag_html = `<div class="mt-1 w-full flex flex-row gap-1 justify-center">${vuln_flag_html}</div>`;
-        vuln_row_html += vuln_flag_html;
+            vuln_flag_html = `<div class="w-full flex flex-row flex-wrap gap-1 justify-end ml-3">${vuln_flag_html}</div>`;
 
         // set up badge with tracking references
         trackCount = Object.keys(vuln.tracked_by).length;
@@ -221,8 +220,8 @@ function createVulnTableRowHtml(idx, vuln) {
         if (source_badge_icon.length < 1)
             source_badge_icon = "fa-solid fa-crosshairs";
 
-        var source_badge_html = `
-        <div class="w-full text-center absolute bottom-1 text-center source-badge-div">
+        var lastRowHtml = `
+        <div class="w-full absolute bottom-1 source-badge-div flex justify-between items-center inset-x-0 px-2">
             <div class="dropdown dropdown-center dropdown-right dropdown-hover">
                 <span
                     class="group badge source-badge px-2 py-2.2 mr-0.5 border-1 bg-base-200 border-${source_badge_color} hover:text-${source_badge_color}-content hover:bg-${source_badge_color} hover:border-base-300 hover:border-1 cursor-default text-sm text-${source_badge_color}">
@@ -247,7 +246,7 @@ function createVulnTableRowHtml(idx, vuln) {
                 source_ref_icon = '<i class="fa-solid fa-shield text-info text-lg"></i>';
             else
                 source_ref_icon = '<i class="fa-regular fa-circle-xmark text-error text-lg"></i>';
-            source_badge_html += `
+            lastRowHtml += `
                 <div class="flex items-center gap-3 w-full whitespace-nowrap">
                     ${source_ref_icon}
                     <span>
@@ -256,9 +255,9 @@ function createVulnTableRowHtml(idx, vuln) {
                 </div>
             `;
         });
-
-        source_badge_html += `</div></div></div>`;
-        vuln_row_html += source_badge_html;
+        lastRowHtml += `</div></div>`;
+        lastRowHtml += vuln_flag_html;
+        vuln_row_html += lastRowHtml + "</div>";
         vuln_row_html += "</div></td>";
     }
 
@@ -356,7 +355,7 @@ function resizeSearchVulnsTable() {
                 const padding =
                     parseFloat(getComputedStyle(td).paddingTop) +
                     parseFloat(getComputedStyle(td).paddingBottom);
-                const badgeHeight = td.querySelector(".source-badge").offsetHeight;
+                const badgeHeight = td.querySelector(".source-badge-div").offsetHeight;
                 td.style.height = (totalContentHeight + padding + badgeHeight * 0.18) + "px";
             });
             vulnTable.classList.remove("invisible");
