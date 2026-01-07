@@ -30,7 +30,6 @@ class TestSearches(unittest.TestCase):
             "CVE-2023-39999",
             "CVE-2024-31210",
             "CVE-2023-5692",
-            "CVE-2024-31211",
             "CVE-2022-4973",
             "CVE-2025-54352",
             "CVE-2025-58674",

@@ -45,9 +45,12 @@ class TestSearches(unittest.TestCase):
             )
             if SeverityType.CVSS in vuln.severity:
                 self.assertEqual(
-                    vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
+                    vuln.severity[SeverityType.CVSS].version,
+                    expected_vulns[vuln_id]["cvss_ver"],
                 )
-                self.assertEqual(vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"])
+                self.assertEqual(
+                    vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
+                )
                 self.assertEqual(
                     vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                 )
@@ -105,9 +108,12 @@ class TestSearches(unittest.TestCase):
             )
             if SeverityType.CVSS in vuln.severity:
                 self.assertEqual(
-                    vuln.severity[SeverityType.CVSS].version, expected_vulns[vuln_id]["cvss_ver"]
+                    vuln.severity[SeverityType.CVSS].version,
+                    expected_vulns[vuln_id]["cvss_ver"],
                 )
-                self.assertEqual(vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"])
+                self.assertEqual(
+                    vuln.severity[SeverityType.CVSS].score, expected_vulns[vuln_id]["cvss"]
+                )
                 self.assertEqual(
                     vuln.severity[SeverityType.CVSS].vector, expected_vulns[vuln_id]["cvss_vec"]
                 )
