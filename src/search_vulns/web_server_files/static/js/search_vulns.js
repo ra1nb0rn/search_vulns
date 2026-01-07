@@ -17,6 +17,11 @@ var minMatchScore = 0;
 
 
 function htmlEntities(text) {
+    if (text == undefined || text == null || text.length < 1)
+        return "";
+    if (typeof myVar !== "string")
+        text = String(text);
+
     return text.replace(/[\u00A0-\u9999<>\&"']/g, function (c) {
         return '&#' + c.charCodeAt(0) + ';';
     });
@@ -313,12 +318,14 @@ function createVulnTableRowHtml(idx, vuln) {
     }
 
     if (selectedColumns.includes('cwe')) {
-        vuln_row_html += `<td class="text-wrap dont-break-out mx-auto">`;
+        vuln_row_html += `<td class="text-wrap dont-break-out mx-auto text-center">`;
         for (const cwe of vuln.cwe_ids) {
             cwe_html += `<a href="https://cwe.mitre.org/data/definitions/${htmlEntities(cwe.split('-')[1])}.html" class="link link-accent" target="_blank">${htmlEntities(cwe)}</a>, `;
         }
         if (cwe_html.length > 0)
             cwe_html = cwe_html.slice(0, -2);  // remove trailing ", "
+        if (cwe_html.length < 1)
+            cwe_html = "N/A";
         vuln_row_html += cwe_html + "</td>";
     }
 
