@@ -89,12 +89,13 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
     input_file >> vulns_json;
 
     json metrics_entry, references_entry;
-    std::string cve_id, description, published, last_modified, vector_string, severity;
+    std::string cve_id, description, published, last_modified, vector_string, severity, cwe_ids_str;
     std::string cvss_version, ref_url, op;
     std::unordered_map<std::string, int> nvd_exploits_refs;
     std::unordered_map<std::string, std::unordered_set<int>> cveid_exploits_map;
     std::list<std::string> cvss_keys = {"cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2"};
     std::list<std::string> cvss_scorer_types = {"Primary", "Secondary"};
+    std::unordered_set<std::string> cwe_ids;
     std::size_t datetime_dot_pos;
     bool vulnerable, cisa_known_exploited, is_general_cpe;
     double base_score;
@@ -107,6 +108,8 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
         cvss_version = "";
         vector_string = "";
         severity = "";
+        cwe_ids_str = "";
+        cwe_ids.clear();
 
         // skip rejected entries without content
         if ((cve_entry["cve"]["metrics"].empty() &&
@@ -151,6 +154,20 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
                             break;
                         }
                     }
+                }
+            }
+        }
+
+        // retrieve CWE-IDs
+        for (auto &weaknesss : cve_entry["cve"]["weaknesses"]) {
+            std::string_view weakness_str = weaknesss["description"][0]["value"].get_ref<const std::string&>();
+            if (weakness_str.size() >= 4 && weakness_str.compare(0, 4, "CWE-") == 0) {
+                auto [it, inserted] = cwe_ids.emplace(weakness_str);
+                if (inserted) {
+                    if (!cwe_ids_str.empty()) {
+                        cwe_ids_str += ',';
+                    }
+                    cwe_ids_str += *it;
                 }
             }
         }
@@ -204,7 +221,8 @@ int add_to_db(DatabaseWrapper *db, const std::string &filepath) {
         cve_query->bind(6, base_score);
         cve_query->bind(7, vector_string);
         cve_query->bind(8, severity);
-        cve_query->bind(9, cisa_known_exploited);
+        cve_query->bind(9, cwe_ids_str);
+        cve_query->bind(10, cisa_known_exploited);
         cve_query->execute();
 
         // Next, retrieve CPE data and put into DB  

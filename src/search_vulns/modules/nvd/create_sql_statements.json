@@ -1,8 +1,8 @@
 {
     "TABLES": {
         "NVD": {
-            "sqlite": "DROP TABLE IF EXISTS nvd; CREATE TABLE nvd (cve_id VARCHAR(25), description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3), base_score CHAR(4), vector VARCHAR(200), severity VARCHAR(15), cisa_known_exploited BOOL, PRIMARY KEY(cve_id));",
-            "mariadb": "CREATE OR REPLACE TABLE nvd (cve_id VARCHAR(25) CHARACTER SET ascii, description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3) CHARACTER SET ascii, base_score CHAR(4) CHARACTER SET ascii, vector VARCHAR(200) CHARACTER SET ascii, severity VARCHAR(15) CHARACTER SET ascii, cisa_known_exploited BOOL, PRIMARY KEY(cve_id));"
+            "sqlite": "DROP TABLE IF EXISTS nvd; CREATE TABLE nvd (cve_id VARCHAR(25), description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3), base_score CHAR(4), vector VARCHAR(200), severity VARCHAR(15), cwe_ids VARCHAR(100), cisa_known_exploited BOOL, PRIMARY KEY(cve_id));",
+            "mariadb": "CREATE OR REPLACE TABLE nvd (cve_id VARCHAR(25) CHARACTER SET ascii, description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3) CHARACTER SET ascii, base_score CHAR(4) CHARACTER SET ascii, vector VARCHAR(200) CHARACTER SET ascii, severity VARCHAR(15) CHARACTER SET ascii, cwe_ids VARCHAR(100) CHARACTER SET ascii, cisa_known_exploited BOOL, PRIMARY KEY(cve_id));"
         },
         "NVD_CPE": {
             "sqlite": "DROP TABLE IF EXISTS nvd_cpe; CREATE TABLE nvd_cpe (cve_id VARCHAR(25), cpe VARCHAR(255), cpe_version_start VARCHAR(100), is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(100), is_cpe_version_end_including BOOL, PRIMARY KEY(cve_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including));",

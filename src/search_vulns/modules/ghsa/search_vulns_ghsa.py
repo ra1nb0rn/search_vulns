@@ -31,13 +31,13 @@ def get_detailed_vulns(vulns: Dict[str, Vulnerability], vuln_db_cursor):
                 detailed_vulns[vuln_id].match_reason = match_reason
             continue
 
-        query = "SELECT aliases, description, published, last_modified, cvss_version, base_score, vector FROM ghsa WHERE ghsa_id = ?"
+        query = "SELECT aliases, description, published, last_modified, cvss_version, base_score, vector, cwe_ids FROM ghsa WHERE ghsa_id = ?"
         vuln_db_cursor.execute(query, (vuln_id,))
         queried_info = vuln_db_cursor.fetchone()
         if queried_info:
-            aliases, descr, publ, last_mod, cvss_ver, score, vector = queried_info
+            aliases, descr, publ, last_mod, cvss_ver, score, vector, cwe_ids = queried_info
         else:
-            aliases, publ, last_mod, cvss_ver, vector = [], "", "", "", ""
+            aliases, publ, last_mod, cvss_ver, vector, cwe_ids = [], "", "", "", "", ""
             score, descr = "-1.0", "NOT FOUND"
             match_reason = MatchReason.N_A
         if cvss_ver:
@@ -49,6 +49,10 @@ def get_detailed_vulns(vulns: Dict[str, Vulnerability], vuln_db_cursor):
             publ = datetime.strptime(publ, "%Y-%m-%d %H:%M:%S")
         if last_mod and not isinstance(last_mod, datetime):
             last_mod = datetime.strptime(last_mod, "%Y-%m-%d %H:%M:%S")
+        if cwe_ids:
+            cwe_ids = cwe_ids.split(",")
+        else:
+            cwe_ids = []
 
         if aliases:
             if "," in aliases:
@@ -80,6 +84,7 @@ def get_detailed_vulns(vulns: Dict[str, Vulnerability], vuln_db_cursor):
             publ,
             last_mod,
             severity,
+            cwe_ids,
             False,
             [],
         )

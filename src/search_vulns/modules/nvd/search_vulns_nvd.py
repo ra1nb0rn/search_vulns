@@ -32,13 +32,22 @@ def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
                 detailed_vulns[vuln_id].match_reason = match_reason
             continue
 
-        query = "SELECT description, published, last_modified, cvss_version, base_score, vector, cisa_known_exploited FROM nvd WHERE cve_id = ?"
+        query = "SELECT description, published, last_modified, cvss_version, base_score, vector, cwe_ids, cisa_known_exploited FROM nvd WHERE cve_id = ?"
         vuln_db_cursor.execute(query, (vuln_id,))
         queried_info = vuln_db_cursor.fetchone()
         if queried_info:
-            descr, publ, last_mod, cvss_ver, score, vector, cisa_known_exploited = queried_info
+            descr, publ, last_mod, cvss_ver, score, vector, cwe_ids, cisa_known_exploited = (
+                queried_info
+            )
         else:
-            publ, last_mod, cvss_ver, vector, cisa_known_exploited = "", "", "", "", False
+            publ, last_mod, cvss_ver, vector, cwe_ids, cisa_known_exploited = (
+                "",
+                "",
+                "",
+                "",
+                "",
+                False,
+            )
             score, descr = "-1.0", "NOT FOUND"
             match_reason = MatchReason.N_A
         if cvss_ver:
@@ -50,11 +59,16 @@ def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
             publ = datetime.strptime(publ, "%Y-%m-%d %H:%M:%S")
         if last_mod and not isinstance(last_mod, datetime):
             last_mod = datetime.strptime(last_mod, "%Y-%m-%d %H:%M:%S")
+        if cwe_ids:
+            cwe_ids = cwe_ids.split(",")
+        else:
+            cwe_ids = []
 
         if float(score) < 0:
             severity = None
         else:
             severity = SeverityCVSS(score=str(float(score)), version=cvss_ver, vector=vector)
+
         vuln = Vulnerability.from_vuln_match_complete(
             vuln_id,
             match_reason,
@@ -65,6 +79,7 @@ def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
             publ,
             last_mod,
             severity,
+            cwe_ids,
             bool(cisa_known_exploited),
             [],
         )

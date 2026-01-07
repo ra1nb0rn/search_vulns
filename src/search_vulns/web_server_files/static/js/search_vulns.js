@@ -144,7 +144,7 @@ function computeVulnMatchScore(vuln) {
 }
 
 function createVulnTableRowHtml(idx, vuln) {
-    var vuln_row_html = '', vuln_style_class = '', vuln_flag_html = '', vuln_id_html = '';
+    var vuln_row_html = '', vuln_style_class = '', vuln_flag_html = '', vuln_id_html = '', cwe_html = '';
     var exploits, cvss, cvss_vector, cvss_version, cvss_badge_css, epss, epss_badge_css, exploit_url_show;
     var vuln_id_ref_map = vuln.aliases;
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
@@ -307,9 +307,19 @@ function createVulnTableRowHtml(idx, vuln) {
         }
 
         if (epss && epss_badge_css)
-            vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="z-10 badge p-1.5 border-none badge-cvss ${epss_badge_css} text-center ${vuln_style_class}" tabindex="0">${epss}</div></td>`;
+            vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="z-10 badge p-1.5 border-none badge-cvss ${epss_badge_css} text-center ${vuln_style_class}" tabindex="0">${htmlEntities(epss)}</div></td>`;
         else
             vuln_row_html += `<td class="text-nowrap whitespace-nowrap text-center"><div class="z-10 badge p-1.5 border-none badge-cvss badge-na text-center ${vuln_style_class}" tabindex="0">N / A</div></td>`;
+    }
+
+    if (selectedColumns.includes('cwe')) {
+        vuln_row_html += `<td class="text-wrap dont-break-out mx-auto">`;
+        for (const cwe of vuln.cwe_ids) {
+            cwe_html += `<a href="https://cwe.mitre.org/data/definitions/${htmlEntities(cwe.split('-')[1])}.html" class="link link-accent" target="_blank">${htmlEntities(cwe)}</a>, `;
+        }
+        if (cwe_html.length > 0)
+            cwe_html = cwe_html.slice(0, -2);  // remove trailing ", "
+        vuln_row_html += cwe_html + "</td>";
     }
 
     if (selectedColumns.includes('descr')) {
@@ -430,6 +440,9 @@ function renderSearchResults(reloadFilterDropdown) {
     if (selectedColumns.includes('epss')) {
         vulns_html += `<th class="bg-base-300" onclick="${sortFunctionEPSS}" style="white-space: nowrap;">EPSS&nbsp;&nbsp;${sortIconEPSS}</th>`;
     }
+    if (selectedColumns.includes('cwe')) {
+        vulns_html += '<th class="bg-base-300">CWE ID</th>'
+    }
     if (selectedColumns.includes('descr')) {
         vulns_html += '<th class="bg-base-300">Description</th>'
     }
@@ -531,6 +544,10 @@ function createVulnsMarkDownTable() {
                 table_row1 += 'EPSS|';
                 table_row2 += ':---:|';
             }
+            else if (column == 'cwe') {
+                table_row1 += 'CWE ID|';
+                table_row2 += ':---:|';
+            }
             else if (column == 'descr') {
                 table_row1 += 'Description|';
                 table_row2 += ':---|';
@@ -543,6 +560,7 @@ function createVulnsMarkDownTable() {
         vulns_md = table_row1 + '\n' + table_row2 + '\n';
     }
     else {
+        // default case
         if (has_exploits) {
             vulns_md = '|Vuln ID|CVSS|Description|Exploits|\n';
             vulns_md += '|:---:|:---:|:---|:---|\n';
@@ -588,12 +606,15 @@ function createVulnsMarkDownTable() {
             else
                 vulns_md += `N/A|`;
         }
-        if (selectedColumns.length < 1 || selectedColumns.includes("epss")) {
+        if (selectedColumns.length > 0 && selectedColumns.includes("epss")) {
             if (vulns[i].severity.hasOwnProperty("EPSS")) {
                 vulns_md += `${vulns[i].severity.EPSS.score}|`;
             }
             else
                 vulns_md += `N/A|`;
+        }
+        if (selectedColumns.length > 0 && selectedColumns.includes("cwe")) {
+            vulns_md += `${vulns[i].cwe_ids.join(", ")}|`;
         }
         if (selectedColumns.length < 1 || selectedColumns.includes("descr")) {
             var description = htmlEntities(vulns[i]["description"].trim());
@@ -679,6 +700,8 @@ function createVulnsCSV() {
                 vulns_csv += 'CVSS,';
             else if (column == "epss")
                 vulns_csv += 'EPSS,';
+            else if (column == "cwe")
+                vulns_csv += 'CWE ID,';
             else if (column == "descr")
                 vulns_csv += 'Description,';
             else if (column == "expl" && has_exploits)
@@ -687,6 +710,7 @@ function createVulnsCSV() {
         vulns_csv = vulns_csv.slice(0, -1) + '\n';
     }
     else {
+        // default
         if (has_exploits)
             vulns_csv = 'Vuln ID,CVSS,Description,Exploits\n';
         else
@@ -728,12 +752,15 @@ function createVulnsCSV() {
             else
                 vulns_csv += `,`;
         }
-        if (selectedColumns.length < 1 || selectedColumns.includes("epss")) {
+        if (selectedColumns.length > 0 && selectedColumns.includes("epss")) {
             if (vulns[i].severity.hasOwnProperty("EPSS")) {
                 vulns_csv += `${escapeCSV(vulns[i].severity.EPSS.score)},`;
             }
             else
                 vulns_csv += `,`;
+        }
+        if (selectedColumns.length > 0 && selectedColumns.includes("cwe")) {
+            vulns_csv += `${escapeCSV(vulns[i].cwe_ids.join(", "))},`;
         }
         if (selectedColumns.length < 1 || selectedColumns.includes('descr'))
             vulns_csv += `${escapeCSV(vulns[i]["description"].trim())},`;
@@ -1085,7 +1112,7 @@ function changeColumnConfig(columnElement) {
         allCheckType = false
 
     if (allCheckType != null) {
-        columnCheckboxIDs = ['showColumnVulnId', 'showColumnCVSS', 'showColumnEPSS', 'showColumnDescription', 'showColumnExploits'];
+        columnCheckboxIDs = ['showColumnVulnId', 'showColumnCVSS', 'showColumnEPSS', 'showColumnCWE', 'showColumnDescription', 'showColumnExploits'];
         columnCheckboxIDs.forEach(function(columnCheckboxID) {
             $('#' + columnCheckboxID)[0].checked = allCheckType;
         });
@@ -1097,6 +1124,8 @@ function changeColumnConfig(columnElement) {
         vulnTableColumns.push('cvss');
     if ($('#showColumnEPSS')[0].checked)
         vulnTableColumns.push('epss');
+    if ($('#showColumnCWE')[0].checked)
+        vulnTableColumns.push('cwe');
     if ($('#showColumnDescription')[0].checked)
         vulnTableColumns.push('descr');
     if ($('#showColumnExploits')[0].checked)
@@ -1200,6 +1229,7 @@ function setupConfigFromLocalstorage() {
     document.getElementById("minMatchScoreLabel").innerText = minMatchScore.toFixed(2);
 
 
+    // set default columns
     if (localStorage.getItem('vulnTableColumns') === null) {
         localStorage.setItem('vulnTableColumns', '["cve", "cvss", "descr", "expl"]');
     }
@@ -1211,6 +1241,8 @@ function setupConfigFromLocalstorage() {
         document.getElementById("showColumnCVSS").checked = true;
     if (vulnTableColumns.includes('epss'))
         document.getElementById("showColumnEPSS").checked = true;
+    if (vulnTableColumns.includes('cwe'))
+        document.getElementById("showColumnCWE").checked = true;
     if (vulnTableColumns.includes('descr'))
         document.getElementById("showColumnDescription").checked = true;
     if (vulnTableColumns.includes('expl'))

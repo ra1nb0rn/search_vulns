@@ -270,9 +270,13 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
             published = advisory["published"].replace("T", " ").replace("Z", "")
             last_modified = advisory["modified"].replace("T", " ").replace("Z", "")
 
+            # retrieve CWE IDs
+            cwe_ids = advisory.get("database_specific", {}).get("cwe_ids", [])
+            cwe_ids = ",".join(cwe_ids)
+
             # put new GHSA entry into DB
             vulndb_cursor.execute(
-                "INSERT INTO ghsa VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                "INSERT INTO ghsa VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
                 (
                     ghsa_id,
                     ",".join(advisory["aliases"]),
@@ -283,6 +287,7 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                     cvss_score,
                     cvss_vector,
                     severity,
+                    cwe_ids,
                 ),
             )
 
@@ -484,10 +489,10 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
     vulndb_cursor = vulndb_conn.cursor()
 
     if vulndb_config["TYPE"] == "sqlite":
-        create_ghsa_table_stmt = "DROP TABLE IF EXISTS ghsa; CREATE TABLE ghsa (ghsa_id VARCHAR(20), aliases VARCHAR(100), description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3), base_score CHAR(3), vector VARCHAR(200), severity VARCHAR(15), PRIMARY KEY(ghsa_id));"
+        create_ghsa_table_stmt = "DROP TABLE IF EXISTS ghsa; CREATE TABLE ghsa (ghsa_id VARCHAR(20), aliases VARCHAR(100), description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3), base_score CHAR(3), vector VARCHAR(200), severity VARCHAR(15), cwe_ids VARCHAR(100), PRIMARY KEY(ghsa_id));"
         create_ghsa_cpe_table_stmt = "DROP TABLE IF EXISTS ghsa_cpe; CREATE TABLE ghsa_cpe(ghsa_id VARCHAR(20), cpe VARCHAR(255), cpe_version_start VARCHAR(100), is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(100), is_cpe_version_end_including BOOL, PRIMARY KEY(ghsa_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including));"
     elif vulndb_config["TYPE"] == "mariadb":
-        create_ghsa_table_stmt = "CREATE OR REPLACE TABLE ghsa (ghsa_id VARCHAR(20) CHARACTER SET ascii, aliases VARCHAR(100)  CHARACTER SET ascii, description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3) CHARACTER SET ascii, base_score CHAR(4) CHARACTER SET ascii, vector VARCHAR(200) CHARACTER SET ascii, severity VARCHAR(15) CHARACTER SET ascii, PRIMARY KEY(ghsa_id));"
+        create_ghsa_table_stmt = "CREATE OR REPLACE TABLE ghsa (ghsa_id VARCHAR(20) CHARACTER SET ascii, aliases VARCHAR(100)  CHARACTER SET ascii, description TEXT, published DATETIME, last_modified DATETIME, cvss_version CHAR(3) CHARACTER SET ascii, base_score CHAR(4) CHARACTER SET ascii, vector VARCHAR(200) CHARACTER SET ascii, severity VARCHAR(15) CHARACTER SET ascii, cwe_ids VARCHAR(100) CHARACTER SET ascii, PRIMARY KEY(ghsa_id));"
         create_ghsa_cpe_table_stmt = "CREATE OR REPLACE TABLE ghsa_cpe (ghsa_id VARCHAR(20) CHARACTER SET ascii, cpe VARCHAR(255) CHARACTER SET utf8, cpe_version_start VARCHAR(100)  CHARACTER SET utf8, is_cpe_version_start_including BOOL, cpe_version_end VARCHAR(100)  CHARACTER SET utf8, is_cpe_version_end_including BOOL, PRIMARY KEY(ghsa_id, cpe, cpe_version_start, is_cpe_version_start_including, cpe_version_end, is_cpe_version_end_including), INDEX(cpe) USING BTREE);"
 
     for stmt in create_ghsa_table_stmt.split(";"):
