@@ -135,8 +135,8 @@ The port forwarding is optional, in case you do not intend on using the web serv
 *search_vulns*'s usage information is shown in the following:
 ```
 usage: search_vulns [-h] [-u] [--full-update] [--full-update-module MODULE_ID [MODULE_ID ...]]
-                    [--full-install] [-a] [-f {txt,json}] [-o OUTPUT] [-q QUERY] [-c CONFIG]
-                    [-V] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
+                    [--full-install] [-a] [-f {json,txt}] [-o OUTPUT] [-q QUERY] [-c CONFIG]
+                    [-V] [--list-modules] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
                     [--ignore-general-product-vulns] [--include-single-version-vulns]
                     [--use-created-product-ids] [--include-patched]
 
@@ -152,7 +152,7 @@ options:
   --full-install        Fully install search_vulns, including all dependencies (python
                         packages, system packages etc.)
   -a, --artifacts       Print JSON list of artifacts created during full update
-  -f {txt,json}, --format {txt,json}
+  -f {json,txt}, --format {json,txt}
                         Output format, either 'txt' or 'json' (default: 'txt')
   -o OUTPUT, --output OUTPUT
                         File to write found vulnerabilities to
@@ -162,6 +162,7 @@ options:
   -c CONFIG, --config CONFIG
                         A config file to use (default: config.json)
   -V, --version         Print the version of search_vulns
+  --list-modules        Print all available modules
   --cpe-search-threshold CPE_SEARCH_THRESHOLD
                         Similarity threshold used for retrieving a CPE via the cpe_search tool
   --ignore-general-product-vulns

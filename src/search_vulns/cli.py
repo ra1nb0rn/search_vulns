@@ -10,6 +10,7 @@ from .core import (
     DEFAULT_CONFIG_FILE,
     _load_config,
     check_and_try_sv_rerun_with_created_cpes,
+    get_modules,
     get_version,
     is_fully_installed,
     search_vulns,
@@ -170,6 +171,9 @@ def parse_args():
         "-V", "--version", action="store_true", help="Print the version of search_vulns"
     )
     parser.add_argument(
+        "--list-modules", action="store_true", help="Print all available modules"
+    )
+    parser.add_argument(
         "--cpe-search-threshold",
         type=float,
         default=None,
@@ -204,6 +208,7 @@ def parse_args():
         and not args.full_update_module
         and not args.version
         and not args.full_install
+        and not args.list_modules
     ):
         parser.print_help()
     return args
@@ -238,6 +243,10 @@ def main():
         )
         args.update = True
 
+    if args.list_modules:
+        module_ids = sorted(get_modules())
+        print("\n".join(module_ids))
+        sys.exit(0)
     if args.update == True:
         from .updater import update
 
