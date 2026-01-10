@@ -31,7 +31,16 @@ class TestSearches(unittest.TestCase):
         query = "curl 7.88.1-11+deb12u10"
         result = search_vulns(query=query, include_patched=True)
 
-        expected_open = ["CVE-2025-0725", "CVE-2024-32928", "CVE-2025-10966"]
+        expected_open = [
+            "CVE-2025-0725",
+            "CVE-2024-32928",
+            "CVE-2025-10966",
+            "CVE-2025-15224",
+            "CVE-2025-15079",
+            "CVE-2025-14819",
+            "CVE-2025-14524",
+            "CVE-2025-14017",
+        ]
         expected_backpatched = [
             "CVE-2023-46219",
             "CVE-2023-38039",

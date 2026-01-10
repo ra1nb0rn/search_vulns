@@ -803,6 +803,16 @@ class TestSearches(unittest.TestCase):
                     "GHSA-6q37-7866-h27j": "https://github.com/advisories/GHSA-6q37-7866-h27j",
                 },
             },
+            "GHSA-gv94-wp4h-vv8p": {
+                "published": "2026-01-08 06:31:32",
+                "cvss_ver": "3.1",
+                "cvss": "5.3",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+                "aliases": {
+                    "CVE-2026-0707": "https://nvd.nist.gov/vuln/detail/CVE-2026-0707",
+                    "GHSA-gv94-wp4h-vv8p": "https://github.com/advisories/GHSA-gv94-wp4h-vv8p",
+                },
+            },
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
