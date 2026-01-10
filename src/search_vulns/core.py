@@ -100,46 +100,18 @@ def merge_module_vulns(
             continue
 
         vulns = all_module_vulns[module_id]
-        tracked_alias_map = {}
+        if not vulns:
+            continue
 
         for vuln_id, vuln in vulns.items():
-            tracked_alias = None
-            for alias in vuln.aliases:
-                # check if the id for this vuln is already tracked
-                if alias in merged_vulns:
-                    tracked_alias = alias
+            processed = False
+            for merged_vuln_id, merged_vuln in merged_vulns.items():
+                if vuln.is_same_vulnerability_as(merged_vuln):
+                    merged_vulns[merged_vuln_id].merge_with(vuln)
+                    processed = True
                     break
-                if alias in tracked_alias_map:
-                    tracked_alias = tracked_alias_map[alias]
-                    break
-
-                # otherwise, check directly if the current vulnerability
-                # was already processed via an alias
-                for merged_vuln_id, merged_vuln in merged_vulns.items():
-                    if alias in merged_vuln.aliases:
-                        tracked_alias = merged_vuln_id
-
-            if not tracked_alias:
+            if not processed:
                 merged_vulns[vuln_id] = vuln
-                for alias in vuln.aliases:
-                    if alias not in tracked_alias_map:
-                        tracked_alias_map[alias] = []
-                    tracked_alias_map[alias].append(alias)
-            else:
-                old_vuln_id = merged_vulns[tracked_alias].id
-                merged_vulns[tracked_alias].merge_with(vuln)
-                new_vuln_id = merged_vulns[tracked_alias].id
-
-                # other vulnerability had a higher match_reason and vuln attributes were changed
-                if old_vuln_id != new_vuln_id:
-                    merged_vulns[new_vuln_id] = merged_vulns[old_vuln_id]
-                    del merged_vulns[old_vuln_id]
-                    if old_vuln_id in tracked_alias_map:
-                        tracked_alias_map[new_vuln_id] = tracked_alias_map[old_vuln_id]
-                        del tracked_alias_map[old_vuln_id]
-                    else:
-                        tracked_alias_map[new_vuln_id] = list(merged_vulns[new_vuln_id].aliases)
-                tracked_alias_map[new_vuln_id] = list(merged_vulns[new_vuln_id].aliases)
 
     return merged_vulns
 
