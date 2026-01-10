@@ -10,10 +10,11 @@ import uuid
 
 import markdown
 import requests
+from apiflask import APIBlueprint, APIFlask, abort
 from cpe_search.database_wrapper_functions import (
     get_connection_pools,
 )
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import jsonify, render_template, request, send_from_directory
 
 from .core import (
     PROJECT_DIR,
@@ -23,12 +24,9 @@ from .core import (
     search_product_ids,
 )
 from .core import search_vulns as search_vulns_call
-from .models.SearchVulnsResult import (
-    PotProductIDsResult,
-    ProductIDsResult,
-    SearchVulnsResult,
-)
+from .models.SearchVulnsResult import SearchVulnsResult
 from .modules.utils import get_database_connection
+from .web_server_files.api_models import *
 
 STATIC_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "static"))
 TEMPLATE_FOLDER = os.path.join(PROJECT_DIR, os.path.join("web_server_files", "templates"))
@@ -51,7 +49,28 @@ MD_TO_HTML_TABLE_RE = re.compile(r"(<table[^>]*>.*?<\/table>)", re.DOTALL)
 SEARCH_VULNS_VERSION = get_version()
 
 
-app = Flask(__name__, static_folder=STATIC_FOLDER, template_folder=TEMPLATE_FOLDER)
+app = APIFlask(
+    __name__,
+    title="search_vulns API",
+    version=SearchVulnsResult().schema_version,
+    static_folder=STATIC_FOLDER,
+    template_folder=TEMPLATE_FOLDER,
+    docs_path="/api/docs",
+    spec_path="/api/openapi.json",
+)
+app.security_schemes = {
+    "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "API-Key",
+    }
+}
+api = APIBlueprint(
+    "Public API",
+    __name__,
+    url_prefix="/api",
+)
+web = APIBlueprint("web", __name__, url_prefix="/", enable_openapi=False)
 config = _load_config(CONFIG_FILE)
 RECAPTCHA_DB_CONFIG = config["DATABASE_CONNECTION"]
 RECAPTCHA_DB_CONFIG["NAME"] = config["RECAPTCHA_AND_API"]["DATABASE_NAME"]
@@ -182,23 +201,30 @@ def search_has_valid_auth(request):
     return is_auth_request, auth_error
 
 
-@app.route("/api/product-id-suggestions")
-def product_id_suggestions():
+@api.route("/product-id-suggestions")
+@api.doc(
+    summary="Retrieve Product IDs",
+    description="Retrieve product IDs and suggestions that match the queried product.",
+    security="ApiKeyAuth",
+)
+@api.input(ProductIDQuery, location="query")
+@api.output(SearchVulnsResult)
+def product_id_suggestions(query_data):
     # check auth if CAPTCHA or API key is required
     if config["RECAPTCHA_AND_API"]["ENABLED"]:
         has_valid_auth, auth_error = search_has_valid_auth(request)
         if not has_valid_auth:
-            return auth_error
+            abort(auth_error[1], auth_error[0])
 
-    query = request.args.get("query")
+    query = query_data.query
     if not query:
-        return "No query provided", 400
+        abort(400, "No query provided")
     query = query.strip()
     query_lower = query.lower()
 
     # limit query length in CAPTCHA / API scenario
     if config["RECAPTCHA_AND_API"]["ENABLED"] and len(query) > MAX_QUERY_LENGTH:
-        return f"Query length is limited to {MAX_QUERY_LENGTH} characters.", 413
+        abort(413, f"Query length is limited to {MAX_QUERY_LENGTH} characters.")
 
     # try to retrieve results from cache and return early
     if (
@@ -217,61 +243,47 @@ def product_id_suggestions():
     return jsonify(result.model_dump(exclude_none=True))
 
 
-@app.route("/api/search-vulns")
-def search_vulns():
+@api.route("/search-vulns")
+@api.doc(
+    summary="Search for known vulnerabilities, exploits and more",
+    description="Search for known vulnerabilities, exploits and more by using search_vulns' core engine and its modules.",
+    security="ApiKeyAuth",
+)
+@app.input(SearchVulnsQuery, location="query")
+@app.output(SearchVulnsResult)
+def search_vulns(query_data: SearchVulnsQuery):
     # check auth if CAPTCHA or API key is required
     if config["RECAPTCHA_AND_API"]["ENABLED"]:
         has_valid_auth, auth_error = search_has_valid_auth(request)
         if not has_valid_auth:
-            return auth_error
+            abort(auth_error[1], auth_error[0])
 
     url_query_string = request.query_string.lower()
-    query = request.args.get("query")
+    query = query_data.query
     if not query:
-        return "No query provided", 400
+        abort(400, "No query provided")
     query = query.strip()
 
     # limit query length in CAPTCHA / API scenario
     if config["RECAPTCHA_AND_API"]["ENABLED"] and len(query) > MAX_QUERY_LENGTH:
-        return f"Query length is limited to {MAX_QUERY_LENGTH} characters.", 413
+        abort(413, f"Query length is limited to {MAX_QUERY_LENGTH} characters.")
 
     if url_query_string in VULN_RESULTS_CACHE:
         return jsonify(VULN_RESULTS_CACHE[url_query_string].model_dump(exclude_none=True))
 
-    # set up retrieval settings
-    ignore_general_product_vulns = request.args.get("ignore-general-product-vulns")
-    if ignore_general_product_vulns and ignore_general_product_vulns.lower() == "true":
-        ignore_general_product_vulns = True
-    else:
-        ignore_general_product_vulns = False
-
-    include_single_version_vulns = request.args.get("include-single-version-vulns")
-    if include_single_version_vulns and include_single_version_vulns.lower() == "true":
-        include_single_version_vulns = True
-    else:
-        include_single_version_vulns = False
-
-    is_good_product_id = request.args.get("is-good-product-id")
-    if is_good_product_id and is_good_product_id.lower() == "false":
-        is_good_product_id = False
-    else:
-        is_good_product_id = True
-
-    include_patched = request.args.get("include-patched")
-    if include_patched and include_patched.lower() == "true":
-        include_patched = True
-    else:
-        include_patched = False
-
-    use_created_product_ids = request.args.get("use-created-product-ids")
-    if use_created_product_ids and use_created_product_ids.lower() == "true":
-        use_created_product_ids = True
-    else:
-        use_created_product_ids = False
+    # set up retrieval preferences
+    is_good_product_id = True if query_data.is_good_product_id == "true" else False
+    ignore_general_product_vulns = (
+        True if query_data.ignore_general_product_vulns == "true" else False
+    )
+    include_single_version_vulns = (
+        True if query_data.include_single_version_vulns == "true" else False
+    )
+    include_patched = True if query_data.include_patched == "true" else False
+    use_created_product_ids = True if query_data.use_created_product_ids == "true" else False
 
     # search for vulns either via previous cpe_search results or user's query
     productids = PRODUCTID_SEARCH_CACHE.get(query.lower(), SearchVulnsResult()).product_ids
-
     vulns = search_vulns_call(
         query,
         productids,
@@ -306,7 +318,12 @@ def search_vulns():
     return jsonify(vulns.model_dump(exclude_none=True))
 
 
-@app.route("/api/version")
+@api.route("/version")
+@app.output(SoftwareVersionResult)
+@api.doc(
+    summary="Retrieve search_vulns version information",
+    description="Retrieve the version of search_vulns and datetime of the latest DB update.",
+)
 def version():
     db_conn = get_database_connection(config["VULN_DATABASE"])
     db_cursor = db_conn.cursor()
@@ -318,18 +335,17 @@ def version():
     db_cursor.close()
     db_conn.close()
 
-    result = {
-        "version": SEARCH_VULNS_VERSION,
-        "last_db_update_ts": last_update_utc.timestamp(),
-        "last_db_update": last_update_utc.strftime("%a, %d %b %Y %H:%M:%S UTC"),
-    }
-
+    result = SoftwareVersionResult(
+        version=SEARCH_VULNS_VERSION,
+        last_db_update_ts=last_update_utc.timestamp(),
+        last_db_update=last_update_utc.strftime("%a, %d %b %Y %H:%M:%S UTC"),
+    )
     return result
 
 
-@app.route("/")
-@app.route("/index")
-@app.route("/home")
+@web.route("/")
+@web.route("/index")
+@web.route("/home")
 def index():
     show_captcha = config["RECAPTCHA_AND_API"]["ENABLED"]
     if request.cookies.get("isAPIKeyConfigured", "").lower() == "true":
@@ -408,7 +424,7 @@ def style_md_converted_html(markdown_html, center_captions=False, with_color=Fal
     return markdown_html
 
 
-@app.route("/about")
+@web.route("/about")
 def about():
     readme_markdown_content = ""
     with open(README_FILE) as f:
@@ -442,7 +458,7 @@ def about():
     )
 
 
-@app.route("/api/setup")
+@web.route("/api/setup")
 def api_setup():
     recaptcha_settings = {
         "recaptcha_site_key": config["RECAPTCHA_AND_API"]["SITE_KEY_V2"],
@@ -453,7 +469,7 @@ def api_setup():
     )
 
 
-@app.route("/api/generate-key", methods=["POST"])
+@web.route("/api/generate-key", methods=["POST"])
 def generate_api_key():
     # check reCAPTCHA
     if config["RECAPTCHA_AND_API"]["ENABLED"]:
@@ -498,9 +514,12 @@ def generate_api_key():
     return {"status": "success", "key": api_key}
 
 
-@app.route("/api/check-key-status", methods=["POST"])
-def check_api_key_status():
-    key = request.json.get("key")
+@api.route("/check-key-status", methods=["POST"])
+@api.doc(summary="Check API key status", description="Check the status of your API key.")
+@api.input(CheckKeyStatusIn)
+@api.output(CheckKeyStatusResult)
+def check_api_key_status(json_data):
+    key = json_data.key
     if not key:
         return {"status": "No key was provided"}
 
@@ -517,12 +536,12 @@ def check_api_key_status():
         return {"status": result[0][0]}
 
 
-@app.route("/api/documentation")
+@web.route("/api/documentation")
 def api_documentation():
     return send_from_directory(STATIC_FOLDER, "search_vulns_openapi.yaml")
 
 
-@app.route("/news")
+@web.route("/news")
 def news():
     markdown_content = ""
     with open(CHANGELOG_FILE) as f:
@@ -617,6 +636,23 @@ def setup_api_db():
 
 if __name__ == "__main__":
     print("[+] Loading resources")
+
+# register up Web and API blueprints
+app.register_blueprint(web)
+app.register_blueprint(api)
+
+# set up app info
+app.info = {
+    "description": 'Welcome to the official public instance of the search_vulns API!<br>This API allows you to search for vulnerabilities, exploits, product IDs and more.<br>An API key is required to use the API. It can be set up at <a href="/api/setup">/api/setup</a>.',
+    "contact": {
+        "name": "search_vulns Support",
+        "url": "https://github.com/ra1nb0rn/search_vulns/issues",
+    },
+    "license": {
+        "name": "MIT",
+        "url": "https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE",
+    },
+}
 
 
 # init test call

@@ -1,430 +1,823 @@
-openapi: 3.0.4
-info:
-  title: search_vulns - OpenAPI 3.0
-  description: |-
-    This documents search_vulns' API for vulnerability search and product ID retrieval.
-
-    Some useful links:
-    - [Generate an API key](https://search-vulns.com/api/setup)
-    - [GitHub repository of search_vulns](https://github.com/ra1nb0rn/search_vulns/)
-    - [Public website and database](https://search-vulns.com/)
-    - [Changelog & news](https://search-vulns.com/news)
-  termsOfService: https://search-vulns.com/legal-notice
-  contact:
-    name: Feedback Form
-    url: https://tally.so/r/nW0qjL
-  license:
-    name: MIT
-    url: https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE
-  version: 0.6.6
-servers:
-  - url: https://search-vulns.com/api/
-paths:
-  /version:
-    get:
-      summary: Get current version of search_vulns instance
-      responses:
-        '200':
-          description: Successful response contains version and datetime of latest database update.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  version:
-                    type: string
-                    description: Version of this search_vulns instance
-                  last_db_update:
-                    type: string
-                    description: Human readable date of latest database update
-                  last_db_update_ts:
-                    type: number
-                    format: double
-                    description: Epoch timestamp of latest database update
-              example:
-                last_db_update: Tue, 10 Jun 2025 06:03:45 GMT
-                last_db_update_ts: 1749535425.4234664
-                version: 0.6.6
-  /check-key-status:
-    post:
-      summary: Check status of an API Key
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - key
-              properties:
-                key:
-                  type: string
-                  description: The API key to check the status of
-      responses:
-        '200':
-          description: On success, a message of the provided key's status is returned
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    description: Textual status of the provided key
-              examples:
-                keyValid:
-                  summary: Provided key is valid
-                  value:
-                    status: valid
-                keyRevoked:
-                  summary: Provided key was revoked
-                  value:
-                    status: Revoked - too many requests - send feedback if genuine request.
-                noKeyProvided:
-                  summary: No key was provided
-                  value:
-                    status: No key was provided
-                keyDoesNotExist:
-                  summary: Provided key does not exist in database
-                  value:
-                    status: Key does not exist in DB
-  /product-id-suggestions:
-    get:
-      summary: Retrieve possible product IDs for the provided query
-      security:
-        - ApiKeyAuth: []
-      parameters:
-        - name: query
-          in: query
-          description: Product and version to search product IDs for
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: On success, possible product IDs are returned
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductIDSearchResponse'
-              examples:
-                basicExample:
-                  summary: Retrieved product IDs for "jquery 2.1.3"
-                  value:
-                    cpe:
-                      - ["cpe:2.3:a:jquery:jquery:2.1.3:*:*:*:*:*:*:*", 0.9919023838421461]
-                      - ["cpe:2.3:a:jquery:jquery:2.1.3:*:*:*:*:node.js:*:*", 0.882450818658909]
-                      - ["cpe:2.3:a:jquery:jquery:-:*:*:*:*:*:*:*", 0.7889609186783934]
-                      - ["cpe:2.3:a:jquery:jquery:*:*:*:*:*:node.js:*:*", 0.7258247616391765]
-                  x-query: "query=jquery+2.1.3"
-        '400':
-          description: No query provided
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "No query provided"
-        '403':
-          description: Permission denied
-          content:
-            text/plain:
-              schema:
-                type: string
-              examples:
-                KeyUnknown:
-                  summary: "Provided API key is unknown"
-                  value: API key is unknown
-                KeyInvalid:
-                  summary: "Provided API key is invalid / revoked"
-                  value: "API key is invalid, key status: revoked"
-                KeyRateLimit:
-                  summary: "Provided API key has run into rate limit"
-                  value: "Too many requests with this API key. Try again in a couple of minutes."
-        '413':
-          description: Query too long
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "Query length is limited to 256 characters."
-  /search-vulns:
-    get:
-      summary: Retrieve vulnerabilities for provided query (product name and version or product ID)
-      security:
-        - ApiKeyAuth: []
-      parameters:
-        - name: query
-          in: query
-          description: Product name and version or product ID to search vulnerabilities for
-          required: true
-          schema:
-            type: string
-        - name: ignore-general-product-vulns
-          in: query
-          description: If "true", not return vulnerabilities affecting the general product, i.e. "cpe:2.3:a:jquery:jquery:-:\*:\*:\*:\*:\*:\*:\*"
-          required: false
-          schema:
-            type: boolean
-            default: false
-        - name: include-single-version-vulns
-          in: query
-          description: "If \"true\", include vulnerabilities which only affect a single version later than the queried one. Example: The NVD states that only RosarioSIS 6.7.2 is affected by CVE-2020-15716, but in this case, earlier version are affected as well."
-          required: false
-          schema:
-            type: boolean
-            default: false
-        - name: is-good-product-id
-          in: query
-          description: "If \"true\", the provided product ID in the query as correct and do not perform any kind of transformation or addition of equivalent or deprecated product IDs."
-          required: false
-          schema:
-            type: boolean
-            default: true
-        - name: include-patched
-          in: query
-          description: "If \"true\", include vulnerabilities which are considered fixed / backpatched in the provided environment into the results. E.g. CVE-2023-44487 is fixed in \"nginx 1.24.0-3 Debian Trixie\""
-          required: false
-          schema:
-            type: boolean
-            default: false
-        - name: use-created-product-ids
-          in: query
-          description: "If \"true\", use the created / potential product ID with the highest confidence score to search for vulnerabilities automatically in case a sufficiently good match could not be found beforehand."
-          required: false
-          schema:
-            type: boolean
-            default: false
-      responses:
-        '200':
-          description: Response containing product IDs and vulnerabilities
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VulnSearchApiResponse'
-              examples:
-                BasicExample:
-                  summary: "Search vulns results for nginx 1.12.0, including general, single version and patched vulns"
-                  x-query: "query=cpe:2.3:a:nginx:nginx:1.27.0:*:*:*:*:*:*:*&is-good-product-id=false&include-single-version-vulns=true&include-patched=true"
-                  value:
-                    pot_product_ids:
-                      cpe:
-                        - ["cpe:2.3:a:nginx:nginx:1.27.0:*:*:*:*:*:*:*", 1]
-                    product_ids:
-                      cpe:
-                        - "cpe:2.3:a:nginx:nginx:1.27.0:*:*:*:*:*:*:*"
-                        - "cpe:2.3:a:igor_sysoev:nginx:1.27.0:*:*:*:*:*:*:*"
-                        - "cpe:2.3:a:f5:nginx:1.27.0:*:*:*:*:*:*:*"
-                        - "cpe:2.3:a:f5:nginx_open_source:1.27.0:*:*:*:*:*:*:*"
-                    version_status:
-                      latest: "1.28.0"
-                      ref: "https://endoflife.date/nginx"
-                      status: "outdated"
-                    vulns:
-                      CVE-2024-7347:
-                        aliases:
-                          CVE-2024-7347: "https://nvd.nist.gov/vuln/detail/CVE-2024-7347"
-                        cisa_known_exploited: false
-                        cvss: "5.7"
-                        cvss_vec: "CVSS:4.0/AV:L/AC:H/AT:P/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-                        cvss_ver: "4.0"
-                        description: >
-                          NGINX Open Source and NGINX Plus have a vulnerability in the ngx_http_mp4_module,
-                          which might allow an attacker to over-read NGINX worker memory resulting in its termination,
-                          using a specially crafted mp4 file. The issue only affects NGINX if it is built with the
-                          ngx_http_mp4_module and the mp4 directive is used in the configuration file. Additionally,
-                          the attack is possible only if an attacker can trigger the processing of a specially crafted
-                          mp4 file with the ngx_http_mp4_module.  Note: Software versions which have reached End of
-                          Technical Support (EoTS) are not evaluated.
-                        epss: 0.00063
-                        exploits: []
-                        id: "CVE-2024-7347"
-                        match_reason: "product_match"
-                        match_sources:
-                          - "nvd"
-                        misc: {}
-                        modified: "2025-01-22T16:10:28Z"
-                        published: "2024-08-14T15:15:31Z"
-                        reported_patched_by: []
-                        tracked_by:
-                          - "nvd"
-                      CVE-2025-23419:
-                        aliases:
-                          CVE-2025-23419: "https://nvd.nist.gov/vuln/detail/CVE-2025-23419"
-                        cisa_known_exploited: false
-                        cvss: "5.3"
-                        cvss_vec: "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-                        cvss_ver: "4.0"
-                        description: >
-                          When multiple server blocks are configured to share the same IP address and port,
-                          an attacker can use session resumption to bypass client certificate authentication
-                          requirements on these servers. This vulnerability arises when  TLS Session Tickets
-                          https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_ticket_key  are
-                          used and/or the  SSL session cache https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_cache
-                          are used in the default server and the default server is performing client certificate
-                          authentication.  Note: Software versions which have reached End of Technical Support (EoTS) are not evaluated.
-                        epss: 0.00082
-                        exploits: []
-                        id: "CVE-2025-23419"
-                        match_reason: "general_product_uncertain"
-                        match_sources:
-                          - "nvdpp"
-                        misc: {}
-                        modified: "2025-02-05T20:15:45Z"
-                        published: "2025-02-05T18:15:33Z"
-                        reported_patched_by: []
-                        tracked_by:
-                          - "nvdpp"
-        '400':
-          description: No query provided
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "No query provided"
-        '403':
-          description: Permission denied
-          content:
-            text/plain:
-              schema:
-                type: string
-              examples:
-                KeyUnknown:
-                  summary: "Provided API key is unknown"
-                  value: API key is unknown
-                KeyInvalid:
-                  summary: "Provided API key is invalid / revoked"
-                  value: "API key is invalid, key status: revoked"
-                KeyRateLimit:
-                  summary: "Provided API key has run into rate limit"
-                  value: "Too many requests with this API key. Try again in a couple of minutes."
-        '413':
-          description: Query too long
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "Query length is limited to 256 characters."
-components:  
-  securitySchemes:
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: API-Key
-  schemas:
-    ProductIDSearchItem:
-      type: array
-      items:
-        oneOf:
-          - type: string
-          - type: number
-            format: double
-
-    ProductIDSearchResponse:
-      type: object
-      properties:
-        cpe:
-          type: array
-          description: List of retrieved product IDs (here CPEs) with confidence scores between 0 and 1
-          items:
-            $ref: '#/components/schemas/ProductIDSearchItem'
-      required:
-        - cpe
-    Vulnerability:
-      type: object
-      properties:
-        aliases:
-          type: object
-          additionalProperties:
-            type: string
-        cisa_known_exploited:
-          type: boolean
-        cvss:
-          type: string
-        cvss_vec:
-          type: string
-        cvss_ver:
-          type: string
-        description:
-          type: string
-        epss:
-          type: number
-          format: float
-        exploits:
-          type: array
-          items: {}
-        id:
-          type: string
-        match_reason:
-          type: string
-        match_sources:
-          type: array
-          items:
-            type: string
-        misc:
-          type: object
-          additionalProperties: true
-        modified:
-          type: string
-          format: date-time
-        published:
-          type: string
-          format: date-time
-        reported_patched_by:
-          type: array
-          items: {}
-        tracked_by:
-          type: array
-          items:
-            type: string
-
-    PotProductIds:
-      type: object
-      properties:
-        cpe:
-          type: array
-          items:
-            type: array
-            items:
-              oneOf:
-                - type: string
-                - type: number
-
-    ProductIds:
-      type: object
-      properties:
-        cpe:
-          type: array
-          items:
-            type: string
-
-    VersionStatus:
-      type: object
-      properties:
-        latest:
-          type: string
-        ref:
-          type: string
-          format: uri
-        status:
-          type: string
-
-    Vulns:
-      type: object
-      additionalProperties:
-        $ref: '#/components/schemas/Vulnerability'
-
-    VulnSearchApiResponse:
-      type: object
-      properties:
-        pot_product_ids:
-          $ref: '#/components/schemas/PotProductIds'
-        product_ids:
-          $ref: '#/components/schemas/ProductIds'
-        version_status:
-          $ref: '#/components/schemas/VersionStatus'
-        vulns:
-          $ref: '#/components/schemas/Vulns'
-      required:
-        - pot_product_ids
-        - product_ids
-        - vulns
+{
+  "components": {
+    "schemas": {
+      "CheckKeyStatusIn": {
+        "properties": {
+          "key": {
+            "description": "API Key to check",
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "CheckKeyStatusIn",
+        "type": "object"
+      },
+      "CheckKeyStatusResult": {
+        "properties": {
+          "status": {
+            "description": "'valid' if key is valid, otherwise a reason for why it is not",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "CheckKeyStatusResult",
+        "type": "object"
+      },
+      "HTTPError": {
+        "properties": {
+          "detail": {
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SearchVulnsResult": {
+        "properties": {
+          "pot_product_ids": {
+            "$ref": "#/components/schemas/SearchVulnsResult.PotProductIDsResult",
+            "description": "Stores other relevant product IDs that did not match fully"
+          },
+          "product_ids": {
+            "$ref": "#/components/schemas/SearchVulnsResult.ProductIDsResult",
+            "description": "Stores successfully matched product IDs"
+          },
+          "schema_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "description": "Schema version of this model",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "version_status": {
+            "$ref": "#/components/schemas/SearchVulnsResult.VersionStatusResult",
+            "description": "Provides status about queried software version if available"
+          },
+          "vulns": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SearchVulnsResult.Vulnerability"
+            },
+            "description": "Stores retrieved vulnerabilities",
+            "propertyNames": {
+              "description": "Vulnerability ID",
+              "minLength": 1
+            },
+            "title": "Vulns",
+            "type": "object"
+          }
+        },
+        "title": "search_vulns Result Model",
+        "type": "object"
+      },
+      "SearchVulnsResult.DataSource": {
+        "enum": [
+          "nvd",
+          "nvd++",
+          "ghsa",
+          "osv.dev",
+          "debian",
+          "ubuntu",
+          "redhat",
+          "product_specific",
+          "other"
+        ],
+        "title": "DataSource",
+        "type": "string"
+      },
+      "SearchVulnsResult.Match": {
+        "properties": {
+          "confidence": {
+            "description": "Confidence for the match",
+            "exclusiveMinimum": 0,
+            "maximum": 1,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "match_reason": {
+            "$ref": "#/components/schemas/SearchVulnsResult.MatchReason",
+            "description": "Reason for the match"
+          }
+        },
+        "required": [
+          "match_reason",
+          "confidence"
+        ],
+        "title": "Vulnerability Match Model",
+        "type": "object"
+      },
+      "SearchVulnsResult.MatchReason": {
+        "enum": [
+          "product_match",
+          "version_in_range",
+          "general_product_ok",
+          "description_match",
+          "general_product_uncertain",
+          "single_higher_version",
+          "vuln_id",
+          "n_a"
+        ],
+        "title": "MatchReason",
+        "type": "string"
+      },
+      "SearchVulnsResult.PotProductIDsResult": {
+        "properties": {
+          "cpe": {
+            "description": "A list containing tuples of a CPE and a match score, sorted by abs(match score)",
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "maximum": 1,
+                  "minimum": -1,
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Cpe",
+            "type": "array"
+          },
+          "purl": {
+            "description": "A list containing tuples of a PURL and a match score, sorted by abs(match score)",
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "maximum": 1,
+                  "minimum": -1,
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Purl",
+            "type": "array"
+          },
+          "raw": {
+            "description": "A list containing tuples of a raw string / product ID and a match score, sorted by abs(match score)",
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "maximum": 1,
+                  "minimum": -1,
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Raw",
+            "type": "array"
+          }
+        },
+        "title": "search_vulns Potential ProductID Result Model",
+        "type": "object"
+      },
+      "SearchVulnsResult.ProductIDsResult": {
+        "properties": {
+          "cpe": {
+            "description": "A list of CPEs",
+            "items": {
+              "type": "string"
+            },
+            "title": "Cpe",
+            "type": "array"
+          },
+          "purl": {
+            "description": "A list of PURLs",
+            "items": {
+              "type": "string"
+            },
+            "title": "Purl",
+            "type": "array"
+          },
+          "raw": {
+            "description": "A list of raw/different/other product IDs",
+            "items": {
+              "type": "string"
+            },
+            "title": "Raw",
+            "type": "array"
+          }
+        },
+        "title": "search_vulns ProductID Result Model",
+        "type": "object"
+      },
+      "SearchVulnsResult.SeverityCVSS": {
+        "properties": {
+          "score": {
+            "description": "CVSS score",
+            "minLength": 1,
+            "title": "Score",
+            "type": "string"
+          },
+          "type": {
+            "const": "CVSS",
+            "default": "CVSS",
+            "title": "Type",
+            "type": "string"
+          },
+          "vector": {
+            "description": "CVSS vector",
+            "minLength": 1,
+            "title": "Vector",
+            "type": "string"
+          },
+          "version": {
+            "description": "CVSS version",
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "score",
+          "version",
+          "vector"
+        ],
+        "title": "CVSS Severity Model",
+        "type": "object"
+      },
+      "SearchVulnsResult.SeverityEPSS": {
+        "properties": {
+          "score": {
+            "description": "EPSS score",
+            "minLength": 1,
+            "title": "Score",
+            "type": "string"
+          },
+          "type": {
+            "const": "EPSS",
+            "default": "EPSS",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "score"
+        ],
+        "title": "EPSS Severity Model",
+        "type": "object"
+      },
+      "SearchVulnsResult.SeverityType": {
+        "enum": [
+          "CVSS",
+          "EPSS"
+        ],
+        "title": "SeverityType",
+        "type": "string"
+      },
+      "SearchVulnsResult.VersionStatus": {
+        "enum": [
+          "EOL",
+          "CURRENT",
+          "OUTDATED",
+          "N/A"
+        ],
+        "title": "VersionStatus",
+        "type": "string"
+      },
+      "SearchVulnsResult.VersionStatusResult": {
+        "properties": {
+          "latest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Latest version",
+            "title": "Latest"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Reference / url where where the information originates",
+            "title": "Reference"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SearchVulnsResult.VersionStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Actual version status"
+          }
+        },
+        "title": "search_vulns Version Status Result Model",
+        "type": "object"
+      },
+      "SearchVulnsResult.Vulnerability": {
+        "properties": {
+          "aliases": {
+            "additionalProperties": {
+              "description": "Reference or URL",
+              "minLength": 1,
+              "type": "string"
+            },
+            "description": "Stores different IDs (aliases) for the vulnerability, alongside references with more details about the vulnerability and its ID",
+            "propertyNames": {
+              "description": "Alias / vulnerability ID",
+              "minLength": 1
+            },
+            "title": "Aliases",
+            "type": "object"
+          },
+          "cisa_kev": {
+            "default": false,
+            "description": "Stores if the vulnerability is a CISA KEV",
+            "title": "Cisa Kev",
+            "type": "boolean"
+          },
+          "cwe_ids": {
+            "description": "Stores CWE-IDs for the vulnerability",
+            "items": {
+              "type": "string"
+            },
+            "title": "Cwe Ids",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "description": {
+            "default": "",
+            "description": "Description of the vulnerability",
+            "title": "Description",
+            "type": "string"
+          },
+          "exploits": {
+            "description": "Stores exploits references",
+            "items": {
+              "description": "Exploit URL",
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Exploits",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "id": {
+            "description": "Unique identifier for this vulnerability",
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "match_reason": {
+            "$ref": "#/components/schemas/SearchVulnsResult.MatchReason",
+            "description": "Reason for why this vulnerability was matched"
+          },
+          "matched_by": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SearchVulnsResult.Match"
+            },
+            "description": "Stores by which data sources the vulnerability was matched by",
+            "minProperties": 1,
+            "title": "Matched By",
+            "type": "object"
+          },
+          "misc": {
+            "additionalProperties": true,
+            "description": "Other optional information about the vulnerability",
+            "title": "Misc",
+            "type": "object"
+          },
+          "modified": {
+            "default": null,
+            "description": "Modified date of the vulnerability",
+            "format": "date-time",
+            "title": "Modified",
+            "type": "string"
+          },
+          "published": {
+            "default": null,
+            "description": "Publish date of the vulnerability",
+            "format": "date-time",
+            "title": "Published",
+            "type": "string"
+          },
+          "reported_patched_by": {
+            "description": "Stores by which data sources the matched to product is considered patched against the vulnerability",
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SearchVulnsResult.DataSource"
+                },
+                {
+                  "description": "Textual identifier for the data source",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "minItems": 1,
+            "title": "Reported Patched By",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "severity": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SearchVulnsResult.SeverityCVSS"
+                },
+                {
+                  "$ref": "#/components/schemas/SearchVulnsResult.SeverityEPSS"
+                }
+              ]
+            },
+            "description": "Stores different severity types for the vulnerability",
+            "propertyNames": {
+              "$ref": "#/components/schemas/SearchVulnsResult.SeverityType"
+            },
+            "title": "Severity",
+            "type": "object"
+          },
+          "tracked_by": {
+            "additionalProperties": {
+              "description": "Reference where the data source tracks this vulnerability",
+              "minLength": 1,
+              "type": "string"
+            },
+            "description": "Stores which data sources keep track of this vulnerability and where",
+            "minProperties": 1,
+            "title": "Tracked By",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "match_reason",
+          "tracked_by",
+          "matched_by"
+        ],
+        "title": "Vulnerability Model",
+        "type": "object"
+      },
+      "SoftwareVersionResult": {
+        "properties": {
+          "last_db_update": {
+            "description": "Datetime string of when the local database was last updated",
+            "title": "Last Db Update",
+            "type": "string"
+          },
+          "last_db_update_ts": {
+            "description": "Epoch timestamp of when the local database was last updated",
+            "title": "Last Db Update Ts",
+            "type": "number"
+          },
+          "version": {
+            "description": "Version of search_vulns software",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "last_db_update",
+          "last_db_update_ts"
+        ],
+        "title": "SoftwareVersionResult",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "detail": {
+            "properties": {
+              "<location>": {
+                "properties": {
+                  "<field_name>": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "in": "header",
+        "name": "API-Key",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "search_vulns Support",
+      "url": "https://github.com/ra1nb0rn/search_vulns/issues"
+    },
+    "description": "Welcome to the official public instance of the search_vulns API!<br>This API allows you to search for vulnerabilities, exploits, product IDs and more.<br>An API key is required to use the API. It can be set up at <a href=\"/api/setup\">/api/setup</a>.",
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE"
+    },
+    "title": "search_vulns API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/check-key-status": {
+      "post": {
+        "description": "Check the status of your API key.",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckKeyStatusIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckKeyStatusResult"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Check API key status",
+        "tags": [
+          "Public Api"
+        ]
+      }
+    },
+    "/api/product-id-suggestions": {
+      "get": {
+        "description": "Retrieve product IDs and suggestions that match the queried product.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "schema": {
+              "description": "Query product to search IDs for, e.g. 'Tomcat 9.0.22'",
+              "title": "Query",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchVulnsResult"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            },
+            "description": "Authentication error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Retrieve Product IDs",
+        "tags": [
+          "Public Api"
+        ]
+      }
+    },
+    "/api/search-vulns": {
+      "get": {
+        "description": "Search for known vulnerabilities, exploits and more by using search_vulns' core engine and its modules.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "schema": {
+              "description": "Query product to search vulnerabilities for, e.g. 'Tomcat 9.0.22'",
+              "title": "Query",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ignore-general-product-vulns",
+            "required": false,
+            "schema": {
+              "default": "false",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "title": "Ignore-General-Product-Vulns",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include-single-version-vulns",
+            "required": false,
+            "schema": {
+              "default": "false",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "title": "Include-Single-Version-Vulns",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is-good-product-id",
+            "required": false,
+            "schema": {
+              "default": "true",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "title": "Is-Good-Product-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include-patched",
+            "required": false,
+            "schema": {
+              "default": "false",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "title": "Include-Patched",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "use-created-product-ids",
+            "required": false,
+            "schema": {
+              "default": "false",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "title": "Use-Created-Product-Ids",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchVulnsResult"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            },
+            "description": "Authentication error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Search for known vulnerabilities, exploits and more",
+        "tags": [
+          "Public Api"
+        ]
+      }
+    },
+    "/api/version": {
+      "get": {
+        "description": "Retrieve the version of search_vulns and datetime of the latest DB update.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoftwareVersionResult"
+                }
+              }
+            },
+            "description": "Successful response"
+          }
+        },
+        "summary": "Retrieve search_vulns version information",
+        "tags": [
+          "Public Api"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Public Api"
+    }
+  ]
+}

@@ -40,6 +40,7 @@ dependencies = [
 [project.optional-dependencies]
 web = [
     "Flask",
+    "apiflask",
     "gunicorn",
     "gevent",
     "markdown",
@@ -64,6 +65,7 @@ all = [
     "univers",
     "pydantic",
     "Flask",
+    "apiflask",
     "gunicorn",
     "gevent",
     "markdown",

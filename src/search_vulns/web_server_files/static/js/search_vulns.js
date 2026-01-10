@@ -1357,7 +1357,7 @@ function retrieveProductIDSuggestions(url_query, recaptcha_response) {
             console.log(errorMsg);
 
             if (jXHR["status"] == 403 && errorMsg.toLowerCase().includes("captcha")) {
-                    $('#productIDSuggestions').html('<span class="text-error">No valid API key / CAPTCHA provided. Set up a key <a class="link" onmousedown="location.href = \'/api/setup\'">here<a>.');
+                $('#productIDSuggestions').html('<span class="text-error">No valid API key / CAPTCHA provided. Set up a key <a class="link" onmousedown="location.href = \'/api/setup\'">here<a>.');
             }
             else {
                 $('#productIDSuggestions').html('<span class="text-error">' + htmlEntities(errorMsg) + '</span>');
