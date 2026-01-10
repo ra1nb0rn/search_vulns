@@ -190,3 +190,6 @@ class CPEVersion:
             return self
 
         return CPEVersion(str(self) + str(other))
+
+    def copy(self):
+        return CPEVersion(str(self))

@@ -60,7 +60,7 @@ def print_vulns(vulns, to_string=False):
                 " ("
                 + MAGENTA
                 + "CVSSv"
-                + vuln_node.get_cvss_version()
+                + str(vuln_node.get_cvss_version())
                 + "/"
                 + str(vuln_node.get_cvss_score())
                 + SANE
