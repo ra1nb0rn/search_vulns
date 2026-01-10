@@ -3322,10 +3322,10 @@
   .text-base-content {
     color: var(--color-base-content);
   }
-  .text-base-content\/30 {
+  .text-base-content\/60 {
     color: var(--color-base-content);
     @supports (color: color-mix(in lab, red, red)) {
-      color: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+      color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
     }
   }
   .text-base-content\/75 {
@@ -3527,12 +3527,12 @@
       --range-thumb-size: calc(var(--size-selector, 0.25rem) * 4);
     }
   }
-  .group-hover\:text-info-content\/30 {
+  .group-hover\:text-info-content\/60 {
     &:is(:where(.group):hover *) {
       @media (hover: hover) {
         color: var(--color-info-content);
         @supports (color: color-mix(in lab, red, red)) {
-          color: color-mix(in oklab, var(--color-info-content) 30%, transparent);
+          color: color-mix(in oklab, var(--color-info-content) 60%, transparent);
         }
       }
     }

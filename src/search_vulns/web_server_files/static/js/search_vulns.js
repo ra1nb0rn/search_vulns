@@ -200,7 +200,7 @@ function createVulnTableRowHtml(idx, vuln) {
             vuln_flag_html += `<span class="vuln-flag-icon" data-tooltip-target="tooltip-patched-${idx}" data-tooltip-placement="bottom"><span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-info/15 text-info"><i class="fa-solid fa-shield text-xs"></i></span><div id="tooltip-patched-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability was reported (back)patched for the queried version and environment.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
             source_badge_color = "info";
             source_badge_icon = "fa-solid fa-shield";
-            badge_text_style = "text-base-content/30 group-hover:text-info-content/30";
+            badge_text_style = "text-base-content/60 group-hover:text-info-content/60";
         }
 
         if (vuln_flag_html)
