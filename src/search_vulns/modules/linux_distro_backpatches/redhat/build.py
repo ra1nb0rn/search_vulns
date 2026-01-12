@@ -8,7 +8,7 @@ import ujson
 from cpe_search.cpe_search import search_cpes
 from univers.versions import RpmVersion
 
-from search_vulns.cpe_version import CPEVersion
+from search_vulns.models.CPEVersion import CPEVersion
 from search_vulns.modules.linux_distro_backpatches.utils import (
     get_hardcoded_pkg_cpe_matches,
     split_deb_pkg_name,

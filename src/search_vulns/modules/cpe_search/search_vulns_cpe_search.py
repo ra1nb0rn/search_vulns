@@ -9,7 +9,7 @@ from cpe_search.cpe_search import (
 )
 from cpe_search.database_wrapper_functions import *
 
-from search_vulns.cpe_version import CPEVersion
+from search_vulns.models.CPEVersion import CPEVersion
 from search_vulns.models.SearchVulnsResult import PotProductIDsResult, ProductIDsResult
 
 # implement update procedures in separate file

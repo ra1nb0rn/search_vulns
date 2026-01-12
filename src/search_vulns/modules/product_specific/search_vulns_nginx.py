@@ -5,7 +5,7 @@ from typing import Dict
 
 import requests
 
-from search_vulns.cpe_version import CPEVersion
+from search_vulns.models.CPEVersion import CPEVersion
 from search_vulns.models.SearchVulnsResult import ProductIDsResult
 from search_vulns.models.Vulnerability import DataSource, MatchReason, Vulnerability
 from search_vulns.modules.utils import (

@@ -2,7 +2,6 @@ import re
 from datetime import datetime
 from typing import Dict, Tuple
 
-from search_vulns.cpe_version import CPEVersion
 from search_vulns.models.SearchVulnsResult import (
     PotProductIDsResult,
     ProductIDsResult,

@@ -16,7 +16,7 @@ from cpe_search.database_wrapper_functions import (
 )
 from tqdm import tqdm
 
-from ..cpe_version import CPEVersion
+from ..models.CPEVersion import CPEVersion
 from ..models.Vulnerability import MatchReason
 
 CPE_COMPARISON_STOP_CHARS_RE = re.compile(r"[\+\-\_\~]")

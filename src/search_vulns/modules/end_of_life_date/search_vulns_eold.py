@@ -1,6 +1,6 @@
 import datetime
 
-from search_vulns.cpe_version import CPEVersion
+from search_vulns.models.CPEVersion import CPEVersion
 from search_vulns.models.SearchVulnsResult import (
     SearchVulnsResult,
     VersionStatus,
