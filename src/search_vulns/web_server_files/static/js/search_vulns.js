@@ -959,6 +959,35 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
     });
 }
 
+function searchVulnsFromState(state) {
+    $("#buttonFilterVulns").addClass("btn-disabled");
+    $("#buttonManageColumns").addClass("btn-disabled");
+    $("#buttonExportResults").addClass("btn-disabled");
+    $('#productIDSuggestions').addClass("hidden");
+    $('#productIDSuggestions').html("");
+    curSelectedProductIDSuggestion = -1;
+    searchIgnoreNextKeyup = true;
+
+    $("#search-display").html("");
+    $("#related-queries-display").html("");
+    $("#vulns").html('<div class="text-lg flex items-center justify-center">Searching for vulnerabilities<span class="loading loading-spinner text-accent ml-3"></span></div>');
+    curSortColIdx = 1;
+    curSortColAsc = false;
+    curVulnData = {};
+    curEOLData = {};
+
+    if (typeof grecaptcha !== 'undefined') {
+        grecaptcha.ready(function() {
+            grecaptcha.execute().then(function(recaptcha_response) {
+                searchVulns(state.query, state.productID, state.url_query, recaptcha_response);
+            });
+        });
+    }
+    else {
+        searchVulns(state.query, state.productID, state.url_query);
+    }
+}
+
 function searchVulnsAction(actionElement) {
     clearTimeout(doneTypingQueryTimer);
 
@@ -989,33 +1018,16 @@ function searchVulnsAction(actionElement) {
 
     isGoodProductID = true;  // reset for subsequent query that wasn't initiated via URL
 
-    history.pushState({}, null, new_url);  // update URL
-    $("#buttonFilterVulns").addClass("btn-disabled");
-    $("#buttonManageColumns").addClass("btn-disabled");
-    $("#buttonExportResults").addClass("btn-disabled");
-    $('#productIDSuggestions').addClass("hidden");
-    $('#productIDSuggestions').html();
-    curSelectedProductIDSuggestion = -1;
-    searchIgnoreNextKeyup = true;
+    // update URL and search state
+    state = {
+        query: query,
+        url_query: url_query,
+        productID: productID,
+        isGoodProductID: isGoodProductID
+    };
+    history.pushState(state, null, new_url);
 
-    $("#search-display").html("");
-    $("#related-queries-display").html("");
-    $("#vulns").html('<div class="text-lg flex items-center justify-center">Searching for vulnerabilities<span class="loading loading-spinner text-accent ml-3"></span></div>');
-    curSortColIdx = 1;
-    curSortColAsc = false;
-    curVulnData = {};
-    curEOLData = {};
-
-    if (typeof grecaptcha !== 'undefined') {
-        grecaptcha.ready(function() {
-            grecaptcha.execute().then(function(recaptcha_response) {
-                searchVulns(query, productID, url_query, recaptcha_response);
-            });
-        });
-    }
-    else {
-        searchVulns(query, productID, url_query);
-    }
+    searchVulnsFromState(state);
 }
 
 function reorderVulns(sortColumnIdx, asc) {
@@ -1522,7 +1534,7 @@ queryInput.on('keydown', function (event) {
         else if(![13, 17, 18, 37, 39, 91, 229].includes(event.keyCode)) {
             clearTimeout(doneTypingQueryTimer);
             $('#productIDSuggestions').addClass("hidden");
-            $('#productIDSuggestions').html();
+            $('#productIDSuggestions').html("");
         }
     }
 });
@@ -1531,5 +1543,25 @@ queryInput.on('keydown', function (event) {
 window.addEventListener("load", function () {
     queryInput.focus();
 });
+
 // resize vuln table on screen resize
 window.addEventListener("resize", resizeSearchVulnsTable);
+
+// enable browser history backwards and forwards
+window.addEventListener("popstate", (event) => {
+    console.log(event.state);
+    if (event.state) {
+        if (event.state.query != undefined)
+            $('#query').val(htmlEntities(event.state.query));
+        if (event.state.isGoodProductID != undefined)
+            isGoodProductID = event.state.isGoodProductID;
+        searchVulnsFromState(event.state);
+    }
+    else {
+        $('#query').val("");
+        $('#productIDSuggestions').html("");
+        $("#search-display").html("");
+        $("#vulns").html("");
+        $("#related-queries-display").html("");
+    }
+});
