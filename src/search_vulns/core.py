@@ -301,7 +301,7 @@ def search_vulns(
         config = _load_config()
 
     close_vuln_db_after, close_product_db_after = False, False
-    if not skip_vuln_search and not vuln_db_cursor:
+    if not vuln_db_cursor:
         vuln_db_conn = get_database_connection(config["VULN_DATABASE"])
         vuln_db_cursor = vuln_db_conn.cursor()
         close_vuln_db_after = True
