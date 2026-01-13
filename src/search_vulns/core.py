@@ -248,7 +248,7 @@ def _search_product_ids(
         module = search_vulns_modules[mid]
         if hasattr(module, "search_product_ids") and callable(module.search_product_ids):
             m_config = config["MODULES"].get(mid, {})
-            new_ids, new_pot_ids = module.search_product_ids(
+            module_result = module.search_product_ids(
                 query,
                 product_db_cursor,
                 product_ids,
@@ -256,7 +256,12 @@ def _search_product_ids(
                 m_config,
                 extra_params,
             )
+            if not module_result:
+                continue
+            new_ids, new_pot_ids = module_result
             product_ids.merge_with(new_ids)
+            if not new_pot_ids:
+                new_pot_ids = PotProductIDsResult.from_product_ids_result(product_ids)
             pot_product_ids.merge_with(new_pot_ids)
 
     return product_ids, pot_product_ids

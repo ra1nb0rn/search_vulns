@@ -95,6 +95,17 @@ class PotProductIDsResult(BaseModel):
     def from_raw(cls, raws: List[Tuple[str, float]]):
         return cls(raws=sorted(raws, key=lambda entry: abs(entry[1]), reverse=True))
 
+    @classmethod
+    def from_product_ids_result(cls, result: ProductIDsResult):
+        pot_result = cls()
+        for cpe in result.cpe:
+            pot_result.add_cpe(cpe, 1)
+        for purl in result.purl:
+            pot_result.add_purl(purl, 1)
+        for raw in result.raw:
+            pot_result.add_raw(raw, 1)
+        return pot_result
+
     def add_cpes(self, cpes: List[Tuple[str, float]]):
         self.cpe = list(set(self.cpe + cpes))
 
