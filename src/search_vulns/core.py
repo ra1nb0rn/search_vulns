@@ -326,7 +326,7 @@ def search_vulns(
             if not preprocess_result:
                 continue
             new_query, mod_extra_params = preprocess_result
-            if new_query:
+            if new_query is not None:
                 query_processed = new_query
             for key, val in mod_extra_params.items():
                 extra_params[key] = val
