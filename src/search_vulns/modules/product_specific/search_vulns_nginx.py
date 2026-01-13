@@ -25,7 +25,7 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
         resp = requests.get(NGINX_ADVISORIES_URL)
         if resp.status_code != 200:
             LOGGER.error(
-                f"Got response code {resp.status_code} when trying to retrieve EPSS data"
+                f"Got response code {resp.status_code} when trying to retrieve Nginx data"
             )
             return False, []
 
@@ -122,7 +122,7 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
 
         db_conn.commit()
     except Exception as e:
-        LOGGER.error(f"Ran into an error {resp.status_code} when trying to process EPSS data")
+        LOGGER.error(f"Ran into an error {resp.status_code} when trying to process Nginx data")
         raise e
     finally:
         if db_cursor:
