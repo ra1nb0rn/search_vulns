@@ -320,9 +320,12 @@ def search_vulns(
         module = search_vulns_modules[mid]
         if hasattr(module, "preprocess_query") and callable(module.preprocess_query):
             m_config = config["MODULES"].get(mid, {})
-            new_query, mod_extra_params = module.preprocess_query(
+            preprocess_result = module.preprocess_query(
                 query_processed, known_product_ids, vuln_db_cursor, product_db_cursor, m_config
             )
+            if not preprocess_result:
+                continue
+            new_query, mod_extra_params = preprocess_result
             if new_query:
                 query_processed = new_query
             for key, val in mod_extra_params.items():
