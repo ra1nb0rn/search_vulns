@@ -36,6 +36,7 @@
         }
     },
     "MODULES_DATA_PREFERENCE": [
+        "product_specific.search_vulns_mssql",
         "nvd.search_vulns_nvd",
         "vulncheck.search_vulns_nvdpp"
     ]
