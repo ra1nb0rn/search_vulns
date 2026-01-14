@@ -2,7 +2,7 @@
 
 import unittest
 
-from search_vulns.cpe_version import CPEVersion
+from search_vulns.models.CPEVersion import CPEVersion
 
 
 class TestSearches(unittest.TestCase):
