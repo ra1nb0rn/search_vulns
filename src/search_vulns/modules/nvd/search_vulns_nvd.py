@@ -22,6 +22,48 @@ DESCR_VERSION_MATCH_RE = re.compile(r"\d\.[\d\w\.]+")
 VULN_TRACK_BASE_URL = "https://nvd.nist.gov/vuln/detail/"
 
 
+def get_detailed_vuln_data(vuln_id, vuln_db_cursor):
+    query = "SELECT description, published, last_modified, cvss_version, base_score, vector, cwe_ids, cisa_known_exploited FROM nvd WHERE cve_id = ?"
+    vuln_db_cursor.execute(query, (vuln_id,))
+    queried_info = vuln_db_cursor.fetchone()
+    if queried_info:
+        descr, publ, last_mod, cvss_ver, score, vector, cwe_ids, cisa_known_exploited = (
+            queried_info
+        )
+    else:
+        publ, last_mod, cvss_ver, vector, cwe_ids, cisa_known_exploited = (
+            "",
+            "",
+            "",
+            "",
+            "",
+            False,
+        )
+        score, descr = "-1.0", "NOT FOUND"
+        match_reason = MatchReason.N_A
+    if cvss_ver:
+        cvss_ver = str(float(cvss_ver))
+    href = VULN_TRACK_BASE_URL + vuln_id
+
+    if publ and not isinstance(publ, datetime):
+        # sqlite returns a simple string instead of a datetime object
+        publ = datetime.strptime(publ, "%Y-%m-%d %H:%M:%S")
+    if last_mod and not isinstance(last_mod, datetime):
+        last_mod = datetime.strptime(last_mod, "%Y-%m-%d %H:%M:%S")
+    if cwe_ids:
+        cwe_ids = cwe_ids.split(",")
+    else:
+        cwe_ids = []
+
+    if float(score) < 0:
+        severity = None
+    else:
+        severity = SeverityCVSS(score=str(float(score)), version=cvss_ver, vector=vector)
+    cisa_known_exploited = bool(cisa_known_exploited)
+
+    return descr, publ, last_mod, severity, cwe_ids, cisa_known_exploited, href
+
+
 def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
     detailed_vulns = {}
     for vuln_info in vulns:
@@ -32,43 +74,9 @@ def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
                 detailed_vulns[vuln_id].match_reason = match_reason
             continue
 
-        query = "SELECT description, published, last_modified, cvss_version, base_score, vector, cwe_ids, cisa_known_exploited FROM nvd WHERE cve_id = ?"
-        vuln_db_cursor.execute(query, (vuln_id,))
-        queried_info = vuln_db_cursor.fetchone()
-        if queried_info:
-            descr, publ, last_mod, cvss_ver, score, vector, cwe_ids, cisa_known_exploited = (
-                queried_info
-            )
-        else:
-            publ, last_mod, cvss_ver, vector, cwe_ids, cisa_known_exploited = (
-                "",
-                "",
-                "",
-                "",
-                "",
-                False,
-            )
-            score, descr = "-1.0", "NOT FOUND"
-            match_reason = MatchReason.N_A
-        if cvss_ver:
-            cvss_ver = str(float(cvss_ver))
-        href = VULN_TRACK_BASE_URL + vuln_id
-
-        if publ and not isinstance(publ, datetime):
-            # sqlite returns a simple string instead of a datetime object
-            publ = datetime.strptime(publ, "%Y-%m-%d %H:%M:%S")
-        if last_mod and not isinstance(last_mod, datetime):
-            last_mod = datetime.strptime(last_mod, "%Y-%m-%d %H:%M:%S")
-        if cwe_ids:
-            cwe_ids = cwe_ids.split(",")
-        else:
-            cwe_ids = []
-
-        if float(score) < 0:
-            severity = None
-        else:
-            severity = SeverityCVSS(score=str(float(score)), version=cvss_ver, vector=vector)
-
+        descr, publ, last_mod, severity, cwe_ids, cisa_known_exploited, href = (
+            get_detailed_vuln_data(vuln_id, vuln_db_cursor)
+        )
         vuln = Vulnerability.from_vuln_match_complete(
             vuln_id,
             match_reason,
@@ -80,7 +88,7 @@ def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
             last_mod,
             severity,
             cwe_ids,
-            bool(cisa_known_exploited),
+            cisa_known_exploited,
             [],
         )
         detailed_vulns[vuln_id] = vuln
@@ -197,6 +205,27 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
                 vuln.add_tracked_by(
                     DataSource.NVD, VULN_TRACK_BASE_URL + next(iter(vuln_cve_ids))
                 )
+
+        # add general vuln info if not present
+        for cve_id in vuln_cve_ids:
+            query = "SELECT description, published, last_modified, cvss_version, base_score, vector, cwe_ids, cisa_known_exploited FROM nvd WHERE cve_id = ?"
+            vuln_db_cursor.execute(query, (vuln_id,))
+            queried_info = vuln_db_cursor.fetchone()
+
+            if queried_info:
+                description, published, modified, severity, cwe_ids, cisa_kev, href = (
+                    get_detailed_vuln_data(cve_id, vuln_db_cursor)
+                )
+
+                for attr in ("description", "published", "modified", "cwe_ids", "cisa_kev"):
+                    if not (getattr(vuln, attr)):
+                        setattr(vuln, attr, locals()[attr])
+
+                if severity and severity.type not in vuln.severity:
+                    vuln.add_severity(severity)
+
+            if cve_id not in vuln.aliases:
+                vuln.add_alias(cve_id, href)
 
 
 def postprocess_results(
