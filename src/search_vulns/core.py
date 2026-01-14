@@ -267,7 +267,7 @@ def _search_product_ids(
     return product_ids, pot_product_ids
 
 
-def _retrieve_module_run_order():
+def _retrieve_module_run_order(config):
     """Determine order to run search_vulns modules in"""
     search_vulns_modules = get_modules()
     remaining_modules = list(search_vulns_modules)
@@ -279,7 +279,16 @@ def _retrieve_module_run_order():
 
             module_requires = []
             if hasattr(module, "REQUIRES_RUN_MODULES"):
-                module_requires = module.REQUIRES_RUN_MODULES
+                module_requires += module.REQUIRES_RUN_MODULES
+            try:
+                module_data_pref_pos = config.get("MODULES_DATA_PREFERENCE", []).index(mid)
+                if module_data_pref_pos + 1 < len(config["MODULES_DATA_PREFERENCE"]):
+                    module_requires += config["MODULES_DATA_PREFERENCE"][
+                        module_data_pref_pos + 1 :
+                    ]
+            except ValueError:
+                # module not in MODULES_DATA_PREFERENCE list
+                pass
 
             if all(req_module in module_run_order for req_module in module_requires):
                 module_run_order.append(mid)
@@ -314,10 +323,12 @@ def search_vulns(
         product_db_conn = get_database_connection(config["PRODUCT_DATABASE"])
         product_db_cursor = product_db_conn.cursor()
         close_product_db_after = True
+    if not known_product_ids:
+        known_product_ids = ProductIDsResult()
 
     query_processed = query.strip()
     search_vulns_modules = get_modules()
-    module_run_order = _retrieve_module_run_order()
+    module_run_order = _retrieve_module_run_order(config)
 
     # preprocess query
     extra_params = {}
