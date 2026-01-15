@@ -113,10 +113,10 @@ def search_has_valid_auth(request):
         db_cursor.execute("SELECT api_key, status FROM api_keys WHERE api_key = ?", (api_key,))
         api_keys = db_cursor.fetchall()
         if not api_keys:
-            auth_error = ("API key is unknown", 403)
+            auth_error = ("API key is unknown", 401)
             is_auth_request = False
         elif api_keys[0][1].lower() != "valid":
-            auth_error = ("API key is invalid, key status: " + str(api_keys[0][1]), 403)
+            auth_error = ("API key is invalid, key status: " + str(api_keys[0][1]), 401)
             is_auth_request = False
 
         # then check if number of requests for key exceeds limit
@@ -134,13 +134,13 @@ def search_has_valid_auth(request):
             if not request_count:
                 auth_error = (
                     "Could not get count of recent API requests for provided API key",
-                    403,
+                    500,
                 )
             request_count = request_count[0]
             if not auth_error and not request_count:
                 auth_error = (
                     "Could not get count of recent API requests for provided API key",
-                    403,
+                    500,
                 )
             request_count = request_count[0]
             if (
@@ -150,7 +150,7 @@ def search_has_valid_auth(request):
             ):
                 auth_error = (
                     "Too many requests with this API key. Try again in a couple of minutes.",
-                    403,
+                    429,
                 )
 
             # then insert the current request into the DB and issue valid auth response
@@ -192,11 +192,11 @@ def search_has_valid_auth(request):
         elif not api_key:
             auth_error = (
                 "Neither a valid API key nor a valid reCAPTCHA token was provided.",
-                403,
+                401,
             )
 
     if not is_auth_request and auth_error is None:
-        auth_error = "Neither a valid API key nor a valid reCAPTCHA token was provided.", 403
+        auth_error = "Neither a valid API key nor a valid reCAPTCHA token was provided.", 401
 
     return is_auth_request, auth_error
 
@@ -206,6 +206,7 @@ def search_has_valid_auth(request):
     summary="Retrieve Product IDs",
     description="Retrieve product IDs and suggestions that match the queried product.",
     security="ApiKeyAuth",
+    responses={429: "Too Many Requests"},
 )
 @api.input(ProductIDQuery, location="query")
 @api.output(SearchVulnsResult)
@@ -248,6 +249,7 @@ def product_id_suggestions(query_data):
     summary="Search for known vulnerabilities, exploits and more",
     description="Search for known vulnerabilities, exploits and more by using search_vulns' core engine and its modules.",
     security="ApiKeyAuth",
+    responses={429: "Too Many Requests"},
 )
 @app.input(SearchVulnsQuery, location="query")
 @app.output(SearchVulnsResult)
