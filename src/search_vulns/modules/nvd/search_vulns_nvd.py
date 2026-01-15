@@ -40,7 +40,6 @@ def get_detailed_vuln_data(vuln_id, vuln_db_cursor):
             False,
         )
         score, descr = "-1.0", "NOT FOUND"
-        match_reason = MatchReason.N_A
     if cvss_ver:
         cvss_ver = str(float(cvss_ver))
     href = VULN_TRACK_BASE_URL + vuln_id
@@ -77,6 +76,9 @@ def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
         descr, publ, last_mod, severity, cwe_ids, cisa_known_exploited, href = (
             get_detailed_vuln_data(vuln_id, vuln_db_cursor)
         )
+        if severity is None:
+            match_reason = MatchReason.N_A
+
         vuln = Vulnerability.from_vuln_match_complete(
             vuln_id,
             match_reason,
