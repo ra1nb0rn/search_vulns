@@ -14,6 +14,7 @@ var doneTypingQueryTimer, queryInput = $('#query'), doneTypingQueryInterval = 60
 var arrowKeyUpDownInterval = null, arrowKeyUpDownIntervalTime = 100, arrowKeyUpDownHoldDetectionTimer = null, arrowKeyUpDownHoldDetectionTime = 150;
 var curSelectedProductIDSuggestion = -1, suggestedQueriesJustOpened = false;
 var minMatchScore = 0;
+const IS_VULN_ID_QUERY_RE = /\b[A-Z]{2,10}(?:-[A-Z0-9]{2,12}){1,4}\b/;
 
 
 function htmlEntities(text) {
@@ -1388,8 +1389,9 @@ function doneTypingQuery () {
         query = '';
 
     // no product ID suggestions for vuln IDs search
-    if (query.trim().startsWith('CVE') || query.trim().startsWith('GHSA')){
-        $('#productIDSuggestions').html('');
+    if (IS_VULN_ID_QUERY_RE.test(query.trim())){
+        var dropdownContent = `<ul class="menu menu-md p-1 bg-base-200 rounded-box w-full"><li tabindex="0"><a class="text-nowrap whitespace-nowrap" id="product-id-suggestion-0" onclick="searchVulnsAction(this)">${query.trim()}</a></li></ul>`;
+        $('#productIDSuggestions').html(dropdownContent);
         return;
     }
 
