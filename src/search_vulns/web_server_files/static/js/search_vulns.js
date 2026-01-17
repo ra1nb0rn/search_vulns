@@ -363,7 +363,7 @@ function createVulnTableRowHtml(idx, vuln) {
                 if (exploit_url_show.length > exploit_url_show_max_length) {
                     exploit_url_show = exploit_url_show.substring(0, exploit_url_show_max_length - 2) + '...';
                 }
-                exploits.push(`<a href="${vuln.exploits[j].replace('"', '&quot;')}" target="_blank" style="color: inherit;">${htmlEntities(exploit_url_show)}</a>`);
+                exploits.push(`<a href="${vuln.exploits[j].replace('"', '&quot;')}" target="_blank" class="link" style="color: inherit;">${htmlEntities(exploit_url_show)}</a>`);
             }
         }
         vuln_row_html += `<td class="lg:text-nowrap lg:whitespace-nowrap">${exploits.join("<br>")}</td>`;
