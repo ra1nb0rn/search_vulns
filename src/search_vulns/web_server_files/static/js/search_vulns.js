@@ -1,7 +1,7 @@
 
 var curVulnData = {}, curEOLData = {}, onlyShowTheseVulns = null;
 var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
-var ignoreGeneralProductVulns = false, onlyShowEDBExploits = false, showGHSAVulns = false;
+var ignoreGeneralProductVulns = false, onlyShowEDBExploits = false;
 var showSingleVersionVulns = false, isGoodProductID = true, showPatchedVulns = true, showTableFiltering = false;
 var noVulnsFoundHtml = '<div class="w-full text-center"><h5 class="text-success">No known vulnerabilities could be found.</h5></div>';
 var filterDataSourcesDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="showDataSourcesAll" onclick="changeDataSourcesConfig(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="showDataSourcesNone" onclick="changeDataSourcesConfig(this)">None</button></div>`;
@@ -181,8 +181,6 @@ function createVulnTableRowHtml(idx, vuln) {
 
     // set up references
     for (const vuln_id in vuln_id_ref_map) {
-        if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
-            continue
         vuln_id_html += `<div class="w-full mb-0.3"><a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a></div>`;
     }
 
@@ -496,8 +494,6 @@ function renderSearchResults(sourceFilterID) {
             continue;
         if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
-        if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
-            continue;
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
         if (computeVulnMatchScore(vulns[i]) < minMatchScore)
@@ -583,8 +579,6 @@ function createVulnsMarkDownTable() {
             continue;
         if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
-        if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
-            continue;
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
         if (computeVulnMatchScore(vulns[i]) < minMatchScore)
@@ -649,8 +643,6 @@ function createVulnsMarkDownTable() {
             continue;
         if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
-        if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
-            continue;
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
         if (computeVulnMatchScore(vulns[i]) < minMatchScore)
@@ -663,8 +655,6 @@ function createVulnsMarkDownTable() {
         if (selectedColumns.length < 1 || selectedColumns.includes("cve")) {
             vuln_id_ref_map = vulns[i].aliases;
             for (const vuln_id in vuln_id_ref_map) {
-                if (vuln_id.startsWith("GHSA") && !showGHSAVulns)
-                    continue
                 vulns_md += `[${vuln_id}](${htmlEntities(vuln_id_ref_map[vuln_id])})<br>`;
             }
             vulns_md = vulns_md.slice(0, -4);  // strip trailing "<br>"
@@ -751,8 +741,6 @@ function createVulnsCSV() {
             continue;
         if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
-        if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
-            continue;
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
         if (computeVulnMatchScore(vulns[i]) < minMatchScore)
@@ -800,8 +788,6 @@ function createVulnsCSV() {
             continue;
         if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
             continue;
-        if (!showGHSAVulns && vulns[i].id.startsWith('GHSA-'))
-            continue;
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
         if (computeVulnMatchScore(vulns[i]) < minMatchScore)
@@ -813,8 +799,6 @@ function createVulnsCSV() {
             vuln_id_ref_map = vulns[i].aliases;
             vuln_ids = [];
             for (const vuln_id in vuln_id_ref_map) {
-                if (vuln_id.startsWith('GHSA') && !showGHSAVulns)
-                    continue
                 vuln_ids.push(vuln_id);
             }
             if (vuln_ids)
@@ -1176,10 +1160,6 @@ function changeSearchConfig(configElement) {
         showSingleVersionVulns = settingEnabled;
         localStorage.setItem("showSingleVersionVulns", settingEnabledStr);
     }
-    else if (configElement.id == "showGHSAVulnsConfig") {
-        showGHSAVulns = settingEnabled;
-        localStorage.setItem("showGHSAVulns", settingEnabledStr);
-    }
     else if (configElement.id == "showPatchedVulnsConfig") {
         showPatchedVulns = settingEnabled;
         localStorage.setItem("showPatchedVulns", settingEnabledStr);
@@ -1325,9 +1305,6 @@ function setupConfigFromLocalstorage() {
     if (localStorage.getItem('showSingleVersionVulns') === null) {
         localStorage.setItem('showSingleVersionVulns', 'false');
     }
-    if (localStorage.getItem('showGHSAVulns') === null) {
-        localStorage.setItem('showGHSAVulns', 'true');
-    }
     if (localStorage.getItem('showPatchedVulns') === null) {
         localStorage.setItem('showPatchedVulns', 'true');
     }
@@ -1352,10 +1329,6 @@ function setupConfigFromLocalstorage() {
     if (localStorage.getItem('showSingleVersionVulns') == 'true') {
         showSingleVersionVulns = true;
         document.getElementById("showSingleVersionVulnsConfig").checked = true;
-    }
-    if (localStorage.getItem('showGHSAVulns') == 'true') {
-        showGHSAVulns = true;
-        document.getElementById("showGHSAVulnsConfig").checked = true;
     }
     if (localStorage.getItem('showPatchedVulns') == 'true') {
         showPatchedVulns = true;
