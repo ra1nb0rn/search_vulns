@@ -2,7 +2,7 @@
 var curVulnData = {}, curEOLData = {}, onlyShowTheseVulns = null;
 var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
 var ignoreGeneralProductVulns = false, onlyShowEDBExploits = false;
-var showSingleVersionVulns = false, isGoodProductID = true, showPatchedVulns = true, showTableFiltering = false;
+var showSingleVersionVulns = false, isGoodProductID = true, showPatchedVulns = true;
 var noVulnsFoundHtml = '<div class="w-full text-center"><h5 class="text-success">No known vulnerabilities could be found.</h5></div>';
 var filterDataSourcesDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="showDataSourcesAll" onclick="changeDataSourcesConfig(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="showDataSourcesNone" onclick="changeDataSourcesConfig(this)">None</button></div>`;
 var filterVulnDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="filterVulnsAll" onclick="changeFilterVulns(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="filterVulnsNone" onclick="changeFilterVulns(this)">None</button></div>`;
@@ -505,7 +505,7 @@ function renderSearchResults(sourceFilterID) {
 
         has_vulns = true;
         var checked_html = "", margin_html = "";
-        if (!showTableFiltering || onlyShowTheseVulns == null || onlyShowTheseVulns.includes(vulns[i].id)) {
+        if (onlyShowTheseVulns == null || onlyShowTheseVulns.includes(vulns[i].id)) {
             vulns_html += createVulnTableRowHtml(i, vulns[i]);
             checked_html = 'checked="checked"';
         }
@@ -1164,10 +1164,6 @@ function changeSearchConfig(configElement) {
         showPatchedVulns = settingEnabled;
         localStorage.setItem("showPatchedVulns", settingEnabledStr);
     }
-    else if (configElement.id == "showTableFilteringConfig") {
-        showTableFiltering = settingEnabled;
-        localStorage.setItem("showTableFiltering", settingEnabledStr);
-    }
 
     if (!$.isEmptyObject(curVulnData)) {
         var hasVulns = renderSearchResults();
@@ -1206,7 +1202,7 @@ function changeColumnConfig(columnElement) {
 
     localStorage.setItem('vulnTableColumns', JSON.stringify(vulnTableColumns));
 
-    if (!$.isEmptyObject(curVulnData) && showTableFiltering)
+    if (!$.isEmptyObject(curVulnData))
         renderSearchResults();
 }
 
@@ -1234,7 +1230,7 @@ function changeFilterVulns(filterVulnsButton) {
             onlyShowTheseVulns.push(filterVulnsDiv.find('.label-text').text().trim());
     });
 
-    if (!$.isEmptyObject(curVulnData) && showTableFiltering)
+    if (!$.isEmptyObject(curVulnData))
         renderSearchResults("filterVulnsDropdown");
 }
 
@@ -1277,7 +1273,7 @@ function changeDataSourcesConfig(dataSourcesElement) {
             el.checked = true;
     });
 
-    if (!$.isEmptyObject(curVulnData) && showTableFiltering)
+    if (!$.isEmptyObject(curVulnData))
         var hasVulns = renderSearchResults("filterDataSourcesDropdown");
         if (!hasVulns)
             $('#vulns').html(noVulnsFoundHtml);
@@ -1308,9 +1304,6 @@ function setupConfigFromLocalstorage() {
     if (localStorage.getItem('showPatchedVulns') === null) {
         localStorage.setItem('showPatchedVulns', 'true');
     }
-    if (localStorage.getItem('showTableFiltering') === null) {
-        localStorage.setItem('showTableFiltering', 'true');
-    }
     if (localStorage.getItem('minMatchScore') === null) {
         localStorage.setItem('minMatchScore', 0);
     }
@@ -1333,10 +1326,6 @@ function setupConfigFromLocalstorage() {
     if (localStorage.getItem('showPatchedVulns') == 'true') {
         showPatchedVulns = true;
         document.getElementById("showPatchedVulnsConfig").checked = true;
-    }
-    if (localStorage.getItem('showTableFiltering') == 'true') {
-        showTableFiltering = true;
-        document.getElementById("showTableFilteringConfig").checked = true;
     }
     minMatchScore = Number(localStorage.getItem('minMatchScore'));
     document.getElementById("minMatchScoreSlider").value = minMatchScore;
