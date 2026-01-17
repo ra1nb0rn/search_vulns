@@ -1334,7 +1334,12 @@ function setupConfigFromLocalstorage() {
 
     // set default columns
     if (localStorage.getItem('vulnTableColumns') === null) {
-        localStorage.setItem('vulnTableColumns', '["cve", "cvss", "descr", "expl"]');
+        // on small screens hide exploits by default
+        const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
+        if (isSmallScreen)
+            localStorage.setItem('vulnTableColumns', '["cve", "cvss", "descr"]');
+        else
+            localStorage.setItem('vulnTableColumns', '["cve", "cvss", "descr", "expl"]');
     }
     var vulnTableColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
 
