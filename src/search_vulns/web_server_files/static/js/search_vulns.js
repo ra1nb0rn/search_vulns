@@ -4,6 +4,7 @@ var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
 var ignoreGeneralProductVulns = false, onlyShowEDBExploits = false, showGHSAVulns = false;
 var showSingleVersionVulns = false, isGoodProductID = true, showPatchedVulns = true, showTableFiltering = false;
 var noVulnsFoundHtml = '<div class="w-full text-center"><h5 class="text-success">No known vulnerabilities could be found.</h5></div>';
+var filterDataSourcesDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="showDataSourcesAll" onclick="changeDataSourcesConfig(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="showDataSourcesNone" onclick="changeDataSourcesConfig(this)">None</button></div>`;
 var filterVulnDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-full"><button class="btn btn-sm btn-neutral sm:mr-1 md:mr-2 w-14" id="filterVulnsAll" onclick="changeFilterVulns(this)">All</button><button class="btn btn-sm btn-neutral w-auto" id="filterVulnsNone" onclick="changeFilterVulns(this)">None</button></div>`;
 var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
 var iconSortDesc = '<i class="fa-solid fa-sort-down"></i>';
@@ -27,6 +28,7 @@ function htmlEntities(text) {
         return '&#' + c.charCodeAt(0) + ';';
     });
 }
+
 
 function escapeMarkdownSimple(text) {
     return text.replace(/[\\|*_\[\]`]/g, function (c) {
@@ -139,14 +141,31 @@ function getCurrentVulnsSorted() {
     }
 }
 
-function computeVulnMatchScore(vuln) {
+function getVulnTrackCount(vuln) {
+    var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
+    var trackCount = Object.keys(vuln.tracked_by).filter(data_source => !excludedDataSources.includes(data_source)).length;
+    return trackCount;
+}
+
+function computeVulnConfidence(vuln) {
+    var trackCount = getVulnTrackCount(vuln);
+    var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
     var vulnConfidence;
-    var trackCount = Object.keys(vuln.tracked_by).length;
     if (vuln.match_reason == 'vuln_id')
         vulnConfidence = trackCount
-    else
-        vulnConfidence = Object.values(vuln.matched_by).reduce((sum, vuln_match) => sum + (vuln_match.confidence || 0), 0);
-    return vulnConfidence / trackCount;
+    else {
+        vulnConfidence = 0;
+        for (const [data_source, vuln_match] of Object.entries(vuln.matched_by)) {
+            if (excludedDataSources.includes(data_source))
+                continue;
+            vulnConfidence += vuln_match.confidence;
+        }
+    }
+    return vulnConfidence
+}
+
+function computeVulnMatchScore(vuln) {
+    return computeVulnConfidence(vuln) / getVulnTrackCount(vuln);
 }
 
 function createVulnTableRowHtml(idx, vuln) {
@@ -208,11 +227,8 @@ function createVulnTableRowHtml(idx, vuln) {
             vuln_flag_html = `<div class="w-full flex flex-row flex-wrap gap-1 justify-end ml-3">${vuln_flag_html}</div>`;
 
         // set up badge with tracking references
-        trackCount = Object.keys(vuln.tracked_by).length;
-        if (vuln.match_reason == 'vuln_id')
-            vulnConfidence = trackCount
-        else
-            vulnConfidence = Object.values(vuln.matched_by).reduce((sum, vuln_match) => sum + (vuln_match.confidence || 0), 0);
+        trackCount = getVulnTrackCount(vuln);
+        vulnConfidence = computeVulnConfidence(vuln);
 
         if (vulnConfidence / trackCount < 0.3)
             source_badge_color = "error";  // overwrite warning colors from hints above
@@ -236,7 +252,11 @@ function createVulnTableRowHtml(idx, vuln) {
                 <div tabindex="0" class="dropdown-content z-[1] shadow-2xl bg-base-200 rounded-box w-fit px-3 py-2 border border-5 border-base-300 space-y-1">
         `;
 
+        var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
         Object.keys(vuln.tracked_by).sort().forEach(source => {
+            if (excludedDataSources.includes(source))
+                return;
+
             source_ref_icon = ""
             if (vuln.match_reason == "vuln_id")
                 source_ref_icon = '<i class="fa-regular fa-circle-check text-success text-lg"></i>';
@@ -381,7 +401,8 @@ function resizeSearchVulnsTable() {
     }
 }
 
-function renderSearchResults(reloadFilterDropdown) {
+
+function renderSearchResults(sourceFilterID) {
     var sortIconVulnId = iconUnsorted, sortFunctionVulnId = "reorderVulns(0, false)";
     var sortIconCVSS = iconUnsorted, sortFunctionCVSS = "reorderVulns(1, false)";
     var sortIconEPSS = iconUnsorted, sortFunctionEPSS = "reorderVulns(2, false)";
@@ -461,7 +482,15 @@ function renderSearchResults(reloadFilterDropdown) {
     vulns_html += "<tbody>";
 
     var filter_vulns_html = filterVulnDropdownButtonHtml, has_vulns = false;
+    var involved_data_sources = new Set();
+    var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
+    var hiddenVulnsViaDataSources, hiddenVulnViaFilter = false, hiddenVulnViaFilter=false;
     for (var i = 0; i < vulns.length; i++) {
+        // append involved data sources
+        for (const data_source of Object.keys(vulns[i].tracked_by)) {
+            involved_data_sources.add(data_source);
+        }
+
         // create row in table
         if (ignoreGeneralProductVulns && vulns[i].match_reason == "general_product_uncertain")
             continue;
@@ -473,6 +502,10 @@ function renderSearchResults(reloadFilterDropdown) {
             continue;
         if (computeVulnMatchScore(vulns[i]) < minMatchScore)
             continue;
+        if (Object.keys(vulns[i].matched_by).every(data_source => excludedDataSources.includes(data_source))) {
+            hiddenVulnsViaDataSources = true;
+            continue;
+        }
 
         has_vulns = true;
         var checked_html = "", margin_html = "";
@@ -480,6 +513,8 @@ function renderSearchResults(reloadFilterDropdown) {
             vulns_html += createVulnTableRowHtml(i, vulns[i]);
             checked_html = 'checked="checked"';
         }
+        if (!checked_html)
+            hiddenVulnViaFilter = true;
         if (i != 0)
             margin_html = "mt-3"
 
@@ -487,6 +522,28 @@ function renderSearchResults(reloadFilterDropdown) {
         filter_vulns_html += `<div class="form-control filter-vulns ${margin_html}"><label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm"><span class="label-text text-nowrap whitespace-nowrap text-base-content flex-1 min-w-0 text-left">${vulns[i]["id"]}</span><input type="checkbox" class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeFilterVulns()" ${checked_html} /></label></div>`;
     }
     vulns_html += "</tbody></table>";
+
+    var filter_data_sources_html = filterDataSourcesDropdownButtonHtml;
+    var checked_html = "", margin_html = "";
+    for (const data_source of [...involved_data_sources].sort()) {
+        if (excludedDataSources.includes(data_source))
+            checked_html = "";
+        else
+            checked_html = "checked=checked";
+        filter_data_sources_html += `<div class="form-control ${margin_html}"><label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm"><span class="label-text text-nowrap whitespace-nowrap text-base-content flex-1 min-w-0 text-left">${htmlEntities(data_source.toUpperCase())}</span><input type="checkbox" class="checkbox checkbox-accent rounded-md shrink-0 filter-data-sources" data-source="${htmlEntities(data_source)}" onclick="changeDataSourcesConfig(this)" ${checked_html} /></label></div>`;
+        if (margin_html.length < 1)
+            margin_html = "mt-3";
+    }
+
+    if (hiddenVulnsViaDataSources)
+        document.getElementById("dataSourcesFilterHiddenVulnsNotifier").classList.remove("hidden");
+    else
+        document.getElementById("dataSourcesFilterHiddenVulnsNotifier").classList.add("hidden");
+    if (hiddenVulnViaFilter)
+        document.getElementById("vulnFilterHiddenVulnsNotifier").classList.remove("hidden");
+    else
+        document.getElementById("vulnFilterHiddenVulnsNotifier").classList.add("hidden");
+
     if (has_vulns) {
         $("#vulns").html(vulns_html);
         // wait for next animation frame and the resize table with the dynamic source badge
@@ -495,8 +552,11 @@ function renderSearchResults(reloadFilterDropdown) {
         });
     }
 
-    if (reloadFilterDropdown)
+    if (sourceFilterID === undefined || sourceFilterID != "filterDataSourcesDropdown")
+        $('#filterDataSourcesDropdown').html(filter_data_sources_html);  // set data source filter HTML
+    if (sourceFilterID === undefined || sourceFilterID != "filterVulnsDropdown")
         $('#filterVulnsDropdown').html(filter_vulns_html);  // set Vuln filter HTML
+
     $('#exportMarkdownIcon').html(exportIcon);
     $('#exportCSVIcon').html(exportIcon);
 
@@ -508,12 +568,13 @@ function renderSearchResults(reloadFilterDropdown) {
 
 function createVulnsMarkDownTable() {
     var selectedVulns = onlyShowTheseVulns;
-    var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'))
+    var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'));
     var vulns = getCurrentVulnsSorted(), vuln_id_ref_map;
     var vulns_md = "";
     var has_exploits = false, cur_vuln_has_exploits = false;
     var cvss_score, cvss_version;
     var exploit_url_show;
+    var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
 
     for (var i = 0; i < vulns.length; i++) {
         if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
@@ -527,6 +588,8 @@ function createVulnsMarkDownTable() {
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
         if (computeVulnMatchScore(vulns[i]) < minMatchScore)
+            continue;
+        if (Object.keys(vulns[i].matched_by).every(data_source => excludedDataSources.includes(data_source)))
             continue;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
@@ -591,6 +654,8 @@ function createVulnsMarkDownTable() {
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
         if (computeVulnMatchScore(vulns[i]) < minMatchScore)
+            continue;
+        if (Object.keys(vulns[i].matched_by).every(data_source => excludedDataSources.includes(data_source)))
             continue;
 
         cur_vuln_has_exploits = false;
@@ -677,6 +742,7 @@ function createVulnsCSV() {
     var vulns_csv = "", vuln_ids = "";
     var cvss_score, cvss_version;
     var has_exploits = false;
+    var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
 
     for (var i = 0; i < vulns.length; i++) {
         if (selectedVulns != null && selectedVulns.length > 0 && !selectedVulns.includes(vulns[i]["id"]))
@@ -690,6 +756,8 @@ function createVulnsCSV() {
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
         if (computeVulnMatchScore(vulns[i]) < minMatchScore)
+            continue;
+        if (Object.keys(vulns[i].matched_by).every(data_source => excludedDataSources.includes(data_source)))
             continue;
 
         if (vulns[i].exploits !== undefined && vulns[i].exploits.length > 0) {
@@ -737,6 +805,8 @@ function createVulnsCSV() {
         if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
             continue;
         if (computeVulnMatchScore(vulns[i]) < minMatchScore)
+            continue;
+        if (Object.keys(vulns[i].matched_by).every(data_source => excludedDataSources.includes(data_source)))
             continue;
 
         if (selectedColumns.length < 1 || selectedColumns.includes('cve')) {
@@ -928,11 +998,12 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
 
             $("#search-display").html(search_display_html);
             onlyShowTheseVulns = null;
-            var hasVulns = renderSearchResults(true);
+            var hasVulns = renderSearchResults();
             if (!hasVulns && !queryError)
                 $('#vulns').html(noVulnsFoundHtml);
 
             $("#related-queries-display").html(related_queries_html);
+            $("#buttonFilterDataSources").removeClass("btn-disabled");
             $("#buttonFilterVulns").removeClass("btn-disabled");
             $("#buttonManageColumns").removeClass("btn-disabled");
             $("#buttonExportResults").removeClass("btn-disabled");
@@ -952,6 +1023,7 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
 
             $("#vulns").html(`<h5 class="text-error w-full text-center">${errorMsg}</h5>`);
 
+            $("#buttonFilterDataSources").removeClass("btn-disabled");
             $("#buttonFilterVulns").removeClass("btn-disabled");
             $("#buttonManageColumns").removeClass("btn-disabled");
             $("#buttonExportResults").removeClass("btn-disabled");
@@ -961,6 +1033,7 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
 }
 
 function searchVulnsFromState(state) {
+    $("#buttonFilterDataSources").addClass("btn-disabled");
     $("#buttonFilterVulns").addClass("btn-disabled");
     $("#buttonManageColumns").addClass("btn-disabled");
     $("#buttonExportResults").addClass("btn-disabled");
@@ -1034,7 +1107,7 @@ function searchVulnsAction(actionElement) {
 function reorderVulns(sortColumnIdx, asc) {
     curSortColIdx = sortColumnIdx;
     curSortColAsc = asc;
-    var hasVulns = renderSearchResults(true);
+    var hasVulns = renderSearchResults();
     if (!hasVulns)
         $('#vulns').html(noVulnsFoundHtml);
 }
@@ -1117,7 +1190,7 @@ function changeSearchConfig(configElement) {
     }
 
     if (!$.isEmptyObject(curVulnData)) {
-        var hasVulns = renderSearchResults(true);
+        var hasVulns = renderSearchResults();
         if (!hasVulns)
             $('#vulns').html(noVulnsFoundHtml);
     }
@@ -1182,7 +1255,52 @@ function changeFilterVulns(filterVulnsButton) {
     });
 
     if (!$.isEmptyObject(curVulnData) && showTableFiltering)
-        renderSearchResults();
+        renderSearchResults("filterVulnsDropdown");
+}
+
+function changeDataSourcesConfig(dataSourcesElement) {
+    var allCheckType = null;
+    onlyShowTheseVulns = null;  // reset vuln ID selection
+
+    if (dataSourcesElement.id == 'showDataSourcesAll')
+        allCheckType = true
+    else if (dataSourcesElement.id == 'showDataSourcesNone')
+        allCheckType = false
+
+    // determine new excluded data sources
+    var excludedDataSources = new Set(JSON.parse(localStorage.getItem("excludedDataSources")));
+    if (allCheckType != null) {
+        document.querySelectorAll(".filter-data-sources").forEach((el) => {
+            if (allCheckType) {
+                el.checked = true;
+                excludedDataSources.delete(el.dataset.source);
+            }
+            else {
+                el.checked = false;
+                excludedDataSources.add(el.dataset.source);
+            }
+        });
+    }
+    else {
+        if (dataSourcesElement.checked)
+            excludedDataSources.delete(dataSourcesElement.dataset.source)
+        else
+            excludedDataSources.add(dataSourcesElement.dataset.source)
+    }
+    localStorage.setItem("excludedDataSources", JSON.stringify([...excludedDataSources]));
+
+    // render new checkboxes and vulns table
+    document.querySelectorAll(".filter-data-sources").forEach((el) => {
+        if (excludedDataSources.has(el.dataset.source))
+            el.checked = false;
+        else
+            el.checked = true;
+    });
+
+    if (!$.isEmptyObject(curVulnData) && showTableFiltering)
+        var hasVulns = renderSearchResults("filterDataSourcesDropdown");
+        if (!hasVulns)
+            $('#vulns').html(noVulnsFoundHtml);
 }
 
 function onMinMatchScoreSliderInput(slider) {
@@ -1218,6 +1336,9 @@ function setupConfigFromLocalstorage() {
     }
     if (localStorage.getItem('minMatchScore') === null) {
         localStorage.setItem('minMatchScore', 0);
+    }
+    if (localStorage.getItem('excludedDataSources') === null) {
+        localStorage.setItem('excludedDataSources', "[]");
     }
 
     if (localStorage.getItem('ignoreGeneralProductVulns') == 'true') {
@@ -1551,7 +1672,6 @@ window.addEventListener("resize", resizeSearchVulnsTable);
 
 // enable browser history backwards and forwards
 window.addEventListener("popstate", (event) => {
-    console.log(event.state);
     if (event.state) {
         if (event.state.query != undefined)
             $('#query').val(htmlEntities(event.state.query));

@@ -126,8 +126,24 @@
         </div>
         <div class="dropdown max-md:dropdown-end mr-1">
             <button tabindex="0" role="button"
+                class="btn btn-disabled btn-neutral rounded-btn text-base p-0 md:min-w-28 lg:min-w-32"
+                id="buttonFilterDataSources">
+                <span id="dataSourcesFilterHiddenVulnsNotifier"
+                    class="hidden absolute top-[3px] right-[3px] h-2 w-2 bg-warning rounded-full"></span>
+                <i class="fa-solid fa-database"></i><span class="max-md:hidden">Sources </span><i
+                    class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div tabindex="0"
+                class="dropdown-content md:left-1/2 md:transform md:-translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box w-auto min-w-40 mt-2 border border-5 border-base-300"
+                id="filterDataSourcesDropdown">
+            </div>
+        </div>
+        <div class="dropdown max-md:dropdown-end mr-1">
+            <button tabindex="0" role="button"
                 class="btn btn-disabled btn-neutral rounded-btn text-base p-0 md:min-w-24 lg:min-w-28"
                 id="buttonFilterVulns">
+                <span id="vulnFilterHiddenVulnsNotifier"
+                    class="hidden absolute top-[3px] right-[3px] h-2 w-2 bg-warning rounded-full"></span>
                 <i class="fa-solid fa-filter"></i><span class="max-md:hidden">Filter </span><i
                     class="fa-solid fa-chevron-down"></i>
             </button>
