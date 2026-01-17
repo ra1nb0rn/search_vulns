@@ -366,7 +366,7 @@ function createVulnTableRowHtml(idx, vuln) {
                 exploits.push(`<a href="${vuln.exploits[j].replace('"', '&quot;')}" target="_blank" style="color: inherit;">${htmlEntities(exploit_url_show)}</a>`);
             }
         }
-        vuln_row_html += `<td class="text-nowrap whitespace-nowrap">${exploits.join("<br>")}</td>`;
+        vuln_row_html += `<td class="lg:text-nowrap lg:whitespace-nowrap">${exploits.join("<br>")}</td>`;
     }
 
     vuln_row_html += "</tr>";
@@ -925,7 +925,7 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
                             productIDIndex = productIDs.indexOf(product_id);
                         if (productIDIndex < 0)
                             productIDIndex = 0;
-                        search_display_html += `<span class="nowrap whitespace-nowrap"> (${htmlEntities(productIDs[productIDIndex])}`;
+                        search_display_html += `<wbr> (${htmlEntities(productIDs[productIDIndex])}`;
 
                         if (productIDs.length > 1) {
                             search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div><div class="dropdown-content translate-x-2.5 z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-fit" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent product IDs that were included into your search: <div class="tooltip tooltip-top text-wrap ml-1" data-tip="Sometimes there are multiple IDs for one product, e.g. because of a rebranding."><i class="fas fa-info-circle text-content"></i></div></h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
@@ -936,7 +936,7 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
                             });
                             search_display_html += '</ul></div></div>';
                         }
-                        search_display_html += `)</span>`;
+                        search_display_html += `)`;
                     }
                     search_display_html += `</h5></div></div>`;
                     curEOLData = {'query': query, 'version_status': search_results.version_status};

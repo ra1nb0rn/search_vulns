@@ -3789,6 +3789,16 @@
       min-width: calc(var(--spacing) * 36);
     }
   }
+  .lg\:text-nowrap {
+    @media (width >= 64rem) {
+      text-wrap: nowrap;
+    }
+  }
+  .lg\:whitespace-nowrap {
+    @media (width >= 64rem) {
+      white-space: nowrap;
+    }
+  }
   .\32 xl\:max-w-8xl {
     @media (width >= 96rem) {
       max-width: var(--spacing-8xl);
