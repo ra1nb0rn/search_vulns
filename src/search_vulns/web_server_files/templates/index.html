@@ -2,210 +2,222 @@
 
 {% block site_content %}
 <div class="md:max-w-8xl lg:max-w-6.5xl 2xl:max-w-8xl mx-auto text-center mt-2 w-full">
-    <div class="flex flex-row rounded-box items-center w-full mx-auto p-3 bg-base-300">
-        <div class="dropdown dropdown-open sm:mr-2 md:mr-3 w-full" id="queryInputConstruct"
-            onfocusout="closeProductIDSuggestions(event)">
-            <label class="input flex w-full items-center gap-5 sm:mr-1 md:mr-2">
-                <i class="fa-solid fa-database"></i>
-                <input type="text" class="w-full text-base" autofocus placeholder="Enter Product or Vulnerability IDs"
-                    name="query" id="query" />
-                <kbd class="kbd kbd-base text-xl">⏎</kbd>
-            </label>
-            <div tabindex="0"
-                class="dropdown-content hidden z-[10] max-h-90 overflow-y-auto overflow-x-hidden w-fit min-w-full shadow-2xl bg-base-300 rounded-box mt-2"
-                id="productIDSuggestions">
+    <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full p-3 rounded-box bg-base-300">
+        <div class="w-full xs:flex-shrink-0 sm:flex-1 mb-1 sm:mb-auto">
+            <div class="dropdown dropdown-open sm:mr-2 md:mr-3 w-full" id="queryInputConstruct"
+                onfocusout="closeProductIDSuggestions(event)">
+                <label class="input flex w-full items-center gap-5 sm:mr-1 md:mr-2">
+                    <i class="fa-solid fa-database"></i>
+                    <input type="text" class="w-full text-base" autofocus
+                        placeholder="Enter Product or Vulnerability IDs" name="query" id="query" />
+                    <kbd class="kbd kbd-base text-xl">⏎</kbd>
+                </label>
+                <div tabindex="0"
+                    class="dropdown-content hidden z-[10] max-h-90 overflow-y-auto overflow-x-hidden w-fit min-w-full shadow-2xl bg-base-300 rounded-box mt-2"
+                    id="productIDSuggestions">
+                </div>
             </div>
         </div>
-        <div class="dropdown max-md:dropdown-end mr-1">
-            <div tabindex="0" role="button" class="btn btn-neutral rounded-btn text-base"><i
-                    class="fa-solid fa-gear"></i></div>
-            <div tabindex="0"
-                class="dropdown-content z-[1] shadow-2xl bg-base-200 rounded-box w-70 mt-2 p-3 border border-5 border-base-300">
-                <div class="form-control">
-                    <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Ignore general vulns
-                            &nbsp;
-                            <div class="tooltip"
-                                data-tip="Some vulnerabilities in the used data set do not contain information about the affected version. These are often False Positives and showing them can be disabled here.">
-                                <i class="fas fa-info-circle text-content"></i>
-                            </div>
-                        </span>
-                        <input id="generalVulnsConfig" type="checkbox"
-                            class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeSearchConfig(this)" />
-                    </label>
-                </div>
-                <div class="form-control mt-3">
-                    <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Only EDB exploits
-                            &nbsp;
-                            <div class="tooltip"
-                                data-tip="Only show references to exploits from the official Exploit-DB. Exploit code from the EDB is usually advanced and readily usable.">
-                                <i class="fas fa-info-circle text-content"></i>
-                            </div>
-                        </span>
-                        <input id="onlyEdbExploitsConfig" type="checkbox"
-                            class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeSearchConfig(this)" />
-                    </label>
-                </div>
-                <div class="form-control mt-3">
-                    <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Show single version
-                            vulns
-                            &nbsp;
-                            <div class="tooltip"
-                                data-tip="Some vulnerabilities only seem to affect a specific version of a product. This could be an error in the data set and returning vulnerabilities for lower versions can be enabled here.">
-                                <i class="fas fa-info-circle text-content"></i>
-                            </div>
-                        </span>
-                        <input id="showSingleVersionVulnsConfig" type="checkbox"
-                            class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeSearchConfig(this)" />
-                    </label>
-                </div>
-                <div class="form-control mt-3">
-                    <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Show Patched
-                            &nbsp;
-                            <div class="tooltip tooltip-bottom"
-                                data-tip="Show vulnerabilities considered (back)patched when additional environment information is provided.">
-                                <i class="fas fa-info-circle text-content"></i>
-                            </div>
-                        </span>
-                        <input id="showPatchedVulnsConfig" type="checkbox"
-                            class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeSearchConfig(this)" />
-                    </label>
-                </div>
-                <div class="form-control mt-3">
-                    <label class="label cursor-pointer flex items-center min-w-0 text-sm w-full">
-                        <span class="label-text text-base-content text-left mr-2">
-                            Min Match Score
-                            &nbsp;
-                            <div class="tooltip tooltip-bottom">
-                                <div class="tooltip-content">
-                                    Choose the ratio of how many data sources should report the software as affected out
-                                    of all data sources tracking the vulnerability (<i
-                                        class="fa-solid fa-crosshairs"></i>).
+        <div class="flex flex-wrap w-full sm:w-auto justify-center md:justify-start gap-1 sm:gap-0">
+            <div class="dropdown max-md:dropdown-end mr-1">
+                <div tabindex="0" role="button" class="btn btn-neutral rounded-btn text-base h-full"><i
+                        class="fa-solid fa-gear"></i></div>
+                <div tabindex="0"
+                    class="dropdown-content z-[1] shadow-2xl bg-base-200 rounded-box w-70 mt-2 p-3 border border-5 border-base-300">
+                    <div class="form-control">
+                        <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
+                            <span class="label-text text-base-content flex-1 min-w-0 text-left">Ignore general vulns
+                                &nbsp;
+                                <div class="tooltip"
+                                    data-tip="Some vulnerabilities in the used data set do not contain information about the affected version. These are often False Positives and showing them can be disabled here.">
+                                    <i class="fas fa-info-circle text-content"></i>
                                 </div>
-                                <i class="fas fa-info-circle text-content"></i>
+                            </span>
+                            <input id="generalVulnsConfig" type="checkbox"
+                                class="checkbox checkbox-accent rounded-md shrink-0"
+                                onclick="changeSearchConfig(this)" />
+                        </label>
+                    </div>
+                    <div class="form-control mt-3">
+                        <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
+                            <span class="label-text text-base-content flex-1 min-w-0 text-left">Only EDB exploits
+                                &nbsp;
+                                <div class="tooltip"
+                                    data-tip="Only show references to exploits from the official Exploit-DB. Exploit code from the EDB is usually advanced and readily usable.">
+                                    <i class="fas fa-info-circle text-content"></i>
+                                </div>
+                            </span>
+                            <input id="onlyEdbExploitsConfig" type="checkbox"
+                                class="checkbox checkbox-accent rounded-md shrink-0"
+                                onclick="changeSearchConfig(this)" />
+                        </label>
+                    </div>
+                    <div class="form-control mt-3">
+                        <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
+                            <span class="label-text text-base-content flex-1 min-w-0 text-left">Show single version
+                                vulns
+                                &nbsp;
+                                <div class="tooltip"
+                                    data-tip="Some vulnerabilities only seem to affect a specific version of a product. This could be an error in the data set and returning vulnerabilities for lower versions can be enabled here.">
+                                    <i class="fas fa-info-circle text-content"></i>
+                                </div>
+                            </span>
+                            <input id="showSingleVersionVulnsConfig" type="checkbox"
+                                class="checkbox checkbox-accent rounded-md shrink-0"
+                                onclick="changeSearchConfig(this)" />
+                        </label>
+                    </div>
+                    <div class="form-control mt-3">
+                        <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
+                            <span class="label-text text-base-content flex-1 min-w-0 text-left">Show Patched
+                                &nbsp;
+                                <div class="tooltip tooltip-bottom"
+                                    data-tip="Show vulnerabilities considered (back)patched when additional environment information is provided.">
+                                    <i class="fas fa-info-circle text-content"></i>
+                                </div>
+                            </span>
+                            <input id="showPatchedVulnsConfig" type="checkbox"
+                                class="checkbox checkbox-accent rounded-md shrink-0"
+                                onclick="changeSearchConfig(this)" />
+                        </label>
+                    </div>
+                    <div class="form-control mt-3">
+                        <label class="label cursor-pointer flex items-center min-w-0 text-sm w-full">
+                            <span class="label-text text-base-content text-left mr-2">
+                                Min Match Score
+                                &nbsp;
+                                <div class="tooltip tooltip-bottom">
+                                    <div class="tooltip-content">
+                                        Choose the ratio of how many data sources should report the software as affected
+                                        out
+                                        of all data sources tracking the vulnerability (<i
+                                            class="fa-solid fa-crosshairs"></i>).
+                                    </div>
+                                    <i class="fas fa-info-circle text-content"></i>
+                                </div>
+                            </span>
+                            <div class="">
+                                <input id="minMatchScoreSlider" type="range" min="0" max="1" value="1"
+                                    class="range range-xs" step="0.01" oninput="onMinMatchScoreSliderInput(this)"
+                                    onchange="onMinMatchScoreSliderChange(this)" />
+                                <div id="minMatchScoreLabel" class="text-xs py-1">
+                                </div>
                             </div>
-                        </span>
-                        <div class="">
-                            <input id="minMatchScoreSlider" type="range" min="0" max="1" value="1"
-                                class="range range-xs" step="0.01" oninput="onMinMatchScoreSliderInput(this)"
-                                onchange="onMinMatchScoreSliderChange(this)" />
-                            <div id="minMatchScoreLabel" class="text-xs py-1">
-                            </div>
-                        </div>
-                    </label>
+                        </label>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="dropdown max-md:dropdown-end mr-1">
-            <button tabindex="0" role="button"
-                class="btn btn-disabled btn-neutral rounded-btn text-base p-0 md:min-w-28 lg:min-w-32"
-                id="buttonFilterDataSources">
-                <span id="dataSourcesFilterHiddenVulnsNotifier"
-                    class="hidden absolute top-[3px] right-[3px] h-2 w-2 bg-warning rounded-full"></span>
-                <i class="fa-solid fa-database"></i><span class="max-md:hidden">Sources </span><i
-                    class="fa-solid fa-chevron-down"></i>
-            </button>
-            <div tabindex="0"
-                class="dropdown-content md:left-1/2 md:transform md:-translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box w-auto min-w-40 mt-2 border border-5 border-base-300"
-                id="filterDataSourcesDropdown">
-            </div>
-        </div>
-        <div class="dropdown max-md:dropdown-end mr-1">
-            <button tabindex="0" role="button"
-                class="btn btn-disabled btn-neutral rounded-btn text-base p-0 md:min-w-24 lg:min-w-28"
-                id="buttonFilterVulns">
-                <span id="vulnFilterHiddenVulnsNotifier"
-                    class="hidden absolute top-[3px] right-[3px] h-2 w-2 bg-warning rounded-full"></span>
-                <i class="fa-solid fa-filter"></i><span class="max-md:hidden">Filter </span><i
-                    class="fa-solid fa-chevron-down"></i>
-            </button>
-            <div tabindex="0"
-                class="dropdown-content md:left-1/2 md:transform md:-translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box min-w-36 mt-2 overflow-y-auto max-h-96 border border-5 border-base-300"
-                id="filterVulnsDropdown">
-            </div>
-        </div>
-        <div class="dropdown max-md:dropdown-end mr-1">
-            <div tabindex="0" role="button"
-                class="btn btn-disabled btn-neutral rounded-btn text-base p-0 md:min-w-32 lg:min-w-36"
-                id="buttonManageColumns">
-                <i class="fa-solid fa-table-columns"></i><span class="max-md:hidden">Columns </span><i
-                    class="fa-solid fa-chevron-down"></i>
-            </div>
-            <div tabindex="0"
-                class="dropdown-content md:left-1/2 md:transform md:-translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box w-auto min-w-40 mt-2 border border-5 border-base-300">
-                <div class="items-center flex-row">
-                    <button class="btn btn-sm btn-neutral w-14 sm:mr-1 md:mr-2" id="showColumnAll"
-                        onclick="changeColumnConfig(this)">All</button>
-                    <button class="btn btn-sm btn-neutral w-16" id="showColumnNone"
-                        onclick="changeColumnConfig(this)">None</button>
-                </div>
-                <div class="form-control mt-3">
-                    <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Vuln ID
-                        </span>
-                        <input id="showColumnVulnId" type="checkbox"
-                            class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeColumnConfig(this)" />
-                    </label>
-                </div>
-                <div class="form-control mt-3">
-                    <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">CVSS-Score
-                        </span>
-                        <input id="showColumnCVSS" type="checkbox" class="checkbox checkbox-accent rounded-md shrink-0"
-                            onclick="changeColumnConfig(this)" />
-                    </label>
-                </div>
-                <div class="form-control mt-3">
-                    <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">EPSS-Score
-                        </span>
-                        <input id="showColumnEPSS" type="checkbox" class="checkbox checkbox-accent rounded-md shrink-0"
-                            onclick="changeColumnConfig(this)" />
-                    </label>
-                </div>
-                <div class="form-control mt-3">
-                    <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">CWE ID
-                        </span>
-                        <input id="showColumnCWE" type="checkbox" class="checkbox checkbox-accent rounded-md shrink-0"
-                            onclick="changeColumnConfig(this)" />
-                    </label>
-                </div>
-                <div class="form-control mt-3">
-                    <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Description
-                        </span>
-                        <input id="showColumnDescription" type="checkbox"
-                            class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeColumnConfig(this)" />
-                    </label>
-                </div>
-                <div class="form-control mt-3">
-                    <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
-                        <span class="label-text text-base-content flex-1 min-w-0 text-left">Exploits
-                        </span>
-                        <input id="showColumnExploits" type="checkbox"
-                            class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeColumnConfig(this)" />
-                    </label>
+            <div class="dropdown max-md:dropdown-end mr-1">
+                <button tabindex="0" role="button"
+                    class="btn btn-disabled btn-neutral rounded-btn text-base py-0 px-2 w-fit"
+                    id="buttonFilterDataSources">
+                    <span id="dataSourcesFilterHiddenVulnsNotifier"
+                        class="hidden absolute top-[3px] right-[3px] h-2 w-2 bg-warning rounded-full"></span>
+                    <i class="fa-solid fa-database"></i><span class="max-lg:hidden">Sources </span><i
+                        class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div tabindex="0"
+                    class="dropdown-content md:left-1/2 md:transform md:-translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box w-auto min-w-40 mt-2 border border-5 border-base-300"
+                    id="filterDataSourcesDropdown">
                 </div>
             </div>
-        </div>
-        <div class="dropdown dropdown-end">
-            <div tabindex="0" role="button"
-                class="btn btn-disabled btn-neutral rounded-btn text-base p-0 md:min-w-28 lg:min-w-32"
-                id="buttonExportResults">
-                <i class="fa-solid fa-arrow-up-from-bracket"></i><span class="max-md:hidden">Export </span><i
-                    class="fa-solid fa-chevron-down"></i>
+            <div class="dropdown max-md:dropdown-end mr-1">
+                <button tabindex="0" role="button"
+                    class="btn btn-disabled btn-neutral rounded-btn text-base py-0 px-2 w-fit" id="buttonFilterVulns">
+                    <span id="vulnFilterHiddenVulnsNotifier"
+                        class="hidden absolute top-[3px] right-[3px] h-2 w-2 bg-warning rounded-full"></span>
+                    <i class="fa-solid fa-filter"></i><span class="max-lg:hidden">Filter </span><i
+                        class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div tabindex="0"
+                    class="dropdown-content md:left-1/2 md:transform md:-translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box min-w-36 mt-2 overflow-y-auto max-h-96 border border-5 border-base-300"
+                    id="filterVulnsDropdown">
+                </div>
             </div>
-            <ul tabindex="0"
-                class="menu dropdown-content z-[1] p-1 mt-2 shadow bg-base-200 rounded-box w-40 border border-5 border-base-300">
-                <li onclick="copyToClipboardMarkdownTable()"><a>Markdown <span class="text-right text-lg"
-                            id="exportMarkdownIcon"><i class="fa-solid fa-clipboard"></i></span></a></li>
-                <li onclick="copyToClipboardCSV()"><a>CSV <span class="text-right text-lg" id="exportCSVIcon"><i
-                                class="fa-solid fa-clipboard"></i></a></span></li>
-            </ul>
+            <div class="dropdown max-md:dropdown-end mr-1">
+                <div tabindex="0" role="button"
+                    class="btn btn-disabled btn-neutral rounded-btn text-base py-0 px-2 w-fit" id="buttonManageColumns">
+                    <i class="fa-solid fa-table-columns"></i><span class="max-lg:hidden">Columns </span><i
+                        class="fa-solid fa-chevron-down"></i>
+                </div>
+                <div tabindex="0"
+                    class="dropdown-content md:left-1/2 md:transform md:-translate-x-1/2 z-[1] p-2 shadow-2xl shadow-base-300 bg-base-200 rounded-box w-auto min-w-40 mt-2 border border-5 border-base-300">
+                    <div class="items-center flex-row">
+                        <button class="btn btn-sm btn-neutral w-14 sm:mr-1 md:mr-2" id="showColumnAll"
+                            onclick="changeColumnConfig(this)">All</button>
+                        <button class="btn btn-sm btn-neutral w-16" id="showColumnNone"
+                            onclick="changeColumnConfig(this)">None</button>
+                    </div>
+                    <div class="form-control mt-3">
+                        <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
+                            <span class="label-text text-base-content flex-1 min-w-0 text-left">Vuln ID
+                            </span>
+                            <input id="showColumnVulnId" type="checkbox"
+                                class="checkbox checkbox-accent rounded-md shrink-0"
+                                onclick="changeColumnConfig(this)" />
+                        </label>
+                    </div>
+                    <div class="form-control mt-3">
+                        <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
+                            <span class="label-text text-base-content flex-1 min-w-0 text-left">CVSS-Score
+                            </span>
+                            <input id="showColumnCVSS" type="checkbox"
+                                class="checkbox checkbox-accent rounded-md shrink-0"
+                                onclick="changeColumnConfig(this)" />
+                        </label>
+                    </div>
+                    <div class="form-control mt-3">
+                        <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
+                            <span class="label-text text-base-content flex-1 min-w-0 text-left">EPSS-Score
+                            </span>
+                            <input id="showColumnEPSS" type="checkbox"
+                                class="checkbox checkbox-accent rounded-md shrink-0"
+                                onclick="changeColumnConfig(this)" />
+                        </label>
+                    </div>
+                    <div class="form-control mt-3">
+                        <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
+                            <span class="label-text text-base-content flex-1 min-w-0 text-left">CWE ID
+                            </span>
+                            <input id="showColumnCWE" type="checkbox"
+                                class="checkbox checkbox-accent rounded-md shrink-0"
+                                onclick="changeColumnConfig(this)" />
+                        </label>
+                    </div>
+                    <div class="form-control mt-3">
+                        <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
+                            <span class="label-text text-base-content flex-1 min-w-0 text-left">Description
+                            </span>
+                            <input id="showColumnDescription" type="checkbox"
+                                class="checkbox checkbox-accent rounded-md shrink-0"
+                                onclick="changeColumnConfig(this)" />
+                        </label>
+                    </div>
+                    <div class="form-control mt-3">
+                        <label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm">
+                            <span class="label-text text-base-content flex-1 min-w-0 text-left">Exploits
+                            </span>
+                            <input id="showColumnExploits" type="checkbox"
+                                class="checkbox checkbox-accent rounded-md shrink-0"
+                                onclick="changeColumnConfig(this)" />
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="dropdown dropdown-end">
+                <div tabindex="0" role="button"
+                    class="btn btn-disabled btn-neutral rounded-btn text-base py-0 px-2 w-fit" id="buttonExportResults">
+                    <i class="fa-solid fa-arrow-up-from-bracket"></i><span class="max-lg:hidden">Export </span><i
+                        class="fa-solid fa-chevron-down"></i>
+                </div>
+                <ul tabindex="0"
+                    class="menu dropdown-content z-[1] p-1 mt-2 shadow bg-base-200 rounded-box w-40 border border-5 border-base-300">
+                    <li onclick="copyToClipboardMarkdownTable()"><a>Markdown <span class="text-right text-lg"
+                                id="exportMarkdownIcon"><i class="fa-solid fa-clipboard"></i></span></a></li>
+                    <li onclick="copyToClipboardCSV()"><a>CSV <span class="text-right text-lg" id="exportCSVIcon"><i
+                                    class="fa-solid fa-clipboard"></i></a></span></li>
+                </ul>
+            </div>
         </div>
     </div>
     <div class="w-full mx-auto mt-5" id="search-display">
