@@ -23,7 +23,7 @@
     <div class="navbar bg-base-100">
         <div class="navbar-start">
             <div class="dropdown">
-                <div tabindex="0" role="button" class="btn btn-ghost md:hidden">
+                <div tabindex="0" role="button" class="btn btn-ghost max-sm:btn-sm md:hidden">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -31,16 +31,16 @@
                     </svg>
                 </div>
                 <ul tabindex="0"
-                    class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52 border border-3 border-base-300">
+                    class="menu dropdown-content mt-2 z-[1] p-2 shadow bg-base-100 rounded-box w-52 border border-3 border-base-300">
                     <li><a href="/">Home</a></li>
                     <li><a href="/about">About</a></li>
                     <li><a href="/api/setup">API</a></li>
                     <li><a href="/news">News</a></li>
                 </ul>
             </div>
-            <a class="btn btn-ghost text-xl" href="/"><i class="fa-solid fa-bug my-auto"></i>
+            <a class="btn btn-ghost max-sm:btn-sm max-sm:text-base text-xl" href="/"><i class="fa-solid fa-bug my-auto"></i>
                 search_vulns<span
-                    class="ml-2 py-0 px-2 my-auto text-version-badge rounded border border-base-content">{{ sv_version
+                    class="ml-1 md:ml-2 py-0 px-2 my-auto text-version-badge rounded border border-base-content">{{ sv_version
                     }}</span>
             </a>
         </div>
@@ -54,7 +54,7 @@
         </div>
         <div class="navbar-end">
             <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost rounded-btn">Theme <i
+                <div tabindex="0" role="button" class="btn btn-ghost rounded-btn max-sm:px-2"><span class="max-md:hidden">Theme</span><span class="md:hidden sm:text-lg"><i class="fa-solid fa-circle-half-stroke"></i></span> <i
                         class="fa-solid fa-chevron-down"></i></div>
                 <ul tabindex="0" id="theme-selector"
                     class="menu dropdown-content z-[1] p-2 shadow bg-base-100 border-3 border-base-300 rounded-box w-40">
@@ -68,8 +68,8 @@
                     <li id="theme-option-sunset" onclick="changeTheme(this)"><a>Sunset</a></li>
                 </ul>
             </div>
-            <a class="btn btn-ghost" href="https://github.com/ra1nb0rn/search_vulns">
-                <i class="fa-brands fa-github text-xl"></i>
+            <a class="btn btn-ghost max-sm:px-1" href="https://github.com/ra1nb0rn/search_vulns">
+                <i class="fa-brands fa-github text-base sm:text-xl"></i>
             </a>
         </div>
     </div>

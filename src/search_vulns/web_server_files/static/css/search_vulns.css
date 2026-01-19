@@ -222,9 +222,16 @@
     line-height: calc(1.375 / 0.938);
 }
 
+/* Version badge sizes mobile and desktop */
 .text-version-badge {
     font-size: 0.825rem;
     line-height: 1.5rem;
+}
+@media (max-width: 639px) {
+    .text-version-badge {
+        font-size: 0.675rem;
+        line-height: 1.1rem;
+    }
 }
 
 .dont-break-out {
