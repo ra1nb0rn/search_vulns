@@ -407,7 +407,7 @@ def style_md_converted_html(markdown_html, center_captions=False, with_color=Fal
                 new_a = a[5][:-1] + " " + 'class="link' + a_color_str
                 if "//" in a[6] or "?" in a[6]:
                     new_a += " dont-break-out a-content"
-                new_a += '">' + a[6] + "</a>"
+                new_a += '">' + a[6].replace('.', '.<wbr>') + "</a>"
             markdown_html = markdown_html.replace(a[0], new_a)
     if "<h" in markdown_html:
         for header in MD_TO_HTML_H_ANCHOR_RE.findall(markdown_html):
