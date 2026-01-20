@@ -49,6 +49,16 @@ def get_version():
 def _load_config(config_file=DEFAULT_CONFIG_FILE):
     """Load config from file"""
 
+    def expand_path(val):
+        if val != os.path.expanduser(val):  # home-relative path was given
+            val = os.path.expanduser(val)
+        else:
+            val = os.path.join(
+                os.path.dirname(os.path.abspath(config_file)), val
+            )
+        return val
+
+
     with open(config_file) as f:  # default: config.json
         config = json.loads(f.read())
 
@@ -73,14 +83,13 @@ def _load_config(config_file=DEFAULT_CONFIG_FILE):
             for key, val in config[db].items():
                 if key.lower() == "name":
                     if not os.path.isabs(val):
-                        if val != os.path.expanduser(val):  # home-relative path was given
-                            val = os.path.expanduser(val)
-                        else:
-                            val = os.path.join(
-                                os.path.dirname(os.path.abspath(config_file)), val
-                            )
+                        val = expand_path(val)
                         config[db][key] = val
                     break
+
+    if 'RECAPTCHA_AND_API' in config and config['RECAPTCHA_AND_API']['ENABLED']:
+        if not os.path.isabs(config['RECAPTCHA_AND_API']['DATABASE_NAME']):
+            config['RECAPTCHA_AND_API']['DATABASE_NAME'] = expand_path(config['RECAPTCHA_AND_API']['DATABASE_NAME'])
 
     return config
 
