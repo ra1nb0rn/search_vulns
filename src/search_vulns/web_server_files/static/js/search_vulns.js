@@ -181,7 +181,7 @@ function createVulnTableRowHtml(idx, vuln) {
 
     // set up references
     for (const vuln_id in vuln_id_ref_map) {
-        vuln_id_html += `<div class="w-full mb-0.3"><a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a></div>`;
+        vuln_id_html += `<div class="w-full mb-0.3 max-md:whitespace-normal max-md:break-words"><a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a></div>`;
     }
 
     // set up row highlighting
