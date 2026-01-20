@@ -1437,7 +1437,7 @@ function retrieveProductIDSuggestions(url_query, recaptcha_response) {
                 if (allProductIDs.length != 0) {
                     var dropdownContent = '<ul class="menu menu-md p-1 bg-base-200 rounded-box w-full">';
                     for (var i = 0; i < allProductIDs.length; i++) {
-                        dropdownContent += `<li tabindex="0" class="my-0 py-0"><a class="text-nowrap whitespace-nowrap" id="product-id-suggestion-${i}" onclick="searchVulnsAction(this)">${htmlEntities(allProductIDs[i])}</a></li>`;
+                        dropdownContent += `<li tabindex="0" class="my-0 py-0"><a class="break-all" id="product-id-suggestion-${i}" onclick="searchVulnsAction(this)">${htmlEntities(allProductIDs[i])}</a></li>`;
                         if (i < allProductIDs.length - 1)
                             dropdownContent += `<div class="divider my-1 py-0 h-auto"></div>`;
                     }
@@ -1445,7 +1445,7 @@ function retrieveProductIDSuggestions(url_query, recaptcha_response) {
                     $('#productIDSuggestions').html(dropdownContent);
                 }
                 else {
-                    $('#productIDSuggestions').html("No possible product IDs found");
+                    $('#productIDSuggestions').html(`<div class="p-1">No possible product IDs found</div>`);
                 }
             }
             curSelectedProductIDSuggestion = -1
