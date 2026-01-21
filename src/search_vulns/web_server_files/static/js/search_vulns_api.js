@@ -1,4 +1,4 @@
-var manageGeneratedKeyHtml = `<button class="btn btn-sm btn-circle m-1" onclick="copyGeneratedKeyToClipboard()"><i class="fa-solid fa-clipboard"></i></button><button class="btn btn-sm btn-circle" onclick="saveGeneratedKeyInBrowser()"><i class="fa-regular fa-window-maximize"></i></button>`;
+var manageGeneratedKeyHtml = `<button class="btn btn-sm text-base btn-circle btn-primary" onclick="copyGeneratedKeyToClipboard()"><i class="fa-solid fa-clipboard"></i></button><button class="btn text-base btn-sm btn-circle btn-secondary" onclick="saveGeneratedKeyInBrowser()"><i class="fa-regular fa-window-maximize"></i></button>`;
 var showKeyStatusMessageTimer, displayMessageTime = 2500;
 
 function htmlEntities(text) {
@@ -41,7 +41,7 @@ function generateAPIKey() {
         data: 'recaptcha_response=' + recaptchaResponse,
         success: function (generationResponse) {
             if (generationResponse.status == 'success') {
-                $("#genTokenResponse").html(`Here is your API key: <span class="font-bold mr-3" id="generated-api-key">${generationResponse.key}</span>` + manageGeneratedKeyHtml);
+                $("#genTokenResponse").html(`<div class="row">Here is your API key:</div><div class="mt-1 flex flex-wrap justify-center gap-x-4 gap-y-2 items-center"><code class="font-bold bg-base-300 rounded-box w-fit p-2 text-center items-center text-sm" id="generated-api-key">${generationResponse.key}</code><div class="flex justify-center gap-2">` + manageGeneratedKeyHtml + "</div>");
             }
             else {
                 $("#genTokenResponse").html(`<span class="text-error font-bold">Encountered an error: ${generationResponse.msg}</span>`);
