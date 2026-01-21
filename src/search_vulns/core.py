@@ -53,11 +53,8 @@ def _load_config(config_file=DEFAULT_CONFIG_FILE):
         if val != os.path.expanduser(val):  # home-relative path was given
             val = os.path.expanduser(val)
         else:
-            val = os.path.join(
-                os.path.dirname(os.path.abspath(config_file)), val
-            )
+            val = os.path.join(os.path.dirname(os.path.abspath(config_file)), val)
         return val
-
 
     with open(config_file) as f:  # default: config.json
         config = json.loads(f.read())
@@ -87,9 +84,15 @@ def _load_config(config_file=DEFAULT_CONFIG_FILE):
                         config[db][key] = val
                     break
 
-    if config["DATABASE_CONNECTION"]["TYPE"].lower() == "sqlite" and 'RECAPTCHA_AND_API' in config and config['RECAPTCHA_AND_API']['ENABLED']:
-        if not os.path.isabs(config['RECAPTCHA_AND_API']['DATABASE_NAME']):
-            config['RECAPTCHA_AND_API']['DATABASE_NAME'] = expand_path(config['RECAPTCHA_AND_API']['DATABASE_NAME'])
+    if (
+        config["DATABASE_CONNECTION"]["TYPE"].lower() == "sqlite"
+        and "RECAPTCHA_AND_API" in config
+        and config["RECAPTCHA_AND_API"]["ENABLED"]
+    ):
+        if not os.path.isabs(config["RECAPTCHA_AND_API"]["DATABASE_NAME"]):
+            config["RECAPTCHA_AND_API"]["DATABASE_NAME"] = expand_path(
+                config["RECAPTCHA_AND_API"]["DATABASE_NAME"]
+            )
 
     return config
 
