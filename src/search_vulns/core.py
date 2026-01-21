@@ -87,7 +87,7 @@ def _load_config(config_file=DEFAULT_CONFIG_FILE):
                         config[db][key] = val
                     break
 
-    if 'RECAPTCHA_AND_API' in config and config['RECAPTCHA_AND_API']['ENABLED']:
+    if config["DATABASE_CONNECTION"]["TYPE"].lower() == "sqlite" and 'RECAPTCHA_AND_API' in config and config['RECAPTCHA_AND_API']['ENABLED']:
         if not os.path.isabs(config['RECAPTCHA_AND_API']['DATABASE_NAME']):
             config['RECAPTCHA_AND_API']['DATABASE_NAME'] = expand_path(config['RECAPTCHA_AND_API']['DATABASE_NAME'])
 
