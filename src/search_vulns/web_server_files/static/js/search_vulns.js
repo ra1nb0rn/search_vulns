@@ -242,12 +242,12 @@ function createVulnTableRowHtml(idx, vuln) {
 
         var lastRowHtml = `
         <div class="w-full absolute bottom-1 source-badge-div flex justify-between items-center inset-x-0 px-2">
-            <div class="dropdown dropdown-center dropdown-right dropdown-hover">
+            <div class="dropdown dropdown-right dropdown-center dropdown-hover">
                 <span
                     class="group badge source-badge px-2 py-2.2 mr-0.5 border-1 bg-base-200 border-${source_badge_color} hover:text-${source_badge_color}-content hover:bg-${source_badge_color} hover:border-base-300 hover:border-1 cursor-default text-sm text-${source_badge_color}">
                     <i class="${source_badge_icon}"></i><span class="${badge_text_style}">${vulnConfidence}<span class="text-xs">&nbsp;/&nbsp;</span>${trackCount}</span>
                 </span>
-                <div tabindex="0" class="dropdown-content z-[1] shadow-2xl bg-base-200 rounded-box w-fit px-3 py-2 border border-5 border-base-300 space-y-1">
+                <div tabindex="0" class="dropdown-content z-[1] shadow-2xl bg-base-200 rounded-box px-3 py-2 border border-5 border-base-300 space-y-1 w-max max-w-75 sm:max-w-156 md:max-w-256">
         `;
 
         var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
@@ -271,9 +271,11 @@ function createVulnTableRowHtml(idx, vuln) {
             else
                 source_ref_icon = '<i class="fa-regular fa-circle-xmark text-error text-lg"></i>';
             lastRowHtml += `
-                <div class="flex items-center gap-3 w-full whitespace-nowrap">
-                    ${source_ref_icon}
-                    <span>
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="shrink-0">
+                        ${source_ref_icon}
+                    </span>
+                    <span class="whitespace-normal break-words">
                         <a class="link link-primary" href="${vuln.tracked_by[source]}" target="_blank">${vuln.tracked_by[source]}</a>
                     </span>
                 </div>
@@ -366,7 +368,7 @@ function createVulnTableRowHtml(idx, vuln) {
                 exploits.push(`<a href="${vuln.exploits[j].replace('"', '&quot;')}" target="_blank" class="link" style="color: inherit;">${htmlEntities(exploit_url_show)}</a>`);
             }
         }
-        vuln_row_html += `<td class="lg:text-nowrap lg:whitespace-nowrap">${exploits.join("<br>")}</td>`;
+        vuln_row_html += `<td class="max-md:break-all lg:text-nowrap lg:whitespace-nowrap w-max max-w-24 sm:max-w-96 md:max-w-164">${exploits.join("<br>")}</td>`;
     }
 
     vuln_row_html += "</tr>";
@@ -918,14 +920,14 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
             else {
                 if ((productIDs != undefined && productIDs.length != 0) || Object.keys(search_results.vulns).length != 0) {
                     curVulnData = search_results.vulns;
-                    search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;">${htmlEntities(query)}`;
+                    search_display_html = `<div class="row mt-2"><div class="col text-center text-info"><h5 style="font-size: 1.05rem;"><span class="wrap-anywhere">${htmlEntities(query)}</span>`;
                     // show product ID (when searching for just vuln IDs there is none)
                     if (productIDs.length > 0 && productIDs[0].length > 0) {
                         if (product_id != undefined)
                             productIDIndex = productIDs.indexOf(product_id);
                         if (productIDIndex < 0)
                             productIDIndex = 0;
-                        search_display_html += `<wbr> (${htmlEntities(productIDs[productIDIndex])}`;
+                        search_display_html += `<wbr> (<span class="wrap-anywhere">${htmlEntities(productIDs[productIDIndex])}`;
 
                         if (productIDs.length > 1) {
                             search_display_html += '<div class="dropdown dropdown-hover dropdown-bottom dropdown-end ml-2"><div class="btn btn-circle btn-outline btn-info btn-xxs"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div><div class="dropdown-content translate-x-2.5 z-[1] p-3 shadow bg-base-300 rounded-box text-base-content w-fit" onclick="document.activeElement.blur();"><h5 class="font-medium text-left text-sm">Equivalent product IDs that were included into your search: <div class="tooltip tooltip-top text-wrap ml-1" data-tip="Sometimes there are multiple IDs for one product, e.g. because of a rebranding."><i class="fas fa-info-circle text-content"></i></div></h5><ul tabindex="0" class="list-disc pl-6 mt-1 text-left text-sm font-light">';
@@ -966,7 +968,7 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
                         var related_queries_html_li = "";
                         for (var i = 0; i < allProductIDs.length; i++) {
                             if (productIDs == null || !productIDs.includes(allProductIDs[i]))
-                                related_queries_html_li += `<li><a href="${window.location.pathname}?query=${encodeURIComponent(htmlEntities(allProductIDs[i]))}&is-good-product-id=false">${htmlEntities(allProductIDs[i])} &nbsp; &nbsp;(${htmlEntities(buildTextualReprFromCPE(allProductIDs[i]))})</a></li>`
+                                related_queries_html_li += `<li class="wrap-anywhere"><a href="${window.location.pathname}?query=${encodeURIComponent(htmlEntities(allProductIDs[i]))}&is-good-product-id=false">${htmlEntities(allProductIDs[i])} &nbsp; &nbsp;(${htmlEntities(buildTextualReprFromCPE(allProductIDs[i]))})</a></li>`
                         }
 
                         if (related_queries_html_li != "") {
@@ -1139,6 +1141,11 @@ function copyToClipboardCVSS(cvssClipboardButton) {
     $(cvssClipboardButton).find('span').find('span').addClass('text-success');
     $(cvssClipboardButton).find('span').find('span').html('<i class="fa-solid fa-clipboard-check"></i>');
     document.activeElement.blur();
+}
+
+function clearQuery() {
+    document.getElementById('query').value='';
+    document.getElementById('query').focus();
 }
 
 function changeSearchConfig(configElement) {
