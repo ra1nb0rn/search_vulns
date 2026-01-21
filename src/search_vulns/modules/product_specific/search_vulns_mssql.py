@@ -21,7 +21,7 @@ SQL_SERVER_BUILDS_VULN_DATA_URL = "https://docs.google.com/spreadsheets/d/16Ymdz
 SQL_SERVER_BUILDS_RELEASES_URL = "https://docs.google.com/spreadsheets/d/16Ymdz80xlCzb6CwRFVokwo0onkofVYFoSkc7mYe6pgw/export?gid=1648964847&format=csv"
 SQL_SERVER_BUILDS_OVERVIEW_URL = "https://sqlserverbuilds.blogspot.com/"
 MICROSOFT_ADVISORY_BASE_URL = "https://msrc.microsoft.com/update-guide/en-US/vulnerability/"
-MSSQL_QUERY_RE = re.compile(r"(mssql|((microsoft)?\s*sql\s*server))\s*((\d+\.\d+).\d+\.\d+)")
+MSSQL_QUERY_RE = re.compile(r"(mssql|((microsoft)?\s*sql\s*server))\s*((\d+\.\d+).\d+\.\d+)", re.IGNORECASE)
 
 
 def full_update(productdb_config, vulndb_config, module_config, stop_update):
