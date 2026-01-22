@@ -74,6 +74,17 @@ class TestSearches(unittest.TestCase):
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
 
+    def test_search_mssql_15_0_4455_1(self):
+        self.maxDiff = None
+        query = "cpe:2.3:a:microsoft:sql_server:15.0.4455.1:*:*:*:*:*:*:*"
+        result = search_vulns(query=query, is_product_id_query=True)
+        expected_result = {
+            "status": VersionStatus.OUTDATED,
+            "latest": "15.0.4455.2 CU32+GDR",
+            "reference": "https://endoflife.date/mssqlserver",
+        }
+        self.assertEqual(result.version_status.model_dump(), expected_result)
+
 
 if __name__ == "__main__":
     unittest.main()

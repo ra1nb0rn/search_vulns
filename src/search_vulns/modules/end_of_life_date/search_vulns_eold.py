@@ -37,6 +37,11 @@ def postprocess_results(
         )
         if vuln_db_cursor:
             eol_releases = vuln_db_cursor.fetchall()
+        if not eol_releases or not eol_releases[0]:
+            continue
+
+        # sort releases by version number, since they aren't always (see MSSQL Server)
+        eol_releases.sort(key=lambda r: CPEVersion(r[1]), reverse=True)
 
         # find release branch matching query version
         queried_release_branch_idx = 0 if eol_releases else None
@@ -109,6 +114,13 @@ def postprocess_results(
                                 latest=str(release_end),
                                 reference=eol_ref,
                             )
+                    elif str(release_end).startswith(str(query_version) + " "):
+                        # e.g. https://endoflife.date/mssqlserver
+                        version_status = VersionStatusResult(
+                            status=VersionStatus.CURRENT,
+                            latest=str(release_end),
+                            reference=eol_ref,
+                        )
                     elif query_version < release_end:
                         if is_queried_release_eol:
                             version_status = VersionStatusResult(
