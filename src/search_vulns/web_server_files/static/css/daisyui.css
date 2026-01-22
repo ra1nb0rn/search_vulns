@@ -2845,8 +2845,8 @@
   .w-52 {
     width: calc(var(--spacing) * 52);
   }
-  .w-64 {
-    width: calc(var(--spacing) * 64);
+  .w-56 {
+    width: calc(var(--spacing) * 56);
   }
   .w-70 {
     width: calc(var(--spacing) * 70);
@@ -2988,6 +2988,9 @@
   }
   .list-disc {
     list-style-type: disc;
+  }
+  .grid-cols-\[1fr_auto\] {
+    grid-template-columns: 1fr auto;
   }
   .flex-col {
     flex-direction: column;
@@ -3884,10 +3887,9 @@
       line-height: var(--tw-leading, var(--text-xl--line-height));
     }
   }
-  .sm\:break-normal {
+  .sm\:text-nowrap {
     @media (width >= 40rem) {
-      overflow-wrap: normal;
-      word-break: normal;
+      text-wrap: nowrap;
     }
   }
   .md\:mr-2 {
