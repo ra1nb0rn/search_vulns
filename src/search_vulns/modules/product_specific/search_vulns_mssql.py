@@ -133,15 +133,19 @@ def preprocess_query(
             "SELECT mssql_release FROM mssql_releases WHERE version = ?", (release_version,)
         )
         release = vuln_db_cursor.fetchall()
+        cpes = []
         if release:
             release = release[0][0]
+
+            # the NVD uses several valid CPEs ...
+            cpes.append(f"cpe:2.3:a:microsoft:sql_server:{build}:*:*:*:*:*:*:*")
             if " " in release:
                 a, b = release.split(" ")
-                cpe = f"cpe:2.3:a:microsoft:sql_server_{a}:{b}:*:*:*:*:*:*:*"
+                cpes.append(f"cpe:2.3:a:microsoft:sql_server_{a}:{b}:*:*:*:*:*:*:*")
             else:
-                cpe = f"cpe:2.3:a:microsoft:sql_server_{release}:{build}:*:*:*:*:*:*:*"
+                cpes.append(f"cpe:2.3:a:microsoft:sql_server_{release}:{build}:*:*:*:*:*:*:*")
 
-        return query.replace(matches[0][0], ""), {"mssql_cpe": cpe, "mssql_build": build}
+        return query.replace(matches[0][0], ""), {"mssql_cpes": cpes, "mssql_build": build}
 
 
 def search_product_ids(
@@ -154,8 +158,8 @@ def search_product_ids(
 ) -> Tuple[ProductIDsResult, ProductIDsResult]:
 
     # provide the previously determined CPE as product ID
-    if "mssql_cpe" in extra_params:
-        product_ids = ProductIDsResult.from_cpes([extra_params["mssql_cpe"]])
+    if "mssql_cpes" in extra_params:
+        product_ids = ProductIDsResult.from_cpes(extra_params["mssql_cpes"])
         return product_ids, None
 
 
