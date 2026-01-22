@@ -645,7 +645,7 @@ app.register_blueprint(api)
 
 # set up app info
 app.info = {
-    "description": 'Welcome to the official public instance of the search_vulns API!<br>This API allows you to search for vulnerabilities, exploits, product IDs and more.<br>An API key is required to use the API. It can be set up at <a href="/api/setup">/api/setup</a>.',
+    "description": 'Welcome to the search_vulns API!<br>This API allows you to search for vulnerabilities, exploits, product IDs and more.<br>An API key is required to use the API. It can be set up at <a href="/api/setup">/api/setup</a>.',
     "contact": {
         "name": "search_vulns Support",
         "url": "https://github.com/ra1nb0rn/search_vulns/issues",
