@@ -813,6 +813,56 @@ class TestSearches(unittest.TestCase):
                     "GHSA-gv94-wp4h-vv8p": "https://github.com/advisories/GHSA-gv94-wp4h-vv8p",
                 },
             },
+            "GHSA-m2w5-7xhv-w6fh": {
+                "published": "2026-01-21 06:31:20",
+                "cvss_ver": "3.1",
+                "cvss": "3.1",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:N",
+                "aliases": {
+                    "CVE-2026-1035": "https://nvd.nist.gov/vuln/detail/CVE-2026-1035",
+                    "GHSA-m2w5-7xhv-w6fh": "https://github.com/advisories/GHSA-m2w5-7xhv-w6fh",
+                },
+            },
+            "GHSA-wv3h-x6c4-r867": {
+                "published": "2026-01-21 09:31:30",
+                "cvss_ver": "3.1",
+                "cvss": "6.5",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:N",
+                "aliases": {
+                    "CVE-2025-14559": "https://nvd.nist.gov/vuln/detail/CVE-2025-14559",
+                    "GHSA-wv3h-x6c4-r867": "https://github.com/advisories/GHSA-wv3h-x6c4-r867",
+                },
+            },
+            "GHSA-7vw6-5q2f-7w5r": {
+                "published": "2026-01-20 15:33:12",
+                "cvss_ver": "3.1",
+                "cvss": "5.8",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:N/A:N",
+                "aliases": {
+                    "CVE-2026-1180": "https://nvd.nist.gov/vuln/detail/CVE-2026-1180",
+                    "GHSA-7vw6-5q2f-7w5r": "https://github.com/advisories/GHSA-7vw6-5q2f-7w5r",
+                },
+            },
+            "GHSA-594w-2fwp-jwrc": {
+                "published": "2026-01-21 15:31:16",
+                "cvss_ver": "3.1",
+                "cvss": "2.7",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:L/I:N/A:N",
+                "aliases": {
+                    "CVE-2025-14083": "https://nvd.nist.gov/vuln/detail/CVE-2025-14083",
+                    "GHSA-594w-2fwp-jwrc": "https://github.com/advisories/GHSA-594w-2fwp-jwrc",
+                },
+            },
+            "GHSA-v897-pv23-r8cw": {
+                "published": "2026-01-15 15:31:17",
+                "cvss_ver": "3.1",
+                "cvss": "3.7",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                "aliases": {
+                    "CVE-2026-0976": "https://nvd.nist.gov/vuln/detail/CVE-2026-0976",
+                    "GHSA-v897-pv23-r8cw": "https://github.com/advisories/GHSA-v897-pv23-r8cw",
+                },
+            },
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id

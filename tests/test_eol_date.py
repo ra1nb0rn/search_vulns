@@ -36,7 +36,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.N_A,
-            "latest": "3.7.1",
+            "latest": "4.0.0",
             "reference": "https://endoflife.date/jquery",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -47,7 +47,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.EOL,
-            "latest": "3.7.1",
+            "latest": "4.0.0",
             "reference": "https://endoflife.date/jquery",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
