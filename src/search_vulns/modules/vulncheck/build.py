@@ -5,7 +5,6 @@ import shutil
 
 import aiohttp
 from aiolimiter import AsyncLimiter
-from cpe_search.cpe_search import add_cpes_to_db
 
 from search_vulns.modules.utils import SQLITE_TIMEOUT, get_database_connection
 

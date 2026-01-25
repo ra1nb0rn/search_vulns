@@ -4,6 +4,7 @@ from typing import Tuple
 import ujson
 from cpe_search.cpe_search import (
     MATCH_CPE_23_RE,
+    get_cpe_product_prefix,
     is_cpe_equal,
     search_cpes,
 )
@@ -43,9 +44,9 @@ def load_equivalent_cpes(product_db_cursor):
                 deprecations_for_product[product_cpe_prefix][cpe] = deprecations
 
         for product_cpe, deprecations in deprecations_for_product.items():
-            product_cpe_prefix = ":".join(product_cpe.split(":")[:5]) + ":"
+            product_cpe_prefix = get_cpe_product_prefix(product_cpe)
             product_db_cursor.execute(
-                "SELECT count FROM product_cpe_counts where product_cpe_prefix=?",
+                "SELECT count FROM cpe_product_counts JOIN cpe_product_prefixes ON cpe_product_counts.cpe_product_prefix_id = cpe_product_prefixes.cpe_product_prefix_id WHERE cpe_product_prefixes.cpe_product_prefix=?",
                 (product_cpe_prefix,),
             )
             product_cpe_count = product_db_cursor.fetchall()

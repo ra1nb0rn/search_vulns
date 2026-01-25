@@ -53,9 +53,11 @@ def add_vuln_cpes_to_product_db(productdb_config, vulndb_config):
     # get distinct official NVD CPEs
     db_conn_cpes = get_database_connection(productdb_config, sqlite_timeout=SQLITE_TIMEOUT)
     db_cursor_cpes = db_conn_cpes.cursor()
-    db_cursor_cpes.execute("SELECT DISTINCT cpe FROM cpe_entries")
+    db_cursor_cpes.execute(
+        "SELECT DISTINCT cpe_product_prefix, cpe_version_suffix FROM cpe_entries JOIN cpe_product_prefixes ON cpe_entries.cpe_product_prefix_id = cpe_product_prefixes.cpe_product_prefix_id"
+    )
     nvd_official_cpes = db_cursor_cpes.fetchall()
-    nvd_official_cpes = set([cpe[0] for cpe in nvd_official_cpes])
+    nvd_official_cpes = set([cpe[0] + cpe[1] for cpe in nvd_official_cpes])
     db_cursor_cpes.close()
     db_conn_cpes.close()
 

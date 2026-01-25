@@ -10,6 +10,7 @@ from typing import Tuple
 import requests
 
 # import and provide these functionalities from this module for simplicity
+from cpe_search.cpe_search import get_cpe_product_prefix, split_cpe
 from cpe_search.database_wrapper_functions import (
     get_database_connection,
     is_safe_db_name,
@@ -149,31 +150,6 @@ def _is_cpe_included_from_field(cpe1, cpe2, field=6):
             return False
 
     return True
-
-
-def split_cpe(cpe):
-    """Split a CPE by ':' into its individual fields, preserving escaped colons"""
-
-    parts = []
-    current = []
-    escape = False
-
-    for char in cpe:
-        if char == ":" and not escape:
-            parts.append("".join(current))
-            current = []
-        else:
-            current.append(char)
-        escape = char == "\\"
-    parts.append("".join(current))
-
-    return parts
-
-
-def get_cpe_product_prefix(cpe):
-    """Return CPE product prefix, e.g. cpe:2.3:a:apache:tomcat:"""
-
-    return ":".join(split_cpe(cpe)[:5]) + ":"
 
 
 def _is_more_specific_cpe_contained(vuln_cpe, vuln_entry_cpes):
