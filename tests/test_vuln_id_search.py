@@ -41,7 +41,7 @@ class TestSearches(unittest.TestCase):
         for vuln_id, vuln in result.vulns.items():
             self.assertIn(vuln_id, expected_vulns)
             self.assertEqual(
-                vuln.serialize_published(vuln.published), expected_vulns[vuln_id]["published"]
+                vuln.serialize_dates(vuln.published), expected_vulns[vuln_id]["published"]
             )
             if SeverityType.CVSS in vuln.severity:
                 self.assertEqual(
@@ -104,7 +104,7 @@ class TestSearches(unittest.TestCase):
         for vuln_id, vuln in result.vulns.items():
             self.assertIn(vuln_id, expected_vulns)
             self.assertEqual(
-                vuln.serialize_published(vuln.published), expected_vulns[vuln_id]["published"]
+                vuln.serialize_dates(vuln.published), expected_vulns[vuln_id]["published"]
             )
             if SeverityType.CVSS in vuln.severity:
                 self.assertEqual(

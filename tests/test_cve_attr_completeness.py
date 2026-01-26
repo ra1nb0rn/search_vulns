@@ -167,7 +167,7 @@ class TestSearches(unittest.TestCase):
             if DataSource.NVD in vuln.matched_by:
                 self.assertIn(vuln_id, expected_attrs)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
@@ -883,7 +883,7 @@ class TestSearches(unittest.TestCase):
             if DataSource.NVD in vuln.matched_by:
                 self.assertIn(vuln_id, expected_attrs)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
@@ -991,7 +991,7 @@ class TestSearches(unittest.TestCase):
             if DataSource.NVD in vuln.matched_by:
                 self.assertIn(vuln_id, expected_attrs)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
@@ -1125,7 +1125,7 @@ class TestSearches(unittest.TestCase):
             if DataSource.NVD in vuln.matched_by:
                 self.assertIn(vuln_id, expected_attrs)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
@@ -1434,7 +1434,7 @@ class TestSearches(unittest.TestCase):
             if DataSource.NVD in vuln.matched_by:
                 self.assertIn(vuln_id, expected_attrs)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(
@@ -1498,7 +1498,7 @@ class TestSearches(unittest.TestCase):
             if DataSource.NVD in vuln.matched_by:
                 self.assertIn(vuln_id, expected_attrs)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_attrs[vuln_id]["published"],
                 )
                 self.assertEqual(

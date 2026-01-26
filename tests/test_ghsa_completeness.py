@@ -80,7 +80,7 @@ class TestSearches(unittest.TestCase):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
                 if SeverityType.CVSS in vuln.severity:
@@ -151,7 +151,7 @@ class TestSearches(unittest.TestCase):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
                 if SeverityType.CVSS in vuln.severity:
@@ -260,7 +260,7 @@ class TestSearches(unittest.TestCase):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
                 if SeverityType.CVSS in vuln.severity:
@@ -320,7 +320,7 @@ class TestSearches(unittest.TestCase):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
                 if SeverityType.CVSS in vuln.severity:
@@ -392,7 +392,7 @@ class TestSearches(unittest.TestCase):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
                 if SeverityType.CVSS in vuln.severity:
@@ -682,7 +682,7 @@ class TestSearches(unittest.TestCase):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
                 if SeverityType.CVSS in vuln.severity:
@@ -908,7 +908,7 @@ class TestSearches(unittest.TestCase):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
                 if SeverityType.CVSS in vuln.severity:
@@ -970,7 +970,7 @@ class TestSearches(unittest.TestCase):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
                 if SeverityType.CVSS in vuln.severity:
@@ -1039,7 +1039,7 @@ class TestSearches(unittest.TestCase):
                 # check that GHSA attributes match
                 actual_ghsa_vulns.append(vuln_id)
                 self.assertEqual(
-                    vuln.serialize_published(vuln.published),
+                    vuln.serialize_dates(vuln.published),
                     expected_vulns[vuln_id]["published"],
                 )
                 if SeverityType.CVSS in vuln.severity:
