@@ -1,6 +1,38 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.0.0 - 2025-01-27
+### Added
+- In web UI, give hints individual icons to make them distinguishable
+- In web UI, add badge with precise match information
+- In web UI, introduce a "match/confidence score" by which results can be filtered
+- In web UI, add proper API documentation, including a Swagger interface
+- Update cpe_search with an improved algorithm, especially for creating new CPEs
+- Extended filtering of vuln data sources in web UI
+- Make web UI more responsive and work on small screens
+- Add product specific modules for nginx and Microsoft SQL Server
+- Add CWE IDs to vulns
+- Add positive vuln matching to linux distro modules
+- Improve GHSA package name to CPE matching
+- Allow regexes in hardcoded matches file
+
+### Changed
+- Use Pydantic to properly model search_vulns results
+- Slightly change search_vulns result model to include complete matching data
+- Change search_vulns' description
+- Remove deprecated install script
+- In web UI, remove search_vulns button and only work with dropdown
+- In web UI, remove displayTableFiltering" config for simplicity
+- In web UI, do not show exploit column by default on small screens
+- Update npm dependencies to Tailwind 4 and DaisyUI 5
+- Update jQuery to 4.0.0
+
+### Fixed
+- In web UI, fix browser forward and backward functionality
+- Many bigger and smaller fixes
+- Update test cases
+
+
 ## v0.9.1 - 2025-12-27
 ### Fixed
 - Fixed GitHub action to update release assets
