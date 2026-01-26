@@ -25,7 +25,7 @@
     "MODULES": {
         "cpe_search.search_vulns_cpe_search": {
             "NVD_API_KEY": "",
-            "CPE_SEARCH_COUNT": 5,
+            "CPE_SEARCH_COUNT": 10,
             "CPE_SEARCH_THRESHOLD": 0.68
         },
         "nvd.search_vulns_nvd": {
