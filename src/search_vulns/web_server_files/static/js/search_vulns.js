@@ -1600,8 +1600,8 @@ queryInput.on('keyup', function (event) {
             }
             event.preventDefault();  // prevent jumping of cursor to start or end
         }
-        // any key except CTRL, OPTION, CMD/SUPER/Windows
-        else if (![13, 17, 18, 91, 229].includes(event.keyCode)) {
+        // any key except CTRL, OPTION, CMD/SUPER/Windows, ESC
+        else if (![13, 17, 18, 27, 91, 229].includes(event.keyCode)) {
             clearTimeout(doneTypingQueryTimer);
             if (!searchIgnoreNextKeyup)
                 doneTypingQueryTimer = setTimeout(doneTypingQuery, doneTypingQueryInterval);
