@@ -1,6 +1,11 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.0.1 - 2025-01-27
+### Fixed
+- Updated cpe_search to fix small performance issue
+
+
 ## v1.0.0 - 2025-01-27
 ### Added
 - In web UI, give hints individual icons to make them distinguishable
