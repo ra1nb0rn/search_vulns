@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Dict, List, Literal, Optional, Tuple
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 from .Vulnerability import Vulnerability
 
@@ -105,6 +105,10 @@ class PotProductIDsResult(BaseModel):
         for raw in result.raw:
             pot_result.add_raw(raw, 1)
         return pot_result
+
+    @field_serializer("cpe", "purl", "raw")
+    def serialize_pot_pids(self, value):
+        return sorted(value, key=lambda pot_pid: abs(pot_pid[1]), reverse=True)
 
     def add_cpes(self, cpes: List[Tuple[str, float]]):
         self.cpe = list(set(self.cpe + cpes))
