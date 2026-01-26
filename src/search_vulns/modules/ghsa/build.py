@@ -108,6 +108,7 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                     possible_start_version = ends_in_version_match.group(1)[
                         1:
                     ]  # strip starting "v"
+                    possible_new_pname = pname.replace(ends_in_version_match.group(1), "")
                 else:
                     possible_new_pname, possible_start_version = split_pkg_name_with_version(
                         pname, 3
@@ -116,7 +117,6 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                 ecosystem = pkg["package"]["ecosystem"].lower()
                 single_version_affected = False
                 affected_ranges = []
-                advisory_affected_pnames.add(pname)
 
                 # extract affected version ranges
                 introduced = ""
@@ -187,6 +187,9 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                         range_entry = (pname, ecosystem, introduced, fixed, is_version_end_incl)
                         ghsa_affects_map[ghsa_id].append(range_entry)
 
+                # finally, append pname to affected pnames (i.e. after possible modifications)
+                advisory_affected_pnames.add(pname)
+
             # get list of all CVE aliasses, retrieve all their affected CPEs
             # and try to match every product name to one of these CPEs
             all_cves = []
@@ -232,7 +235,7 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                         ):
                             pname_cpe_map[pname] = most_similar
                     else:
-                        ghsa_no_cpe_yet.append((pname, ghsa_id))
+                        ghsa_no_cpe_yet.append((pname, ecosystem, ghsa_id))
 
             # retrieve CVSS version, vector, score and GHSA severity
             if advisory["severity"]:
@@ -300,16 +303,23 @@ def complete_pname_cpe_map(pname_cpe_map, ghsa_no_cpe_yet, productdb_config):
 
     productdb_conn = get_database_connection(productdb_config, sqlite_timeout=SQLITE_TIMEOUT)
     productdb_cursor = productdb_conn.cursor()
-    for pname, ghsa_id in ghsa_no_cpe_yet:
+    for pname, ecosystem, ghsa_id in ghsa_no_cpe_yet:
         product_cpe = pname_cpe_map.get(pname, None)
         if not product_cpe:
-            # skip assigning CPEs to cerrtain packages for now, because it's too
+            # skip assigning CPEs to certain packages for now, because it's too
             # difficult, e.g., GHSA-78hx-gp6g-7mj6 or https://github.com/advisories/GHSA-7mc6-x925-7qvx
             if any(pname.startswith(prefix) for prefix in DIFFICULT_PACKAGE_PREFIXES):
                 pname_cpe_map[pname] = (pname, None)
                 continue
 
-            cpe_search_results = search_cpes(pname, productdb_cursor)
+            # modify query for java/maven packages to work better with cpe_search
+            query_pname = pname
+            if ecosystem == "maven":
+                query_pname = query_pname.replace(".", " ")
+                query_pname = query_pname.replace(":", " ")
+                query_pname = query_pname.replace("org ", " ")
+
+            cpe_search_results = search_cpes(query_pname, productdb_cursor)
             cpe_search_cpes = cpe_search_results.get("cpes", [])
             if not cpe_search_cpes:
                 cpe_search_cpes = cpe_search_results.get("pot_cpes", [])
