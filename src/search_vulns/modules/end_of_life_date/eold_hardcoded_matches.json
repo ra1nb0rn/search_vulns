@@ -142,5 +142,27 @@
     ],
     "cos": [],
     "amazon-rds-postgresql": [],
-    "redhat-build-of-openjdk": []
+    "redhat-build-of-openjdk": [],
+    "bamboo": [
+        "cpe:2.3:a:atlassian:bamboo:"
+    ],
+    "jaeger": [
+        "cpe:2.3:a:jaegertracing:jaeger_ui:"
+    ],
+    "quarkus-framework": [
+        "cpe:2.3:a:quarkus:quarkus:"
+    ],
+    "react-native": [
+        "cpe:2.3:a:facebook:react-native:"
+    ],
+    "unity": [
+        "cpe:2.3:a:unity:editor:"
+    ],
+    "tailwind-css": [],
+    "drush": [],
+    "dce": [],
+    "eslint": [],
+    "cloud-sql-auth-proxy": [],
+    "amazon-documentdb": [],
+    "zerto": []
 }
