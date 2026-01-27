@@ -1,6 +1,13 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.0.2 - 2025-01-27
+### Fixed
+- Updated cpe_search to fix small performance and matching issues
+- Added a few hardcoded matches for endoflife.date module
+- Made NVD building process slightly more resilient
+
+
 ## v1.0.1 - 2025-01-27
 ### Fixed
 - Updated cpe_search to fix small performance issue
