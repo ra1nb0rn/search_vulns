@@ -119,8 +119,10 @@ async def api_request(headers, params, requestno):
                     "Got the following exception when downloading vuln data via API: %s"
                     % str(e)
                 )
-                NVD_UPDATE_SUCCESS = False
-                return None
+                await asyncio.sleep(retry_interval)
+
+    NVD_UPDATE_SUCCESS = False
+    return None
 
 
 def write_data_to_json_file(api_data, requestno):
@@ -177,7 +179,7 @@ async def full_update_async(productdb_config, vulndb_config, module_config, stop
     for _ in range(3):
         try:
             cve_api_initial_response = requests.get(
-                url=CVE_API_URL, headers=headers, params=params
+                url=CVE_API_URL + "?resultsPerPage=1", headers=headers, params=params
             )
             numTotalResults = cve_api_initial_response.json().get("totalResults")
         except:
