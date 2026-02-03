@@ -96,9 +96,9 @@ async def api_request(headers, params, requestno):
     if NVD_UPDATE_SUCCESS is not None and not NVD_UPDATE_SUCCESS:
         return None
 
-    retry_limit = 3
-    retry_interval = 6
-    for _ in range(retry_limit + 1):
+    retry_limit = 5
+    initial_retry_interval = 3
+    for i in range(retry_limit + 1):
         async with aiohttp.ClientSession() as session:
             try:
                 cve_api_data_response = await session.get(
@@ -113,13 +113,13 @@ async def api_request(headers, params, requestno):
                     LOGGER.warning(
                         f"Received status code {cve_api_data_response.status} on request {requestno} Retrying..."
                     )
-                await asyncio.sleep(retry_interval)
+                await asyncio.sleep(initial_retry_interval + i * 3)
             except Exception as e:
                 LOGGER.error(
                     "Got the following exception when downloading vuln data via API: %s"
                     % str(e)
                 )
-                await asyncio.sleep(retry_interval)
+                await asyncio.sleep(initial_retry_interval + i * 3)
 
     NVD_UPDATE_SUCCESS = False
     return None
