@@ -196,10 +196,9 @@ function createVulnTableRowHtml(idx, vuln) {
     if (vuln.reported_patched_by.length > 0) {
         vuln_style_class += "  patched-vuln text-base-content/75";  // overwrites color of previous
         backgroundColorClass = "bg-info/25";
-    }
-    vuln_style_class += " " + backgroundColorClass;
+    };
 
-    vuln_row_html += `<tr class="${vuln_style_class} border-none">`;
+    vuln_row_html += `<tr class="${vuln_style_class} ${backgroundColorClass} border-none">`;
     if (selectedColumns.includes('cve')) {
         vuln_row_html += `<td class="text-nowrap whitespace-nowrap relative pr-1 source-badge-cell align-top">` + vuln_id_html;
 
@@ -310,9 +309,9 @@ function createVulnTableRowHtml(idx, vuln) {
         }
 
         if (cvss_vector && cvss_badge_css)
-            vuln_row_html += `<td><div class="mx-auto w-fit"><div class="dropdown dropdown-hover"><div class="z-10 badge border-none badge-cvss ${cvss_badge_css} text-center ${vuln_style_class} underline decoration-dotted underline-offset-3 cursor-help py-3 text-nowrap whitespace-nowrap" tabindex="0">${cvss.toFixed(1)}&nbsp;(v${cvss_version})</div><div tabindex="0" class="dropdown-content menu z-20 m-0 p-2 shadow bg-base-300 rounded-box text-nowrap"><div class="cursor-pointer text-smxs w-max max-w-54 sm:max-w-128" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b class="whitespace-normal break-all">${cvss_vector}</b></span></div></div></div></div></td>`;
+            vuln_row_html += `<td><div class="mx-auto w-fit"><div class="dropdown dropdown-hover ${cvss_badge_css} ${vuln_style_class}"><div class="z-10 badge border-none badge-cvss text-center underline decoration-dotted underline-offset-3 cursor-help py-3 text-nowrap whitespace-nowrap" tabindex="0">${cvss.toFixed(1)}&nbsp;(v${cvss_version})</div><div tabindex="0" class="dropdown-content menu z-20 m-0 p-2 shadow-xl bg-base-300 rounded-box text-nowrap"><div class="cursor-pointer text-smxs w-max max-w-54 sm:max-w-128" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b class="whitespace-normal break-all">${cvss_vector}</b></span></div></div></div></div></td>`;
         else
-            vuln_row_html += `<td><div class="mx-auto w-fit"><div class="dropdown max-sm:dropdown-center dropdown-hover"><div class="z-10 badge p-1.5 border-none badge-cvss badge-na text-center ${vuln_style_class} text-nowrap whitespace-nowrap underline decoration-dotted underline-offset-3 cursor-help" tabindex="0">N / A</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-2 shadow bg-base-300 rounded-box text-nowrap"><div class="cursor-pointer text-smxs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>Not Available (N/A)</b></span></div></div></div></div></td>`;
+            vuln_row_html += `<td><div class="mx-auto w-fit"><div class="dropdown max-sm:dropdown-center dropdown-hover badge-na ${vuln_style_class}"><div class="z-10 badge p-1.5 border-none badge-cvss text-center text-nowrap whitespace-nowrap underline decoration-dotted underline-offset-3 cursor-help" tabindex="0">N / A</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-2 bg-base-300 rounded-box text-nowrap shadow-xl"><div class="cursor-pointer text-smxs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>Not Available (N/A)</b></span></div></div></div></div></td>`;
     }
 
     if (selectedColumns.includes('epss')) {
@@ -333,9 +332,9 @@ function createVulnTableRowHtml(idx, vuln) {
         }
 
         if (epss && epss_badge_css)
-            vuln_row_html += `<td class="text-nowrap whitespace-nowrap"><div class="z-10 badge p-1.5 border-none badge-cvss ${epss_badge_css} text-center ${vuln_style_class}" tabindex="0">${htmlEntities(epss)}</div></td>`;
+            vuln_row_html += `<td class="text-nowrap whitespace-nowrap ${epss_badge_css} ${vuln_style_class} text-center"><div class="z-10 badge p-1.5 border-none badge-cvss text-center" tabindex="0">${htmlEntities(epss)}</div></td>`;
         else
-            vuln_row_html += `<td class="text-nowrap whitespace-nowrap text-center"><div class="z-10 badge p-1.5 border-none badge-cvss badge-na text-center ${vuln_style_class}" tabindex="0">N / A</div></td>`;
+            vuln_row_html += `<td class="text-nowrap whitespace-nowrap ${epss_badge_css} ${vuln_style_class} text-center"><div class="z-10 badge p-1.5 border-none badge-cvss badge-na text-center" tabindex="0">N / A</div></td>`;
     }
 
     if (selectedColumns.includes('cwe')) {

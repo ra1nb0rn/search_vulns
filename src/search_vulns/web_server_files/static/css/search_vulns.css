@@ -48,44 +48,70 @@
     color: var(--cvss-badge-text-color);
 }
 
-.badge-critical {
+.badge-critical>.badge {
     background-color: var(--cvss-badge-bg-color-critical);
 }
-
-.badge-critical.uncertain-vuln {
+.badge-critical.uncertain-vuln>.badge {
     background-color: var(--cvss-badge-bg-color-critical-uncertain);
 }
+.badge-critical>.dropdown-content {
+    border: 1px solid var(--cvss-badge-bg-color-critical);
+}
+.badge-critical.uncertain-vuln>.dropdown-content {
+    border: 1px solid var(--cvss-badge-bg-color-critical-uncertain);
+}
 
-.badge-high {
+.badge-high>.badge {
     background-color: var(--cvss-badge-bg-color-high);
 }
-
-.badge-high.uncertain-vuln {
+.badge-high.uncertain-vuln>.badge {
     background-color: var(--cvss-badge-bg-color-high-uncertain);
 }
+.badge-high>.dropdown-content {
+    border: 1px solid var(--cvss-badge-bg-color-high);
+}
+.badge-high.uncertain-vuln>.dropdown-content {
+    border: 1px solid var(--cvss-badge-bg-color-high-uncertain);
+}
 
-.badge-medium {
+
+.badge-medium>.badge {
     background-color: var(--cvss-badge-bg-color-medium);
 }
-
-.badge-medium.uncertain-vuln {
+.badge-medium.uncertain-vuln>.badge {
     background-color: var(--cvss-badge-bg-color-medium-uncertain);
 }
+.badge-medium>.dropdown-content {
+    border: 1px solid var(--cvss-badge-bg-color-medium);
+}
+.badge-medium.uncertain-vuln>.dropdown-content {
+    border: 1px solid var(--cvss-badge-bg-color-medium-uncertain);
+}
 
-.badge-low {
+.badge-low>.badge {
     background-color: var(--cvss-badge-bg-color-low);
 }
-
-.badge-low.uncertain-vuln {
+.badge-low.uncertain-vuln>.badge {
     background-color: var(--cvss-badge-bg-color-low-uncertain);
 }
-
-.badge-na {
-    background-color: var(--cvss-badge-bg-color-na);
+.badge-low>.dropdown-content {
+    border: 1px solid var(--cvss-badge-bg-color-low);
+}
+.badge-low.uncertain-vuln>.dropdown-content {
+    border: 1px solid var(--cvss-badge-bg-color-low-uncertain);
 }
 
-.badge-na.uncertain-vuln {
+.badge-na>.badge {
+    background-color: var(--cvss-badge-bg-color-na);
+}
+.badge-na.uncertain-vuln>.badge {
     background-color: var(--cvss-badge-bg-color-na-uncertain);
+}
+.badge-na>.dropdown-content {
+    border: 1px solid var(--cvss-badge-bg-color-na);
+}
+.badge-na.uncertain-vuln>.dropdown-content {
+    border: 1px solid var(--cvss-badge-bg-color-na-uncertain);
 }
 
 
