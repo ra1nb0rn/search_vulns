@@ -35,12 +35,14 @@ def _setup_new_shared_databases(config):
 
     orig_productdb_name = config["PRODUCT_DATABASE"]["NAME"]
     orig_vulndb_name = config["VULN_DATABASE"]["NAME"]
-    if not is_safe_db_name(orig_productdb_name, config["PRODUCT_DATABASE"]["TYPE"].lower()):
-        print("Potentially malicious product database name detected, canceling update.")
-        return False
-    if not is_safe_db_name(orig_vulndb_name, config["VULN_DATABASE"]["TYPE"].lower()):
-        print("Potentially malicious vuln database name detected, canceling update.")
-        return False
+    if config["PRODUCT_DATABASE"]["TYPE"].lower() != "sqlite":
+        if not is_safe_db_name(orig_productdb_name, config["PRODUCT_DATABASE"]["TYPE"].lower()):
+            print("Potentially malicious product database name detected, canceling update.")
+            return False
+    if config["VULN_DATABASE"]["TYPE"].lower() != "sqlite":
+        if not is_safe_db_name(orig_vulndb_name, config["VULN_DATABASE"]["TYPE"].lower()):
+            print("Potentially malicious vuln database name detected, canceling update.")
+            return False
 
     if config["PRODUCT_DATABASE"]["TYPE"].lower() == "sqlite":
         temp_productdb_name = orig_productdb_name + ".update"
