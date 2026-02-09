@@ -156,8 +156,8 @@ async def full_update_async(productdb_config, vulndb_config, module_config, stop
         nvd_api_key = module_config["NVD_API_KEY"]
 
     if nvd_api_key:
-        LOGGER.info("API Key found - Requests will be sent at a rate of 25 per 30s.")
-        rate_limit = AsyncLimiter(25.0, 30.0)
+        LOGGER.info("API Key found - Requests will be sent at a rate of 45 per 30s.")
+        rate_limit = AsyncLimiter(45.0, 30.0)
     else:
         LOGGER.info("No API Key found - Requests will be sent at a rate of 5 per 30s.")
         rate_limit = AsyncLimiter(5.0, 30.0)
