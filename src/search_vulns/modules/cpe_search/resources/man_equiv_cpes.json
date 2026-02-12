@@ -79,5 +79,6 @@
     "cpe:2.3:a:inetsoftware:clear_reports:": ["cpe:2.3:a:inetsoftware:i-net_clear_reports:"],
     "cpe:2.3:a:atom:electron:": ["cpe:2.3:a:electronjs:electron:"],
     "cpe:2.3:a:rosariosis:student_information_system:": ["cpe:2.3:a:rosariosis:rosariosis:"],
-    "cpe:2.3:a:apache:http_server:": ["cpe:2.3:a:apache:apache_http_server:", "cpe:2.3:a:apache:apache_webserver:"]
+    "cpe:2.3:a:apache:http_server:": ["cpe:2.3:a:apache:apache_http_server:", "cpe:2.3:a:apache:apache_webserver:"],
+    "cpe:2.3:a:zeit:next.js:": ["cpe:2.3:a:vercel:next.js:"]
 }
