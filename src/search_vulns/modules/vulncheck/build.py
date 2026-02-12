@@ -19,8 +19,8 @@ async def vulncheck_worker(cveids, headers):
     global VULNCHECK_UPDATE_SUCCESS
 
     affects_statements = []
-    retry_limit = 3
-    retry_interval = 10
+    retry_limit = 8
+    initial_retry_interval = 3
     async with aiohttp.ClientSession() as session:
         for cveid in cveids:
             if VULNCHECK_UPDATE_SUCCESS is not None and not VULNCHECK_UPDATE_SUCCESS:
@@ -28,7 +28,7 @@ async def vulncheck_worker(cveids, headers):
 
             # get extra data from vulncheck API
             vulncheck_data = None
-            for _ in range(retry_limit + 1):
+            for i in range(retry_limit + 1):
                 try:
                     vulncheck_url = "https://api.vulncheck.com/v3/index/nist-nvd2"
                     params = {"cve": cveid}
@@ -45,7 +45,7 @@ async def vulncheck_worker(cveids, headers):
                             "Got an exception when downloading data from vulncheck API: %s"
                             % str(e)
                         )
-                await asyncio.sleep(retry_interval)
+                await asyncio.sleep(initial_retry_interval + i * 3)
 
             if vulncheck_data is None:
                 if VULNCHECK_UPDATE_SUCCESS is None:
