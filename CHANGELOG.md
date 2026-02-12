@@ -1,6 +1,23 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.0.3 - 2025-02-13
+### Added
+- Added equivalent CPEs for Oracle APEX and Next.js
+- In web app, improve visual separation between CVSS vector dropdown and background
+
+### Changed
+- Increased NVD rate limits, since the API is generally more stable now
+- Do not check for safe DB name with SQLite
+
+### Fixed
+- Updated cpe_search with various fixes
+- Made VulnCheck NVD++ building process slightly more resilient
+- Improve detection of bad CPE matches with GHSA
+- In web app, fixed width and spacing of CVSS vector dropdown
+- Updated test cases
+
+
 ## v1.0.2 - 2025-01-27
 ### Fixed
 - Updated cpe_search to fix small performance and matching issues
