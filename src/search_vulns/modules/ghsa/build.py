@@ -4,7 +4,12 @@ import re
 import shutil
 
 import ujson
-from cpe_search.cpe_search import add_cpes_to_db, search_cpes
+from cpe_search.cpe_search import (
+    TEXT_TO_VECTOR_RE,
+    add_cpes_to_db,
+    search_cpes,
+    split_cpe,
+)
 from cvss import CVSS2, CVSS3, CVSS4
 from cvss.exceptions import (
     CVSS2MalformedError,
@@ -318,15 +323,35 @@ def complete_pname_cpe_map(pname_cpe_map, ghsa_no_cpe_yet, productdb_config):
                 query_pname = query_pname.replace(".", " ")
                 query_pname = query_pname.replace(":", " ")
                 query_pname = query_pname.replace("org ", " ")
+            if ecosystem == "npm":
+                if query_pname.startswith("@"):
+                    query_pname = query_pname[1:]
 
             cpe_search_results = search_cpes(query_pname, productdb_cursor)
             cpe_search_cpes = cpe_search_results.get("cpes", [])
             if not cpe_search_cpes:
                 cpe_search_cpes = cpe_search_results.get("pot_cpes", [])
+
             if cpe_search_cpes:
-                cpe_parts = cpe_search_cpes[0][0].split(":")
-                product_cpe = ":".join(cpe_parts[:5] + ["*"] * 8)
-                pname_cpe_map[pname] = (product_cpe, 0)
+                # ensure that packages with subcomponents are not assigned a CPE with
+                # the subpackage name being the vendor, e.g. payloadcms/graphql in GHSA-26rv-h2hf-3fw4
+                cpe_parts = split_cpe(cpe_search_cpes[0][0])
+                cpe_vendor = cpe_parts[3]
+                pname_parts = TEXT_TO_VECTOR_RE.findall(query_pname)
+                mismatch = False
+                for i, pname_part in enumerate(pname_parts[1:]):
+                    if 3 + i + 1 < len(cpe_parts):
+                        if pname_part == cpe_parts[3 + i + 1] and pname_part in pname_parts[0]:
+                            continue
+                        elif pname_part in cpe_vendor:
+                            mismatch = True
+                            break
+
+                if not mismatch:
+                    product_cpe = ":".join(cpe_parts[:5] + ["*"] * 8)
+                    pname_cpe_map[pname] = (product_cpe, 0)
+                else:
+                    pname_cpe_map[pname] = (pname, None)
             else:
                 pname_cpe_map[pname] = (pname, None)
 
