@@ -13,7 +13,7 @@ class TestSearches(unittest.TestCase):
         query = "nginx 1.20.1-22 RHEL 9.2"
         result = search_vulns(query=query, include_patched=True)
 
-        expected_open = ["CVE-2025-53859"]
+        expected_open = ["CVE-2025-53859", "CVE-2026-1642"]
         expected_backpatched = [
             "CVE-2024-7347",
             "CVE-2022-41742",

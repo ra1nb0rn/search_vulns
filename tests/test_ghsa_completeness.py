@@ -67,9 +67,12 @@ class TestSearches(unittest.TestCase):
             if vuln_id.startswith("CVE-"):
                 if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
+                            if vuln_id not in expected_vulns:
+                                self.assertIn(alias, expected_vulns)
+                            else:
+                                self.assertTrue(alias == expected_vulns[vuln_id])
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
@@ -138,9 +141,12 @@ class TestSearches(unittest.TestCase):
             if vuln_id.startswith("CVE-"):
                 if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
+                            if vuln_id not in expected_vulns:
+                                self.assertIn(alias, expected_vulns)
+                            else:
+                                self.assertTrue(alias == expected_vulns[vuln_id])
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
@@ -247,9 +253,12 @@ class TestSearches(unittest.TestCase):
             if vuln_id.startswith("CVE-"):
                 if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
+                            if vuln_id not in expected_vulns:
+                                self.assertIn(alias, expected_vulns)
+                            else:
+                                self.assertTrue(alias == expected_vulns[vuln_id])
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
@@ -307,9 +316,12 @@ class TestSearches(unittest.TestCase):
             if vuln_id.startswith("CVE-"):
                 if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
+                            if vuln_id not in expected_vulns:
+                                self.assertIn(alias, expected_vulns)
+                            else:
+                                self.assertTrue(alias == expected_vulns[vuln_id])
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
@@ -379,9 +391,12 @@ class TestSearches(unittest.TestCase):
             if vuln_id.startswith("CVE-"):
                 if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
+                            if vuln_id not in expected_vulns:
+                                self.assertIn(alias, expected_vulns)
+                            else:
+                                self.assertTrue(alias == expected_vulns[vuln_id])
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
@@ -615,15 +630,6 @@ class TestSearches(unittest.TestCase):
                     "GHSA-g585-crjf-vhwq": "https://github.com/advisories/GHSA-g585-crjf-vhwq"
                 },
             },
-            "GHSA-75mx-chcf-2q32": {
-                "published": "2024-05-30 21:25:26",
-                "cvss_ver": "3.1",
-                "cvss": "6.1",
-                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
-                "aliases": {
-                    "GHSA-75mx-chcf-2q32": "https://github.com/advisories/GHSA-75mx-chcf-2q32"
-                },
-            },
             "GHSA-2rcw-9hrm-8q7q": {
                 "published": "2024-06-07 19:47:52",
                 "cvss_ver": "3.1",
@@ -669,9 +675,12 @@ class TestSearches(unittest.TestCase):
             if vuln_id.startswith("CVE-"):
                 if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
+                            if vuln_id not in expected_vulns:
+                                self.assertIn(alias, expected_vulns)
+                            else:
+                                self.assertTrue(alias == expected_vulns[vuln_id])
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
@@ -863,6 +872,76 @@ class TestSearches(unittest.TestCase):
                     "GHSA-v897-pv23-r8cw": "https://github.com/advisories/GHSA-v897-pv23-r8cw",
                 },
             },
+            "GHSA-hcvw-475w-8g7p": {
+                "published": "2026-02-09 20:15:55",
+                "cvss_ver": "3.1",
+                "cvss": "8.1",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
+                "aliases": {
+                    "CVE-2026-1529": "https://nvd.nist.gov/vuln/detail/CVE-2026-1529",
+                    "GHSA-hcvw-475w-8g7p": "https://github.com/advisories/GHSA-hcvw-475w-8g7p",
+                },
+            },
+            "GHSA-fm6w-rrp3-2x4w": {
+                "published": "2026-02-09 20:15:54",
+                "cvss_ver": "3.1",
+                "cvss": "5.4",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N",
+                "aliases": {
+                    "CVE-2025-14778": "https://nvd.nist.gov/vuln/detail/CVE-2025-14778",
+                    "GHSA-fm6w-rrp3-2x4w": "https://github.com/advisories/GHSA-fm6w-rrp3-2x4w",
+                },
+            },
+            "GHSA-63v5-26vq-m4vm": {
+                "published": "2026-01-26 21:30:36",
+                "cvss_ver": "3.1",
+                "cvss": "3.1",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:L/A:N",
+                "aliases": {
+                    "CVE-2026-1190": "https://nvd.nist.gov/vuln/detail/CVE-2026-1190",
+                    "GHSA-63v5-26vq-m4vm": "https://github.com/advisories/GHSA-63v5-26vq-m4vm",
+                },
+            },
+            "GHSA-fwhw-chw4-gh37": {
+                "published": "2026-02-02 09:30:30",
+                "cvss_ver": "3.1",
+                "cvss": "2.7",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:L/A:N",
+                "aliases": {
+                    "CVE-2026-1518": "https://nvd.nist.gov/vuln/detail/CVE-2026-1518",
+                    "GHSA-fwhw-chw4-gh37": "https://github.com/advisories/GHSA-fwhw-chw4-gh37",
+                },
+            },
+            "GHSA-37gf-gmxv-74wv": {
+                "published": "2026-02-09 21:31:03",
+                "cvss_ver": "3.1",
+                "cvss": "8.8",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+                "aliases": {
+                    "CVE-2026-1486": "https://nvd.nist.gov/vuln/detail/CVE-2026-1486",
+                    "GHSA-37gf-gmxv-74wv": "https://github.com/advisories/GHSA-37gf-gmxv-74wv",
+                },
+            },
+            "GHSA-gv3v-2cpp-3pmq": {
+                "published": "2026-02-10 12:30:28",
+                "cvss_ver": "3.1",
+                "cvss": "5.0",
+                "cvss_vec": "CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:H/I:N/A:N",
+                "aliases": {
+                    "CVE-2025-11537": "https://nvd.nist.gov/vuln/detail/CVE-2025-11537",
+                    "GHSA-gv3v-2cpp-3pmq": "https://github.com/advisories/GHSA-gv3v-2cpp-3pmq",
+                },
+            },
+            "GHSA-g78x-7vwx-9f58": {
+                "published": "2026-02-02 06:30:53",
+                "cvss_ver": "3.1",
+                "cvss": "2.7",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:L/I:N/A:N",
+                "aliases": {
+                    "CVE-2025-13881": "https://nvd.nist.gov/vuln/detail/CVE-2025-13881",
+                    "GHSA-g78x-7vwx-9f58": "https://github.com/advisories/GHSA-g78x-7vwx-9f58",
+                },
+            },
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
@@ -895,9 +974,12 @@ class TestSearches(unittest.TestCase):
             if vuln_id.startswith("CVE-"):
                 if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
+                            if vuln_id not in expected_vulns:
+                                self.assertIn(alias, expected_vulns)
+                            else:
+                                self.assertTrue(alias == expected_vulns[vuln_id])
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
@@ -944,6 +1026,16 @@ class TestSearches(unittest.TestCase):
             "CVE-2023-45809": "GHSA-fc75-58r8-rm3h",
             "CVE-2023-28837": "GHSA-33pv-vcgh-jfg9",
             "CVE-2024-39317": "GHSA-jmp3-39vp-fwg8",
+            "GHSA-4qvv-g3vr-m348": {
+                "published": "2026-02-04 21:16:02",
+                "cvss_ver": "4.0",
+                "cvss": "5.1",
+                "cvss_vec": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
+                "aliases": {
+                    "CVE-2026-25517": "https://nvd.nist.gov/vuln/detail/CVE-2026-25517",
+                    "GHSA-4qvv-g3vr-m348": "https://github.com/advisories/GHSA-4qvv-g3vr-m348",
+                },
+            },
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
@@ -957,9 +1049,12 @@ class TestSearches(unittest.TestCase):
             if vuln_id.startswith("CVE-"):
                 if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
+                            if vuln_id not in expected_vulns:
+                                self.assertIn(alias, expected_vulns)
+                            else:
+                                self.assertTrue(alias == expected_vulns[vuln_id])
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
@@ -1026,9 +1121,12 @@ class TestSearches(unittest.TestCase):
             if vuln_id.startswith("CVE-"):
                 if DataSource.GHSA in vuln.matched_by:
                     # check that ghsa vulns for the software are reported
-                    self.assertIn(expected_vulns[vuln_id], vuln.aliases)
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
+                            if vuln_id not in expected_vulns:
+                                self.assertIn(alias, expected_vulns)
+                            else:
+                                self.assertTrue(alias == expected_vulns[vuln_id])
                             actual_ghsa_vulns.append(alias)
                 else:
                     # check that cve<->ghsa matchings work, even if the software is not vulnerable via GHSA
