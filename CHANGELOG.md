@@ -1,6 +1,11 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.0.4 - 2025-02-17
+### Added
+- Enabled GitHub Sponsors for voluntary donations
+
+
 ## v1.0.3 - 2025-02-13
 ### Added
 - Added equivalent CPEs for Oracle APEX and Next.js
