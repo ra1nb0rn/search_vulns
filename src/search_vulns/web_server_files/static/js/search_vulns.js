@@ -9,7 +9,7 @@ var filterVulnDropdownButtonHtml = `<div class="items-center flex-row mb-2 w-ful
 var iconUnsorted = '<i class="fa-solid fa-sort"></i>';
 var iconSortDesc = '<i class="fa-solid fa-sort-down"></i>';
 var iconSortAsc = '<i class="fa-solid fa-sort-up"></i>';
-var exportIcon = `<i class="fa-solid fa-clipboard"></i>`, exportIconSuccess = `<i class="fa-solid fa-clipboard-check text-success"></i>`;
+var exportIcon = `<i class="fa-regular fa-copy"></i>`, exportIconSuccess = `<i class="fa-solid fa-check text-success"></i>`;
 var curSortColIdx = 1, curSortColAsc = false, searchIgnoreNextKeyup = false;
 var doneTypingQueryTimer, queryInput = $('#query'), doneTypingQueryInterval = 600;  //time in ms
 var arrowKeyUpDownInterval = null, arrowKeyUpDownIntervalTime = 100, arrowKeyUpDownHoldDetectionTimer = null, arrowKeyUpDownHoldDetectionTime = 150;
@@ -309,9 +309,9 @@ function createVulnTableRowHtml(idx, vuln) {
         }
 
         if (cvss_vector && cvss_badge_css)
-            vuln_row_html += `<td><div class="mx-auto w-fit"><div class="dropdown dropdown-hover ${cvss_badge_css} ${vuln_style_class}"><div class="z-10 badge border-none badge-cvss text-center underline decoration-dotted underline-offset-3 cursor-help py-3 text-nowrap whitespace-nowrap" tabindex="0">${cvss.toFixed(1)}&nbsp;(v${cvss_version})</div><div tabindex="0" class="dropdown-content menu z-20 m-0 p-2 shadow-xl bg-base-300 rounded-box text-nowrap"><div class="cursor-pointer text-smxs w-max max-w-54 sm:max-w-128" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b class="whitespace-normal break-all">${cvss_vector}</b></span></div></div></div></div></td>`;
+            vuln_row_html += `<td><div class="mx-auto w-fit"><div class="dropdown dropdown-hover ${cvss_badge_css} ${vuln_style_class}"><div class="z-10 badge border-none badge-cvss text-center underline decoration-dotted underline-offset-3 cursor-help py-3 text-nowrap whitespace-nowrap" tabindex="0">${cvss.toFixed(1)}&nbsp;(v${cvss_version})</div><div tabindex="0" class="dropdown-content menu z-20 m-0 p-2 shadow-xl bg-base-300 rounded-box text-nowrap"><div class="cursor-pointer text-smxs w-max max-w-54 sm:max-w-128" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-regular fa-copy"></i></span>&nbsp;&nbsp;<b class="whitespace-normal break-all">${cvss_vector}</b></span></div></div></div></div></td>`;
         else
-            vuln_row_html += `<td><div class="mx-auto w-fit"><div class="dropdown max-sm:dropdown-center dropdown-hover badge-na ${vuln_style_class}"><div class="z-10 badge p-1.5 border-none badge-cvss text-center text-nowrap whitespace-nowrap underline decoration-dotted underline-offset-3 cursor-help" tabindex="0">N / A</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-2 bg-base-300 rounded-box text-nowrap shadow-xl"><div class="cursor-pointer text-smxs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-solid fa-clipboard"></i></span>&nbsp;&nbsp;<b>Not Available (N/A)</b></span></div></div></div></div></td>`;
+            vuln_row_html += `<td><div class="mx-auto w-fit"><div class="dropdown max-sm:dropdown-center dropdown-hover badge-na ${vuln_style_class}"><div class="z-10 badge p-1.5 border-none badge-cvss text-center text-nowrap whitespace-nowrap underline decoration-dotted underline-offset-3 cursor-help" tabindex="0">N / A</div><div tabindex="0" class="dropdown-content z-20 menu m-0 p-2 bg-base-300 rounded-box text-nowrap shadow-xl"><div class="cursor-pointer text-smxs" onclick="copyToClipboardCVSS(this)"><span><span><i class="fa-regular fa-copy"></i></span>&nbsp;&nbsp;<b>Not Available (N/A)</b></span></div></div></div></div></td>`;
     }
 
     if (selectedColumns.includes('epss')) {
@@ -1138,7 +1138,7 @@ function copyToClipboardCSV() {
 function copyToClipboardCVSS(cvssClipboardButton) {
     navigator.clipboard.writeText($(cvssClipboardButton).find("b").text());
     $(cvssClipboardButton).find('span').find('span').addClass('text-success');
-    $(cvssClipboardButton).find('span').find('span').html('<i class="fa-solid fa-clipboard-check"></i>');
+    $(cvssClipboardButton).find('span').find('span').html('<i class="fa-solid fa-check"></i>');
     document.activeElement.blur();
 }
 
