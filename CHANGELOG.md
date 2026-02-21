@@ -1,6 +1,17 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.0.5 - 2025-02-21
+### Added
+- Show search_vulns update output in GitHub workflow again
+
+### Changed
+- Changed icons for copying to clipboard in web app
+
+### Fixed
+- Updated test cases
+
+
 ## v1.0.4 - 2025-02-17
 ### Added
 - Enabled GitHub Sponsors for voluntary donations
