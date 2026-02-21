@@ -77,7 +77,7 @@ class TestSearches(unittest.TestCase):
         self.assertEqual(set(expected_backpatched), set(result_backpatched))
         self.assertEqual(set(expected_open), set(result_open))
 
-    def test_search_mariadb(self):
+    def test_search_tomcat(self):
         self.maxDiff = None
         query = "apache tomcat 9.0.70-2 ubuntu 25.04"
         result = search_vulns(query=query, include_patched=True)
@@ -96,6 +96,8 @@ class TestSearches(unittest.TestCase):
             "CVE-2024-50379",
             "CVE-2016-6325",
             "CVE-2016-5425",
+            "GHSA-qq5r-98hh-rxc9",
+            "GHSA-fpj8-gq4v-p354",
         ]
         expected_backpatched = [
             "CVE-2025-55752",

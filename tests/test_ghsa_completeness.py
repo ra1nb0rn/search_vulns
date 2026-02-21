@@ -942,6 +942,16 @@ class TestSearches(unittest.TestCase):
                     "GHSA-g78x-7vwx-9f58": "https://github.com/advisories/GHSA-g78x-7vwx-9f58",
                 },
             },
+            "GHSA-fjf4-6f34-w64q": {
+                "published": "2026-02-19 18:31:51",
+                "cvss_ver": "3.1",
+                "cvss": "3.8",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:L/I:L/A:N",
+                "aliases": {
+                    "CVE-2026-2733": "https://nvd.nist.gov/vuln/detail/CVE-2026-2733",
+                    "GHSA-fjf4-6f34-w64q": "https://github.com/advisories/GHSA-fjf4-6f34-w64q",
+                },
+            },
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
