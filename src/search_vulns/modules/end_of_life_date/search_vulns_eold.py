@@ -48,6 +48,9 @@ def postprocess_results(
         is_queried_release_eol, is_lower_release_eol = None, None
         for i, release in enumerate(eol_releases):
             release_end = CPEVersion(release[2])
+            if not release_end:
+                # skip releases where latest release is unclear, e.g. oracle-database
+                continue
             release_eol, now = release[3].lower(), datetime.datetime.now()
             is_lower_release_eol = False
             if release_eol not in ("true", "false"):
@@ -71,6 +74,10 @@ def postprocess_results(
             latest_release = eol_releases[0][2]
             release = eol_releases[queried_release_branch_idx]
             release_start, release_end = CPEVersion(release[1]), CPEVersion(release[2])
+            if not release_end:
+                # skip releases where latest release is unclear, e.g. oracle-database
+                continue
+
             eol_ref = "https://endoflife.date/" + release[0]
             if not query_version:  # no query version --> return general information
                 if is_queried_release_eol:
