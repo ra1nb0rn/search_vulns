@@ -274,3 +274,36 @@ def search_vulns(
         )
 
     return vulns
+
+
+def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
+    # add tracking information
+    if extra_params.get('mssql_cpes'):
+        # get all tracked CVEs (could be precomputed ideally, but this suffices for now)
+        vuln_db_cursor.execute(
+            "SELECT DISTINCT cves FROM mssql_vulns;"
+        )
+        cves = vuln_db_cursor.fetchall()
+        if not cves:
+            return
+
+        all_tracked_cves = set()
+        for cve_group in cves:
+            if cve_group and cve_group[0]:
+                for cve in cve_group[0].split(','):
+                    all_tracked_cves.add(cve)
+
+        # add tracking statement
+        for vuln_id, vuln in vulns.items():
+            if DataSource.PRODUCT_SPECIFIC not in vuln.tracked_by:
+                # get all CVE IDs
+                vuln_cve_ids = set()
+                if vuln_id.startswith("CVE-"):
+                    vuln_cve_ids.add(vuln_id)
+                for alias in vuln.aliases:
+                    if alias.startswith("CVE-"):
+                        vuln_cve_ids.add(alias)
+
+                # set tracking
+                if any(cve in all_tracked_cves for cve in vuln_cve_ids):
+                    vuln.add_tracked_by(DataSource.PRODUCT_SPECIFIC, SQL_SERVER_BUILDS_OVERVIEW_URL)
