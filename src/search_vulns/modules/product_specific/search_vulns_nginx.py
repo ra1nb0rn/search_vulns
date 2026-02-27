@@ -162,7 +162,9 @@ def search_vulns(
                     version_start, version_end = CPEVersion(version_start), CPEVersion(
                         version_end
                     )
-                    if version_start <= version:
+                    if not version:
+                        vuln_cves.add(cve_id)
+                    elif version_start <= version:
                         if version < version_end:
                             vuln_cves.add(cve_id)
                         elif version == version_end and version_end_incl == 1:
