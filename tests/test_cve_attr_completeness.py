@@ -1428,6 +1428,13 @@ class TestSearches(unittest.TestCase):
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:H/I:N/A:N",
                 "cisa_kev": False,
             },
+            "CVE-2026-24050": {
+                "published": "2026-02-06 19:16:08",
+                "cvss_ver": "4.0",
+                "cvss": "1.1",
+                "cvss_vec": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:P/VC:N/VI:N/VA:N/SC:L/SI:L/SA:N/E:U/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
+                "cisa_kev": False,
+            },
         }
 
         for vuln_id, vuln in result.vulns.items():

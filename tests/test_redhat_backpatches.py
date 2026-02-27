@@ -83,7 +83,6 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-3891",
             "CVE-2024-42516",
             "CVE-1999-0678",
-            "CVE-2007-0450",
             "CVE-1999-1237",
             "CVE-2007-0086",
             "CVE-2019-17567",
@@ -162,6 +161,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2023-31122",
             "CVE-2022-22719",
             "CVE-2024-38477",
+            "CVE-2007-0450",
         ]
         result_open, result_backpatched = [], []
 
