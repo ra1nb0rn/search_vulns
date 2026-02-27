@@ -1321,18 +1321,26 @@ function setupConfigFromLocalstorage() {
         ignoreGeneralProductVulns = true;
         document.getElementById("generalVulnsConfig").checked = true;
     }
+    else
+        ignoreGeneralProductVulns = false;
     if (localStorage.getItem('onlyShowEDBExploits') == 'true') {
         onlyShowEDBExploits = true;
         document.getElementById("onlyEdbExploitsConfig").checked = true;
     }
+    else
+        onlyShowEDBExploits = true;
     if (localStorage.getItem('showSingleVersionVulns') == 'true') {
         showSingleVersionVulns = true;
         document.getElementById("showSingleVersionVulnsConfig").checked = true;
     }
+    else
+        showSingleVersionVulns = false;
     if (localStorage.getItem('showPatchedVulns') == 'true') {
         showPatchedVulns = true;
         document.getElementById("showPatchedVulnsConfig").checked = true;
     }
+    else
+        showPatchedVulns = false;
     minMatchScore = Number(localStorage.getItem('minMatchScore'));
     document.getElementById("minMatchScoreSlider").value = minMatchScore;
     document.getElementById("minMatchScoreLabel").innerText = minMatchScore.toFixed(2);
