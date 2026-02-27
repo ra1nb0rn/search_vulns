@@ -24,6 +24,9 @@ MICROSOFT_ADVISORY_BASE_URL = "https://msrc.microsoft.com/update-guide/en-US/vul
 MSSQL_QUERY_RE = re.compile(
     r"(mssql|((microsoft)?\s*sql\s*server))\s*(\d{4})?\s*((\d+\.\d+).\d+\.\d+)", re.IGNORECASE
 )
+MSSQL_CPE_QUERY_RE = re.compile(
+    r"(cpe:2\.3:a:microsoft:sql_server:((\d+\.\d+).\d+\.\d+):)", re.IGNORECASE
+)
 
 
 def full_update(productdb_config, vulndb_config, module_config, stop_update):
@@ -121,11 +124,20 @@ def preprocess_query(
     query, product_ids: ProductIDsResult, vuln_db_cursor, product_db_cursor, config
 ) -> Tuple[str, Dict]:
 
-    # hijack query to match to proper CPE
-    matches = MSSQL_QUERY_RE.findall(query)
-    if matches:
-        release_version = matches[0][-1]
-        build = matches[0][-2]
+    # hijack textual query to match to proper CPE
+    text_query_matches = MSSQL_QUERY_RE.findall(query)
+    if text_query_matches:
+        build = text_query_matches[0][-2]
+        cpe = f"cpe:2.3:a:microsoft:sql_server:{build}:*:*:*:*:*:*:*"
+        return query.replace(text_query_matches[0][0], ""), {"mssql_cpes": [cpe], "mssql_build": build}
+
+    # hijack CPE query to include equivalent CPEs, since NVD's CPE usage is inconsistent
+    cpe_query_matches = MSSQL_CPE_QUERY_RE.findall(query)
+    if cpe_query_matches:
+        cpes = [cpe_query_matches[0][0]]
+        release_version = cpe_query_matches[0][-1]
+        build = cpe_query_matches[0][-2]
+
         # strip double zero
         if release_version.endswith("00"):
             release_version = release_version[:-1]
@@ -138,14 +150,13 @@ def preprocess_query(
             release = release[0][0]
 
             # the NVD uses several valid CPEs ...
-            cpes.append(f"cpe:2.3:a:microsoft:sql_server:{build}:*:*:*:*:*:*:*")
             if " " in release:
                 a, b = release.split(" ")
                 cpes.append(f"cpe:2.3:a:microsoft:sql_server_{a}:{b}:*:*:*:*:*:*:*")
             else:
                 cpes.append(f"cpe:2.3:a:microsoft:sql_server_{release}:{build}:*:*:*:*:*:*:*")
 
-        return query.replace(matches[0][0], ""), {"mssql_cpes": cpes, "mssql_build": build}
+        return query, {"mssql_cpes": cpes, "mssql_build": build}
 
 
 def search_product_ids(
