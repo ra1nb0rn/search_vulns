@@ -22,7 +22,7 @@ SQL_SERVER_BUILDS_RELEASES_URL = "https://docs.google.com/spreadsheets/d/16Ymdz8
 SQL_SERVER_BUILDS_OVERVIEW_URL = "https://sqlserverbuilds.blogspot.com/"
 MICROSOFT_ADVISORY_BASE_URL = "https://msrc.microsoft.com/update-guide/en-US/vulnerability/"
 MSSQL_QUERY_RE = re.compile(
-    r"(mssql|((microsoft)?\s*sql\s*server))\s*((\d+\.\d+).\d+\.\d+)", re.IGNORECASE
+    r"(mssql|((microsoft)?\s*sql\s*server))\s*(\d{4})?\s*((\d+\.\d+).\d+\.\d+)", re.IGNORECASE
 )
 
 
