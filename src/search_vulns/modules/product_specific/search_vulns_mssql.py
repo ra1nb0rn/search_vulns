@@ -129,7 +129,10 @@ def preprocess_query(
     if text_query_matches:
         build = text_query_matches[0][-2]
         cpe = f"cpe:2.3:a:microsoft:sql_server:{build}:*:*:*:*:*:*:*"
-        return query.replace(text_query_matches[0][0], ""), {"mssql_cpes": [cpe], "mssql_build": build}
+        return query.replace(text_query_matches[0][0], ""), {
+            "mssql_cpes": [cpe],
+            "mssql_build": build,
+        }
 
     # hijack CPE query to include equivalent CPEs, since NVD's CPE usage is inconsistent
     cpe_query_matches = MSSQL_CPE_QUERY_RE.findall(query)
@@ -278,11 +281,9 @@ def search_vulns(
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
     # add tracking information
-    if extra_params.get('mssql_cpes'):
+    if extra_params.get("mssql_cpes"):
         # get all tracked CVEs (could be precomputed ideally, but this suffices for now)
-        vuln_db_cursor.execute(
-            "SELECT DISTINCT cves FROM mssql_vulns;"
-        )
+        vuln_db_cursor.execute("SELECT DISTINCT cves FROM mssql_vulns;")
         cves = vuln_db_cursor.fetchall()
         if not cves:
             return
@@ -290,7 +291,7 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
         all_tracked_cves = set()
         for cve_group in cves:
             if cve_group and cve_group[0]:
-                for cve in cve_group[0].split(','):
+                for cve in cve_group[0].split(","):
                     all_tracked_cves.add(cve)
 
         # add tracking statement
@@ -306,4 +307,6 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
 
                 # set tracking
                 if any(cve in all_tracked_cves for cve in vuln_cve_ids):
-                    vuln.add_tracked_by(DataSource.PRODUCT_SPECIFIC, SQL_SERVER_BUILDS_OVERVIEW_URL)
+                    vuln.add_tracked_by(
+                        DataSource.PRODUCT_SPECIFIC, SQL_SERVER_BUILDS_OVERVIEW_URL
+                    )
