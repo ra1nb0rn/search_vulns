@@ -143,6 +143,7 @@ def search_vulns(
     for cpe in product_ids.cpe:
         cpe_split = split_cpe(cpe)
         if cpe_split[4] in ("nginx", "nginx_open_source"):
+            extra_params["is_nginx_query"] = True
             version = cpe_split[5]
             if version in processed_versions:
                 continue
@@ -177,3 +178,29 @@ def search_vulns(
         )
 
     return vulns
+
+
+def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
+    # add tracking information
+    if extra_params.get("is_nginx_query"):
+        # get all tracked CVEs
+        vuln_db_cursor.execute("SELECT DISTINCT cve_id FROM nginx_vulns;")
+        all_tracked_cves = vuln_db_cursor.fetchall()
+        if not all_tracked_cves:
+            return
+        all_tracked_cves = [cve[0] for cve in all_tracked_cves if cve and cve[0]]
+
+        # add tracking statement
+        for vuln_id, vuln in vulns.items():
+            if DataSource.PRODUCT_SPECIFIC not in vuln.tracked_by:
+                # get all CVE IDs
+                vuln_cve_ids = set()
+                if vuln_id.startswith("CVE-"):
+                    vuln_cve_ids.add(vuln_id)
+                for alias in vuln.aliases:
+                    if alias.startswith("CVE-"):
+                        vuln_cve_ids.add(alias)
+
+                # set tracking
+                if any(cve in all_tracked_cves for cve in vuln_cve_ids):
+                    vuln.add_tracked_by(DataSource.PRODUCT_SPECIFIC, NGINX_ADVISORIES_URL)
