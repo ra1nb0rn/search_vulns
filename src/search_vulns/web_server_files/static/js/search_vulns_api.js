@@ -1,4 +1,4 @@
-var manageGeneratedKeyHtml = `<button class="btn btn-sm text-base btn-circle btn-primary" onclick="copyGeneratedKeyToClipboard()"><i class="fa-solid fa-clipboard"></i></button><button class="btn text-base btn-sm btn-circle btn-secondary" onclick="saveGeneratedKeyInBrowser()"><i class="fa-regular fa-window-maximize"></i></button>`;
+var manageGeneratedKeyHtml = `<button class="btn btn-sm text-base btn-circle btn-primary" onclick="copyGeneratedKeyToClipboard()"><i class="fa-regular fa-copy"></i></button><button class="btn text-base btn-sm btn-circle btn-secondary" onclick="saveGeneratedKeyInBrowser()"><i class="fa-regular fa-window-maximize"></i></button>`;
 var showKeyStatusMessageTimer, displayMessageTime = 2500;
 
 function htmlEntities(text) {
