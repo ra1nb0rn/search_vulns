@@ -243,7 +243,7 @@ function createVulnTableRowHtml(idx, vuln) {
         <div class="w-full absolute bottom-1 source-badge-div flex justify-between items-center inset-x-0 px-2">
             <div class="dropdown dropdown-right dropdown-center dropdown-hover">
                 <span
-                    class="group badge source-badge px-2 py-2.2 mr-0.5 border-1 bg-base-200 border-${source_badge_color} hover:text-${source_badge_color}-content hover:bg-${source_badge_color} hover:border-base-300 hover:border-1 cursor-default text-sm text-${source_badge_color}">
+                    class="group badge source-badge px-2 py-2.2 mr-0.5 border-1 bg-base-200 border-${source_badge_color} hover:text-${source_badge_color}-content hover:bg-${source_badge_color} hover:border-base-300 hover:border-1 cursor-default text-sm text-${source_badge_color} mr-1 mt-1 mb-1">
                     <i class="${source_badge_icon}"></i><span class="${badge_text_style}">${vulnConfidence}<span class="text-xs">&nbsp;/&nbsp;</span>${trackCount}</span>
                 </span>
                 <div tabindex="0" class="dropdown-content z-[1] shadow-2xl bg-base-200 rounded-box px-3 py-2 border border-5 border-base-300 space-y-1 w-max max-w-75 sm:max-w-156 md:max-w-256">
