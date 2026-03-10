@@ -19,7 +19,7 @@ async def vulncheck_worker(cveids, headers):
     global VULNCHECK_UPDATE_SUCCESS
 
     affects_statements = []
-    retry_limit = 10
+    retry_limit = 12
     initial_retry_interval = 3
     async with aiohttp.ClientSession() as session:
         for cveid in cveids:
