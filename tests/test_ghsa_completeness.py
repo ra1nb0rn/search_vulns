@@ -952,6 +952,9 @@ class TestSearches(unittest.TestCase):
                     "GHSA-fjf4-6f34-w64q": "https://github.com/advisories/GHSA-fjf4-6f34-w64q",
                 },
             },
+            "CVE-2026-0871": "GHSA-v4jw-m6rm-399h",
+            "CVE-2025-12150": "GHSA-7g5x-9c4v-4w5r",
+            "CVE-2026-3009": "GHSA-m297-3jv9-m927",
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
@@ -976,6 +979,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-4057": "GHSA-q5q7-8x6x-hcg2",
             "CVE-2025-7784": "GHSA-83j7-mhw9-388w",
             "CVE-2025-7195": "GHSA-856v-8qm2-9wjv",
+            "CVE-2026-3047": "GHSA-8cr3-vpxx-92cx",
         }
 
         actual_ghsa_vulns = []
@@ -1046,6 +1050,8 @@ class TestSearches(unittest.TestCase):
                     "GHSA-4qvv-g3vr-m348": "https://github.com/advisories/GHSA-4qvv-g3vr-m348",
                 },
             },
+            "CVE-2026-28222": "GHSA-p5cm-246w-84jm",
+            "CVE-2026-28223": "GHSA-p4v8-rw59-93cq",
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id

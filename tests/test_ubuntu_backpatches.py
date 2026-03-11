@@ -96,8 +96,8 @@ class TestSearches(unittest.TestCase):
             "CVE-2024-50379",
             "CVE-2016-6325",
             "CVE-2016-5425",
-            "GHSA-qq5r-98hh-rxc9",
-            "GHSA-fpj8-gq4v-p354",
+            "CVE-2025-66614",
+            "CVE-2026-24733",
         ]
         expected_backpatched = [
             "CVE-2025-55752",
