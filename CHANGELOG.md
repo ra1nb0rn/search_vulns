@@ -1,7 +1,24 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
-## v1.0.5 - 2025-02-21
+## v1.0.6 - 2026-03-11
+### Added
+- Updated cpe_search
+- Added vuln tracking information to MSSQL and nginx modules
+
+### Changed
+- Increased Vulncheck NVD++ API retries, because of recent API issues
+
+### Fixed
+- MSSQL-plugin: Improved detection of and search with MSSQL queries
+- Fixed bug if endoflife.date data does not contain a latest release
+- Consistently use copy icon throughout web app instead of clipboard icon
+- Fixed various smaller bugs
+- Updated test cases
+- Corrected CHANGELOG years
+
+
+## v1.0.5 - 2026-02-21
 ### Added
 - Show search_vulns update output in GitHub workflow again
 
@@ -12,12 +29,12 @@ This file keeps track of all notable changes between the different versions of s
 - Updated test cases
 
 
-## v1.0.4 - 2025-02-17
+## v1.0.4 - 2026-02-17
 ### Added
 - Enabled GitHub Sponsors for voluntary donations
 
 
-## v1.0.3 - 2025-02-13
+## v1.0.3 - 2026-02-13
 ### Added
 - Added equivalent CPEs for Oracle APEX and Next.js
 - In web app, improve visual separation between CVSS vector dropdown and background
@@ -34,19 +51,19 @@ This file keeps track of all notable changes between the different versions of s
 - Updated test cases
 
 
-## v1.0.2 - 2025-01-27
+## v1.0.2 - 2026-01-27
 ### Fixed
 - Updated cpe_search to fix small performance and matching issues
 - Added a few hardcoded matches for endoflife.date module
 - Made NVD building process slightly more resilient
 
 
-## v1.0.1 - 2025-01-27
+## v1.0.1 - 2026-01-27
 ### Fixed
 - Updated cpe_search to fix small performance issue
 
 
-## v1.0.0 - 2025-01-27
+## v1.0.0 - 2026-01-27
 ### Added
 - In web UI, give hints individual icons to make them distinguishable
 - In web UI, add badge with precise match information
