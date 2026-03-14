@@ -86,7 +86,7 @@ def _overwrite_old_shared_databases(config, productdb_namepair, vulndb_namepair)
 
         if config[db]["TYPE"] == "sqlite":
             if os.path.isfile(temp_db_name):
-                os.rename(temp_db_name, orig_db_name)
+                os.replace(temp_db_name, orig_db_name)
         else:
             db_conn = get_database_connection(config[db], db_name="")
             db_cursor = db_conn.cursor()
