@@ -40,6 +40,9 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-14819",
             "CVE-2025-14524",
             "CVE-2025-14017",
+            "CVE-2026-3783",
+            "CVE-2026-1965",
+            "CVE-2026-3784",
         ]
         expected_backpatched = [
             "CVE-2023-46219",
