@@ -1,6 +1,13 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.0.7 - 2026-03-16
+### Fixed
+- Fixed soft updating process on Windows (#33)
+- Added rate limiting to Vulncheck NVD++ as required by their latest update
+- Updated test cases
+
+
 ## v1.0.6 - 2026-03-11
 ### Added
 - Updated cpe_search
