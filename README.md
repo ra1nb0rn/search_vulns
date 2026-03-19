@@ -267,7 +267,7 @@ thread_handling = pool-of-threads
 
 
 ## License
-The code of *search_vulns* in this repository is licensed under the MIT license, see [here](https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE).
+The code of *search_vulns* in this repository is licensed under the MIT license, see [here](https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE-MIT).
 
 The data produced by *search_vulns* is licensed under the CC BY 4.0 license, see [here](https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE-CC-BY-4.0).
 
