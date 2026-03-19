@@ -84,14 +84,30 @@
 
     {% if show_captcha is defined and show_captcha == true %}
     <button id="toTopButton" onclick="backToTop()" title="Go To Top"
-        class="hidden btn btn-circle btn-accent fixed z-50 bottom-20 right-2.5 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
+        class="hidden btn btn-circle btn-accent fixed z-50 bottom-30 right-3 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
         <i class="fa-solid fa-arrow-up"></i>
     </button>
+    <div class="fixed z-50 bottom-2 right-0.5 p-0 m-0">
+        <a href="https://github.com/ra1nb0rn/search_vulns#LICENSE" target="_blank">
+            <div class="badge badge-outline gap-1 px-2 py-4 text-2xl">
+                <i class="fa-brands fa-creative-commons"></i>
+                <i class="fa-brands fa-creative-commons-by"></i>
+            </div>
+        </a>
+    </div>
     {% else %}
     <button id="toTopButton" onclick="backToTop()" title="Go To Top"
-        class="hidden btn btn-circle btn-accent fixed z-50 bottom-5 right-5 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
+        class="hidden btn btn-circle btn-accent fixed z-50 bottom-12 right-3 p-3 w-12 h-12 shadow-md text-lg font-semibold transition-colors duration-300">
         <i class="fa-solid fa-arrow-up"></i>
     </button>
+    <div class="fixed z-50 bottom-1 right-0.5 p-0 m-0">
+        <a href="https://github.com/ra1nb0rn/search_vulns#LICENSE" target="_blank">
+            <div class="badge badge-outline gap-1 px-2 py-4 text-2xl">
+                <i class="fa-brands fa-creative-commons"></i>
+                <i class="fa-brands fa-creative-commons-by"></i>
+            </div>
+        </a>
+    </div>
     {% endif %}
 
     <!-- Include classes only used by frontend JS for compiler

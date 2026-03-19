@@ -2200,11 +2200,11 @@
   .right-0 {
     right: calc(var(--spacing) * 0);
   }
-  .right-2\.5 {
-    right: calc(var(--spacing) * 2.5);
+  .right-0\.5 {
+    right: calc(var(--spacing) * 0.5);
   }
-  .right-5 {
-    right: calc(var(--spacing) * 5);
+  .right-3 {
+    right: calc(var(--spacing) * 3);
   }
   .right-\[3px\] {
     right: 3px;
@@ -2215,11 +2215,14 @@
   .bottom-1 {
     bottom: calc(var(--spacing) * 1);
   }
-  .bottom-5 {
-    bottom: calc(var(--spacing) * 5);
+  .bottom-2 {
+    bottom: calc(var(--spacing) * 2);
   }
-  .bottom-20 {
-    bottom: calc(var(--spacing) * 20);
+  .bottom-12 {
+    bottom: calc(var(--spacing) * 12);
+  }
+  .bottom-30 {
+    bottom: calc(var(--spacing) * 30);
   }
   .bottom-\[60px\] {
     bottom: 60px;
@@ -3110,6 +3113,14 @@
     --tw-border-style: none;
     border-style: none;
   }
+  .badge-outline {
+    @layer daisyui.l1.l2 {
+      color: var(--badge-color);
+      --badge-bg: #0000;
+      background-image: none;
+      border-color: currentColor;
+    }
+  }
   .border-base-300 {
     border-color: var(--color-base-300);
   }
@@ -3197,6 +3208,9 @@
   .stroke-current {
     stroke: currentcolor;
   }
+  .p-0 {
+    padding: calc(var(--spacing) * 0);
+  }
   .p-1 {
     padding: calc(var(--spacing) * 1);
   }
@@ -3243,6 +3257,9 @@
   }
   .py-3 {
     padding-block: calc(var(--spacing) * 3);
+  }
+  .py-4 {
+    padding-block: calc(var(--spacing) * 4);
   }
   .pr-1 {
     padding-right: calc(var(--spacing) * 1);
