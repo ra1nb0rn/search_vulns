@@ -77,7 +77,7 @@ def create_ubuntu_release_codename_mapping(vulndb_config):
         LOGGER.error(
             "Could not retrieve Ubuntu releases from https://ubuntu.com/security/releases.json"
         )
-        return False, []
+        return False
     releases_raw = ubuntu_api_initial_response.json()["releases"]
 
     db_conn = get_database_connection(vulndb_config, sqlite_timeout=SQLITE_TIMEOUT)
