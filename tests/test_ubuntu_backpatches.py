@@ -46,7 +46,7 @@ class TestSearches(unittest.TestCase):
         query = "squid 5.7-2 Ubuntu Focal"
         result = search_vulns(query=query, include_patched=True)
 
-        expected_open = ["CVE-2024-45802"]
+        expected_open = ["CVE-2024-45802", "CVE-2026-33526", "CVE-2026-32748", "CVE-2026-33515"]
         expected_backpatched = [
             "CVE-2023-46728",
             "CVE-2023-49285",

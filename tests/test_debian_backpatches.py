@@ -13,7 +13,17 @@ class TestSearches(unittest.TestCase):
         self.maxDiff = None
         query = "cpe:2.3:a:nginx:nginx:1.24.0-3:*:*:*:*:*:*:debian_trixie"
         result = search_vulns(query=query, include_patched=True)
-        expected_open = ["CVE-2024-7347", "CVE-2025-23419", "CVE-2025-53859", "CVE-2026-1642"]
+        expected_open = [
+            "CVE-2024-7347",
+            "CVE-2025-23419",
+            "CVE-2025-53859",
+            "CVE-2026-1642",
+            "CVE-2026-27784",
+            "CVE-2026-27651",
+            "CVE-2026-27654",
+            "CVE-2026-32647",
+            "CVE-2026-28753",
+        ]
         expected_backpatched = ["CVE-2023-44487"]
         result_open, result_backpatched = [], []
 
@@ -90,7 +100,7 @@ class TestSearches(unittest.TestCase):
         query = "squid 5.7-2 Debian 12"
         result = search_vulns(query=query, include_patched=True)
 
-        expected_open = ["CVE-2023-49288"]
+        expected_open = ["CVE-2023-49288", "CVE-2026-33515", "CVE-2026-32748", "CVE-2026-33526"]
         expected_backpatched = [
             "CVE-2024-23638",
             "CVE-2023-50269",

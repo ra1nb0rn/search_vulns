@@ -13,7 +13,15 @@ class TestSearches(unittest.TestCase):
         query = "nginx 1.20.1-22 RHEL 9.2"
         result = search_vulns(query=query, include_patched=True)
 
-        expected_open = ["CVE-2025-53859", "CVE-2026-1642"]
+        expected_open = [
+            "CVE-2025-53859",
+            "CVE-2026-1642",
+            "CVE-2026-27651",
+            "CVE-2026-27784",
+            "CVE-2026-28753",
+            "CVE-2026-32647",
+            "CVE-2026-27654",
+        ]
         expected_backpatched = [
             "CVE-2024-7347",
             "CVE-2022-41742",
@@ -38,7 +46,13 @@ class TestSearches(unittest.TestCase):
         query = "cpe:2.3:a:squid-cache:squid:5.5:*:*:*:*:*:*:rhel_9.2_5.5-5"
         result = search_vulns(query=query, include_patched=True, is_product_id_query=True)
 
-        expected_open = ["CVE-2022-41317", "CVE-2025-59362"]
+        expected_open = [
+            "CVE-2022-41317",
+            "CVE-2025-59362",
+            "CVE-2026-33515",
+            "CVE-2026-32748",
+            "CVE-2026-33526",
+        ]
         expected_backpatched = [
             "CVE-2023-46728",
             "CVE-2023-50269",
