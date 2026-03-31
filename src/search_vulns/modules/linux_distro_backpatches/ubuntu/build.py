@@ -175,6 +175,9 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
     global UBUNTU_RELEASES, DISTRO_CODENAMES
 
     try:
+        productdb_cursor, productdb_conn = None, None
+        vulndb_cursor, vulndb_conn = None, None
+
         # retrieve Ubuntu codename to version number mapping
         success = create_ubuntu_release_codename_mapping(vulndb_config)
         if not success:
@@ -484,10 +487,14 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
         LOGGER.error(f"Ran into an error when trying to retrieve Ubuntu vuln data")
         raise e
     finally:
-        vulndb_cursor.close()
-        vulndb_conn.close()
-        productdb_cursor.close()
-        productdb_conn.close()
+        if vulndb_cursor:
+            vulndb_cursor.close()
+        if vulndb_conn:
+            vulndb_conn.close()
+        if productdb_cursor:
+            productdb_cursor.close()
+        if productdb_conn:
+            productdb_conn.close()
 
     # remove processed resources
     del_deb_pkg_cpe_map_file()
