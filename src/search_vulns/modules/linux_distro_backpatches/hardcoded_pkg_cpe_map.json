@@ -19,5 +19,6 @@
     "httpd": "cpe:2.3:a:apache:http_server:",
     "thunderbird": "cpe:2.3:a:mozilla:thunderbird:",
     "mysql": "cpe:2.3:a:oracle:mysql:",
-    "nss": "'cpe:2.3:a:mozilla:network_security_services:"
+    "nss": "'cpe:2.3:a:mozilla:network_security_services:",
+    "nginx": "cpe:2.3:a:f5:nginx:*:*:*:*:*:*:*:*"
 }
