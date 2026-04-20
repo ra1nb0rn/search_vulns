@@ -1298,6 +1298,7 @@ function onMinMatchScoreSliderChange(slider) {
 }
 
 function setupConfigFromLocalstorage() {
+    // init default settings
     if (localStorage.getItem('ignoreGeneralProductVulns') === null) {
         localStorage.setItem('ignoreGeneralProductVulns', 'false');
     }
@@ -1317,6 +1318,7 @@ function setupConfigFromLocalstorage() {
         localStorage.setItem('excludedDataSources', "[]");
     }
 
+    // get configuration from local storage and adjust UI and internal state
     if (localStorage.getItem('ignoreGeneralProductVulns') == 'true') {
         ignoreGeneralProductVulns = true;
         document.getElementById("generalVulnsConfig").checked = true;
@@ -1328,7 +1330,7 @@ function setupConfigFromLocalstorage() {
         document.getElementById("onlyEdbExploitsConfig").checked = true;
     }
     else
-        onlyShowEDBExploits = true;
+        onlyShowEDBExploits = false;
     if (localStorage.getItem('showSingleVersionVulns') == 'true') {
         showSingleVersionVulns = true;
         document.getElementById("showSingleVersionVulnsConfig").checked = true;
