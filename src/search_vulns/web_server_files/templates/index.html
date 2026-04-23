@@ -96,6 +96,35 @@
                             </div>
                         </label>
                     </div>
+                    <div class="form-control mt-3">
+                        <div class="flex items-center min-w-0 text-sm w-full">
+                            <div class="flex items-center mr-2 shrink-0 label-text text-base-content text-sm">
+                                Vuln IDs <div class="tooltip tooltip-bottom ml-1">
+                                    <div class="tooltip-content">Choose types of vulnerability IDs to be shown, e.g.
+                                        CVE, GHSA etc.</div>
+                                    <i class="fas fa-info-circle text-content"></i>
+                                </div>
+                            </div>
+                            <div class="relative w-full ml-1" id="vuln-ids-config-ms-wrap">
+                                <div tabindex="0" id="vuln-ids-config-ms-trigger" class="w-full h-10 px-3 flex items-center gap-2 cursor-pointer
+                                            bg-base-100 border border-base-300 rounded-lg text-sm">
+                                    <span id="vuln-ids-config-ms-ph" class="flex-1 text-base-content/40">Pick ID Types
+                                        ...</span>
+                                    <span id="vuln-ids-config-ms-arrow"><i class="fa-solid fa-caret-down"></i></span>
+                                </div>
+                                <div id="vuln-ids-config-ms-dropdown" class="hidden absolute top-[calc(100%+4px)] left-0 right-0
+                                    bg-base-100 border border-base-300 rounded-box shadow-md overflow-hidden">
+                                    <ul id="vuln-ids-config-ms-opts" class="max-h-52 overflow-y-auto"></ul>
+                                    <div class="flex justify-between px-4 py-1.5 border-t border-base-200 text-xs">
+                                        <button type="button" id="vuln-ids-config-ms-all"
+                                            class="link link-primary">All</button>
+                                        <button type="button" id="vuln-ids-config-ms-none"
+                                            class="link link-primary">None</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="dropdown dropdown-center mr-1">
