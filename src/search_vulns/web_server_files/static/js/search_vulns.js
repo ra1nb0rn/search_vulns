@@ -1,5 +1,5 @@
 
-var curVulnData = {}, curEOLData = {}, onlyShowTheseVulns = null;
+var curVulnData = {}, curVulnsSorted = [], curEOLData = {}, onlyShowTheseVulns = null;
 var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
 var ignoreGeneralProductVulns = false, onlyShowEDBExploits = false;
 var showSingleVersionVulns = false, isGoodProductID = true, showPatchedVulns = true;
@@ -14,8 +14,9 @@ var curSortColIdx = 1, curSortColAsc = false, searchIgnoreNextKeyup = false;
 var doneTypingQueryTimer, queryInput = $('#query'), doneTypingQueryInterval = 600;  //time in ms
 var arrowKeyUpDownInterval = null, arrowKeyUpDownIntervalTime = 100, arrowKeyUpDownHoldDetectionTimer = null, arrowKeyUpDownHoldDetectionTime = 150;
 var curSelectedProductIDSuggestion = -1, suggestedQueriesJustOpened = false;
-var minMatchScore = 0;
+var minMatchScore = 0, curVulnTableRowIndex = 0;
 const IS_VULN_ID_QUERY_RE = /\b[A-Z]{2,10}(?:-[A-Z0-9]{2,12}){1,4}\b/;
+const VULN_TABLE_ROW_BATCH_SIZE = 100;
 
 
 function htmlEntities(text) {
@@ -402,6 +403,43 @@ function resizeSearchVulnsTable() {
     }
 }
 
+function shouldVulnBeShownGenerally(vuln) {
+    if (ignoreGeneralProductVulns && vuln.match_reason == "general_product_uncertain")
+        return false;
+    if (!showSingleVersionVulns && vuln.match_reason == "single_higher_version")
+        return false;
+    if (!showPatchedVulns && vuln.reported_patched_by.length > 0)
+        return false;
+    if (computeVulnMatchScore(vuln) < minMatchScore)
+        return false;
+    return true;
+}
+
+function createNextVulnRowBatchHtml() {
+    var curBatchIdx = 0, vulnsHtml = "";
+    const excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
+    while (curBatchIdx < VULN_TABLE_ROW_BATCH_SIZE) {
+        if (curVulnTableRowIndex < curVulnsSorted.length) {
+            // skip vuln if configured
+            if (!shouldVulnBeShownGenerally(curVulnsSorted[curVulnTableRowIndex])) {
+                curVulnTableRowIndex++;
+                continue;
+            }
+            if (Object.keys(curVulnsSorted[curVulnTableRowIndex].matched_by).every(data_source => excludedDataSources.includes(data_source))) {
+                curVulnTableRowIndex++;
+                continue;
+            }
+            if (onlyShowTheseVulns == null || onlyShowTheseVulns.includes(curVulnsSorted[curVulnTableRowIndex].id)) {
+                vulnsHtml += createVulnTableRowHtml(curVulnTableRowIndex, curVulnsSorted[curVulnTableRowIndex]);
+                curBatchIdx++;
+            }
+            curVulnTableRowIndex++;
+        }
+        else
+            break
+    }
+    return vulnsHtml;
+}
 
 function renderSearchResults(sourceFilterID) {
     var sortIconVulnId = iconUnsorted, sortFunctionVulnId = "reorderVulns(0, false)";
@@ -410,7 +448,7 @@ function renderSearchResults(sourceFilterID) {
     var sortIconExploits = iconUnsorted, sortFunctionExploits = "reorderVulns(4, false)";
 
     // retrieve and sort vulns
-    var vulns = getCurrentVulnsSorted();
+    curVulnsSorted = getCurrentVulnsSorted();
     if (curSortColIdx == 0) {  // Vuln ID
         if (curSortColAsc) {
             sortIconVulnId = iconSortAsc;
@@ -480,41 +518,36 @@ function renderSearchResults(sourceFilterID) {
         vulns_html += `<th class="bg-base-300" onclick="${sortFunctionExploits}" style="white-space: nowrap;">Exploits&nbsp;&nbsp;${sortIconExploits}</th>`;
     }
     vulns_html += "</tr></thead>";
-    vulns_html += "<tbody>";
+    vulns_html += `<tbody id="vulns-tbody">`;
 
     var filter_vulns_html = filterVulnDropdownButtonHtml, has_vulns = false;
     var involved_data_sources = new Set(), allVulnIDTypes = new Set();
     var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
     var hiddenVulnsViaDataSources, hiddenVulnViaFilter = false, hiddenVulnViaFilter=false;
-    for (var i = 0; i < vulns.length; i++) {
+    curVulnTableRowIndex = 0;
+    for (var i = 0; i < curVulnsSorted.length; i++) {
         // append involved data sources
-        for (const data_source of Object.keys(vulns[i].tracked_by)) {
+        for (const data_source of Object.keys(curVulnsSorted[i].tracked_by)) {
             involved_data_sources.add(data_source);
         }
 
         // append involved vuln ID types, assume a dash format
-        Object.keys(vulns[i].aliases).forEach(vulnID => {
+        Object.keys(curVulnsSorted[i].aliases).forEach(vulnID => {
             allVulnIDTypes.add(vulnID.slice(0, vulnID.indexOf("-") + 1))
         });
 
-        // create row in table
-        if (ignoreGeneralProductVulns && vulns[i].match_reason == "general_product_uncertain")
+        // skip vuln if configured
+        if (!shouldVulnBeShownGenerally(curVulnsSorted[i]))
             continue;
-        if (!showSingleVersionVulns && vulns[i].match_reason == "single_higher_version")
-            continue;
-        if (!showPatchedVulns && vulns[i].reported_patched_by.length > 0)
-            continue;
-        if (computeVulnMatchScore(vulns[i]) < minMatchScore)
-            continue;
-        if (Object.keys(vulns[i].matched_by).every(data_source => excludedDataSources.includes(data_source))) {
+        if (Object.keys(curVulnsSorted[i].matched_by).every(data_source => excludedDataSources.includes(data_source))) {
             hiddenVulnsViaDataSources = true;
             continue;
         }
 
+        // extract secondary information
         has_vulns = true;
         var checked_html = "", margin_html = "";
-        if (onlyShowTheseVulns == null || onlyShowTheseVulns.includes(vulns[i].id)) {
-            vulns_html += createVulnTableRowHtml(i, vulns[i]);
+        if (onlyShowTheseVulns == null || onlyShowTheseVulns.includes(curVulnsSorted[i].id)) {
             checked_html = 'checked="checked"';
         }
         if (!checked_html)
@@ -523,8 +556,11 @@ function renderSearchResults(sourceFilterID) {
             margin_html = "mt-3"
 
         // add Vuln ID to filter
-        filter_vulns_html += `<div class="form-control filter-vulns ${margin_html}"><label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm"><span class="label-text text-nowrap whitespace-nowrap text-base-content flex-1 min-w-0 text-left">${vulns[i]["id"]}</span><input type="checkbox" class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeFilterVulns()" ${checked_html} /></label></div>`;
+        filter_vulns_html += `<div class="form-control filter-vulns ${margin_html}"><label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm"><span class="label-text text-nowrap whitespace-nowrap text-base-content flex-1 min-w-0 text-left">${curVulnsSorted[i]["id"]}</span><input type="checkbox" class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeFilterVulns()" ${checked_html} /></label></div>`;
     }
+
+    // get HTML for vuln row batch and add it to table
+    vulns_html += createNextVulnRowBatchHtml();
     vulns_html += "</tbody></table>";
 
     // update vuln data sources filter
@@ -552,11 +588,18 @@ function renderSearchResults(sourceFilterID) {
     // update vuln ID type configuration
     if (sourceFilterID != "excludedVulnIDTypes") {
         renderVulnIDTypesSelectionOptions(allVulnIDTypes);
-        rerenderOnVulnIDTypesSelection([... allVulnIDTypes]);
+        rerenderOnVulnIDTypesSelection([... allVulnIDTypes], false);
     }
 
     if (has_vulns) {
-        $("#vulns").html(vulns_html);
+        // use Template/DocumentFragment for faster operation than jQuery's .html
+        const template = document.createElement('template');
+        template.innerHTML = vulns_html;
+
+        const container = document.getElementById('vulns');
+        container.innerHTML = '';
+        container.appendChild(template.content);
+
         // wait for next animation frame and the resize table with the dynamic source badge
         requestAnimationFrame(() => {
             resizeSearchVulnsTable();
@@ -1594,7 +1637,7 @@ function closeVulnIDTypesSelection() {
     document.getElementById('vuln-ids-config-ms-arrow').style.transform = '';
 }
 
-function rerenderOnVulnIDTypesSelection(allTypes) {
+function rerenderOnVulnIDTypesSelection(allTypes, rerenderVulns) {
     const excludedTypes = JSON.parse(localStorage.getItem("excludedVulnIDTypes"));
     const shownTypes = allTypes.filter(type => !excludedTypes.includes(type));
     const placeholder = document.getElementById('vuln-ids-config-ms-ph');
@@ -1604,7 +1647,7 @@ function rerenderOnVulnIDTypesSelection(allTypes) {
         : 'Pick ID Types ...';
     placeholder.className = `flex-1 ${shownTypes.length ? 'text-base-content' : 'text-base-content/40'}`;
 
-    if (!$.isEmptyObject(curVulnData)) {
+    if (!$.isEmptyObject(curVulnData) && rerenderVulns) {
         var hasVulns = renderSearchResults("excludedVulnIDTypes");
         if (!hasVulns)
             $('#vulns').html(noVulnsFoundHtml);
@@ -1642,7 +1685,7 @@ function renderVulnIDTypesSelectionOptions(curShownTypes) {
                 newExcluded.push(type);
             localStorage.setItem("excludedVulnIDTypes", JSON.stringify([...newExcluded]));
 
-            rerenderOnVulnIDTypesSelection(allTypes);
+            rerenderOnVulnIDTypesSelection(allTypes, true);
         });
         label.appendChild(document.createTextNode(type));
         label.appendChild(checkbox);
@@ -1667,7 +1710,28 @@ function vulnIDTypesSelectionAllNone(all) {
         }
     });
     localStorage.setItem("excludedVulnIDTypes", JSON.stringify(excludedVulnIDTypes));
-    rerenderOnVulnIDTypesSelection(allTypes);
+    rerenderOnVulnIDTypesSelection(allTypes, true);
+}
+
+function loadMoreVulnRows() {
+    if (curVulnsSorted.length > 0) {
+        // load more rows HTML
+        const vulnsHtml = createNextVulnRowBatchHtml();
+
+        const template = document.createElement('template');
+        template.innerHTML = vulnsHtml;
+
+        const tbody = document.getElementById('vulns-tbody');
+        tbody.appendChild(template.content);
+
+        // wait for next animation frame and the resize table with the dynamic source badge
+        requestAnimationFrame(() => {
+            resizeSearchVulnsTable();
+        });
+
+        initFlowbite();
+        fixDropdownClicking();
+    }
 }
 
 
@@ -1803,4 +1867,16 @@ window.addEventListener("popstate", (event) => {
         $("#vulns").html("");
         $("#related-queries-display").html("");
     }
+});
+
+// enable infinite scroll for vuln tables
+window.addEventListener('scroll', function () {
+    const tbody = document.getElementById('vulns-tbody');
+    if (tbody == null)
+        return;
+
+    // load more vulns when the table bottom is within 300px of the viewport bottom
+    const tbodyBottom = tbody.getBoundingClientRect().bottom;
+    if (tbodyBottom - window.innerHeight < 300)
+        loadMoreVulnRows();
 });
