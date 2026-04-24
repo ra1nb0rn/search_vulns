@@ -291,7 +291,7 @@ function createVulnTableRowHtml(idx, vuln) {
 
     if (selectedColumns.includes('cvss')) {
         cvss_vector = "N/A";
-        cvss= "N/A";
+        cvss = "N/A";
         cvss_badge_css = "";
 
         if (vuln.severity.hasOwnProperty("CVSS")) {
@@ -495,7 +495,7 @@ function renderSearchResults(sourceFilterID) {
         $("#vulns").html('');
         return false;
     }
-    
+
     vulns_html = '<table class="table table-mdsm sv-vuln-table-zebra table-rounded table-auto invisible">';
     vulns_html += '<thead>';
     vulns_html += '<tr>'
@@ -523,7 +523,7 @@ function renderSearchResults(sourceFilterID) {
     var filter_vulns_html = filterVulnDropdownButtonHtml, has_vulns = false;
     var involved_data_sources = new Set(), allVulnIDTypes = new Set();
     var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
-    var hiddenVulnsViaDataSources, hiddenVulnViaFilter = false, hiddenVulnViaFilter=false;
+    var hiddenVulnsViaDataSources, hiddenVulnViaFilter = false, hiddenVulnViaFilter = false;
     curVulnTableRowIndex = 0;
     for (var i = 0; i < curVulnsSorted.length; i++) {
         // append involved data sources
@@ -588,7 +588,7 @@ function renderSearchResults(sourceFilterID) {
     // update vuln ID type configuration
     if (sourceFilterID != "excludedVulnIDTypes") {
         renderVulnIDTypesSelectionOptions(allVulnIDTypes);
-        rerenderOnVulnIDTypesSelection([... allVulnIDTypes], false);
+        rerenderOnVulnIDTypesSelection([...allVulnIDTypes], false);
     }
 
     if (has_vulns) {
@@ -941,7 +941,7 @@ function buildTextualReprFromCPE(cpe) {
     cpe_parts.slice(7).forEach(cpe_part => {
         if (cpe_part && cpe_part != '-' && cpe_part != '*') {
             var cpe_part = cpe_part[0].toUpperCase() + cpe_part.substring(1);
-            cpe_condition += cpe_part.split('_').map(w => w ? w[0].toUpperCase() + w.substring(1).toLowerCase(): '').join(' ') + ' ';
+            cpe_condition += cpe_part.split('_').map(w => w ? w[0].toUpperCase() + w.substring(1).toLowerCase() : '').join(' ') + ' ';
         }
     });
 
@@ -958,7 +958,7 @@ function buildTextualReprFromCPE(cpe) {
 function searchVulns(query, product_id, url_query, recaptcha_response) {
     var headers = {}
     if (recaptcha_response !== undefined)
-        headers = {'Recaptcha-Response': recaptcha_response}
+        headers = { 'Recaptcha-Response': recaptcha_response }
 
     var apiKey = localStorage.getItem('apiKey');
     if (apiKey !== undefined && apiKey !== null && apiKey)
@@ -1001,7 +1001,7 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
                         search_display_html += `)`;
                     }
                     search_display_html += `</h5></div></div>`;
-                    curEOLData = {'query': query, 'version_status': search_results.version_status};
+                    curEOLData = { 'query': query, 'version_status': search_results.version_status };
                     if (search_results.version_status) {
                         if (search_results.version_status.status == 'EOL') {
                             search_display_html += `<div class="row mt-1 mb-3 text-warning text-smxs font-light">${htmlEntities(query)} is end of life. The latest version is ${htmlEntities(search_results.version_status.latest)} (see <a class="link" target="_blank" href="${htmlEntities(search_results.version_status.reference)}">here</a>).<span class="ml-2 text-base-content"><button class="btn btn-sm btn-copy-md align-middle" onclick="copyToClipboardEOLProof(this)"><i class="fa-brands fa-markdown"></i></button></span></div>`;
@@ -1097,8 +1097,8 @@ function searchVulnsFromState(state) {
     curEOLData = {};
 
     if (typeof grecaptcha !== 'undefined') {
-        grecaptcha.ready(function() {
-            grecaptcha.execute().then(function(recaptcha_response) {
+        grecaptcha.ready(function () {
+            grecaptcha.execute().then(function (recaptcha_response) {
                 searchVulns(state.query, state.productID, state.url_query, recaptcha_response);
             });
         });
@@ -1180,7 +1180,7 @@ function copyToClipboardEOLProof(clickedButton) {
     // indicate success
     $(clickedButton).removeClass('text-base-content');
     $(clickedButton).addClass('text-success');
-    setTimeout(function() {
+    setTimeout(function () {
         $(clickedButton).removeClass('text-success');
         $(clickedButton).addClass('text-base-content');
     }, 1750);
@@ -1204,7 +1204,7 @@ function copyToClipboardCVSS(cvssClipboardButton) {
 }
 
 function clearQuery() {
-    document.getElementById('query').value='';
+    document.getElementById('query').value = '';
     document.getElementById('query').focus();
 }
 
@@ -1249,7 +1249,7 @@ function changeColumnConfig(columnElement) {
 
     if (allCheckType != null) {
         columnCheckboxIDs = ['showColumnVulnId', 'showColumnCVSS', 'showColumnEPSS', 'showColumnCWE', 'showColumnDescription', 'showColumnExploits'];
-        columnCheckboxIDs.forEach(function(columnCheckboxID) {
+        columnCheckboxIDs.forEach(function (columnCheckboxID) {
             $('#' + columnCheckboxID)[0].checked = allCheckType;
         });
     }
@@ -1278,7 +1278,7 @@ function changeFilterVulns(filterVulnsButton) {
     var allOrNone = '';
 
     if (filterVulnsButton != null) {
-        if(filterVulnsButton.id == 'filterVulnsNone')
+        if (filterVulnsButton.id == 'filterVulnsNone')
             allOrNone = 'none';
         else {
             onlyShowTheseVulns = null;
@@ -1286,7 +1286,7 @@ function changeFilterVulns(filterVulnsButton) {
         }
     }
 
-    $('.filter-vulns').each(function(i, filterVulnsDiv) {
+    $('.filter-vulns').each(function (i, filterVulnsDiv) {
         filterVulnsDiv = $(filterVulnsDiv);
         if (allOrNone == 'none')
             filterVulnsDiv.find('.checkbox')[0].checked = false;
@@ -1342,8 +1342,8 @@ function changeDataSourcesConfig(dataSourcesElement) {
 
     if (!$.isEmptyObject(curVulnData))
         var hasVulns = renderSearchResults("filterDataSourcesDropdown");
-        if (!hasVulns)
-            $('#vulns').html(noVulnsFoundHtml);
+    if (!hasVulns)
+        $('#vulns').html(noVulnsFoundHtml);
 }
 
 function onMinMatchScoreSliderInput(slider) {
@@ -1455,8 +1455,8 @@ function initQuery() {
 }
 
 function fixDropdownClicking() {
-    $('.dropdown').find('.btn:first').on('mousedown', function(event) {
-        var closestDropdown = document.activeElement.closest('.dropdown') 
+    $('.dropdown').find('.btn:first').on('mousedown', function (event) {
+        var closestDropdown = document.activeElement.closest('.dropdown')
         if (closestDropdown !== null && closestDropdown == event.target.closest('.dropdown')) {
             event.preventDefault();
             document.activeElement.blur();
@@ -1549,7 +1549,7 @@ function retrieveProductIDSuggestions(url_query, recaptcha_response) {
     });
 }
 
-function doneTypingQuery () {
+function doneTypingQuery() {
     // user paused or finished typing query --> retrieve and show product ID suggestions
     $('#productIDSuggestions').html('Searching for products and IDs<div class="loading loading-spinner ml-2"></div>');
     $('#productIDSuggestions').removeClass('hidden');
@@ -1559,7 +1559,7 @@ function doneTypingQuery () {
         query = '';
 
     // no product ID suggestions for vuln IDs search
-    if (IS_VULN_ID_QUERY_RE.test(query.trim())){
+    if (IS_VULN_ID_QUERY_RE.test(query.trim())) {
         var dropdownContent = `<ul class="menu menu-md p-1 bg-base-200 rounded-box w-full"><li tabindex="0"><a class="text-nowrap whitespace-nowrap" id="product-id-suggestion-0" onclick="searchVulnsAction(this)">${query.trim()}</a></li></ul>`;
         $('#productIDSuggestions').html(dropdownContent);
         return;
@@ -1569,8 +1569,8 @@ function doneTypingQuery () {
     var url_query = "query=" + queryEnc;
 
     if (typeof grecaptcha !== 'undefined') {
-        grecaptcha.ready(function() {
-            grecaptcha.execute().then(function(recaptcha_response) {
+        grecaptcha.ready(function () {
+            grecaptcha.execute().then(function (recaptcha_response) {
                 retrieveProductIDSuggestions(url_query, recaptcha_response);
             });
         });
@@ -1835,7 +1835,7 @@ queryInput.on('keydown', function (event) {
             }
         }
         // any key except CTRL, OPTION, CMD/SUPER/Windows
-        else if(![13, 17, 18, 37, 39, 91, 229].includes(event.keyCode)) {
+        else if (![13, 17, 18, 37, 39, 91, 229].includes(event.keyCode)) {
             clearTimeout(doneTypingQueryTimer);
             $('#productIDSuggestions').addClass("hidden");
             $('#productIDSuggestions').html("");
