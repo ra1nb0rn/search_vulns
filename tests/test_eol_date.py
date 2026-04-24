@@ -80,7 +80,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.OUTDATED,
-            "latest": "15.0.4460.4 CU32+GDR",
+            "latest": "15.0.4465.1 CU32+GDR",
             "reference": "https://endoflife.date/mssqlserver",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)

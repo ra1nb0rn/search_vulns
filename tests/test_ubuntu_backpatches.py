@@ -13,7 +13,17 @@ class TestSearches(unittest.TestCase):
         query = "cpe:2.3:a:openssh:openssh:8.2:p1:*:*:*:*:*:ubuntu_focal_8.2p1-4ubuntu0.13"
         result = search_vulns(query=query, include_patched=True)
 
-        expected_open = ["CVE-2007-2768", "CVE-2008-3844", "CVE-2025-61984", "CVE-2025-61985"]
+        expected_open = [
+            "CVE-2007-2768",
+            "CVE-2008-3844",
+            "CVE-2025-61984",
+            "CVE-2025-61985",
+            "CVE-2026-35387",
+            "CVE-2026-35388",
+            "CVE-2026-35414",
+            "CVE-2026-35385",
+            "CVE-2026-35386",
+        ]
         expected_backpatched = [
             "CVE-2020-14145",
             "CVE-2020-15778",
@@ -98,6 +108,11 @@ class TestSearches(unittest.TestCase):
             "CVE-2016-5425",
             "CVE-2025-66614",
             "CVE-2026-24733",
+            "CVE-2026-34483",
+            "CVE-2026-25854",
+            "CVE-2026-24880",
+            "CVE-2026-34487",
+            "CVE-2026-29146",
         ]
         expected_backpatched = [
             "CVE-2025-55752",
