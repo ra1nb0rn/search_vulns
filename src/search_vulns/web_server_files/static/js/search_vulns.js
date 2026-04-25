@@ -45,6 +45,7 @@ function escapeCSV(text) {
         text = "'" + text;
     if (text.includes(',') || text.includes('"'))
         text = `"${text}"`;
+    text = text.replaceAll('\n', '\\n');
     return text;
 }
 
@@ -177,14 +178,17 @@ function createVulnTableRowHtml(idx, vuln) {
     var trackCount, vulnConfidence, source_badge_color = "", source_badge_icon = "", source_ref_icon = "";
     var badge_text_style = "", backgroundColorClass = "";
     var excludedVulnIDTypes = JSON.parse(localStorage.getItem('excludedVulnIDTypes'));
+    var hasNoVulnIDShown = true;
 
     if (selectedColumns.length < 1)
         return '';
 
     // set up references
     for (const vuln_id in vuln_id_ref_map) {
-        if (!excludedVulnIDTypes.some(vulnIDType => vuln_id.startsWith(vulnIDType)))
+        if (!excludedVulnIDTypes.some(vulnIDType => vuln_id.startsWith(vulnIDType))) {
             vuln_id_html += `<div class="w-full mb-0.3 max-md:whitespace-normal max-md:break-words"><a href="${htmlEntities(vuln_id_ref_map[vuln_id])}" target="_blank" style="color: inherit;">${htmlEntities(vuln_id)}&nbsp;&nbsp;<i class="fa-solid fa-up-right-from-square" style="font-size: 0.92rem"></i></a></div>`;
+            hasNoVulnIDShown = false;
+        }
     }
 
     // set up row highlighting
@@ -203,6 +207,9 @@ function createVulnTableRowHtml(idx, vuln) {
 
     vuln_row_html += `<tr class="${vuln_style_class} ${backgroundColorClass} border-none">`;
     if (selectedColumns.includes('cve')) {
+        if (hasNoVulnIDShown)
+            return "";
+
         vuln_row_html += `<td class="text-nowrap whitespace-nowrap relative pr-1 source-badge-cell align-top">` + vuln_id_html;
 
         // set up icons
@@ -416,7 +423,7 @@ function shouldVulnBeShownGenerally(vuln) {
 }
 
 function createNextVulnRowBatchHtml() {
-    var curBatchIdx = 0, vulnsHtml = "";
+    var curBatchIdx = 0, vulnsHtml = "", curVulnHtml = "";
     const excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
     while (curBatchIdx < VULN_TABLE_ROW_BATCH_SIZE) {
         if (curVulnTableRowIndex < curVulnsSorted.length) {
@@ -430,8 +437,11 @@ function createNextVulnRowBatchHtml() {
                 continue;
             }
             if (onlyShowTheseVulns == null || onlyShowTheseVulns.includes(curVulnsSorted[curVulnTableRowIndex].id)) {
-                vulnsHtml += createVulnTableRowHtml(curVulnTableRowIndex, curVulnsSorted[curVulnTableRowIndex]);
-                curBatchIdx++;
+                curVulnHtml = createVulnTableRowHtml(curVulnTableRowIndex, curVulnsSorted[curVulnTableRowIndex]);
+                if (curVulnHtml.length > 0) {
+                    vulnsHtml += curVulnHtml;
+                    curBatchIdx++;
+                }
             }
             curVulnTableRowIndex++;
         }
@@ -625,7 +635,7 @@ function createVulnsMarkDownTable() {
     var selectedColumns = JSON.parse(localStorage.getItem('vulnTableColumns'));
     var vulns = getCurrentVulnsSorted(), vuln_id_ref_map;
     var vulns_md = "";
-    var has_exploits = false, cur_vuln_has_exploits = false;
+    var has_exploits = false, cur_vuln_has_exploits = false, vulnIDMarkdown = "";
     var cvss_score, cvss_version;
     var exploit_url_show;
     var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
@@ -712,12 +722,19 @@ function createVulnsMarkDownTable() {
         cur_vuln_has_exploits = false;
         vulns_md += '|';
         if (selectedColumns.length < 1 || selectedColumns.includes("cve")) {
+            vulnIDMarkdown = "";
             vuln_id_ref_map = vulns[i].aliases;
             for (const vuln_id in vuln_id_ref_map) {
                 if (!excludedVulnIDTypes.some(vulnIDType => vuln_id.startsWith(vulnIDType)))
-                    vulns_md += `[${vuln_id}](${htmlEntities(vuln_id_ref_map[vuln_id])})<br>`;
+                    vulnIDMarkdown += `[${vuln_id}](${htmlEntities(vuln_id_ref_map[vuln_id])})<br>`;
             }
-            vulns_md = vulns_md.slice(0, -4);  // strip trailing "<br>"
+            if (vulnIDMarkdown.length < 1) {
+                vulns_md = vulns_md.slice(0, -1);  // remove already opened row '|'
+                continue;
+            }
+
+            vulnIDMarkdown = vulnIDMarkdown.slice(0, -4);  // strip trailing "<br>"
+            vulns_md += vulnIDMarkdown;
             vulns_md += "|";
         }
         if (selectedColumns.length < 1 || selectedColumns.includes("cvss")) {
@@ -863,8 +880,10 @@ function createVulnsCSV() {
                 if (!excludedVulnIDTypes.some(vulnIDType => vuln_id.startsWith(vulnIDType)))
                     vuln_ids.push(vuln_id);
             }
-            if (vuln_ids)
+            if (vuln_ids.length > 0)
                 vulns_csv += `${escapeCSV(vuln_ids.join(', '))}`
+            else
+                continue;
             vulns_csv += ','
         }
         if (selectedColumns.length < 1 || selectedColumns.includes("cvss")) {
