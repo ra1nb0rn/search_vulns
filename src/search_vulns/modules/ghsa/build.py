@@ -214,6 +214,14 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                         )
                         all_nvd_cpes.add(cpe_version_wildcarded)
 
+            # steer matching toward certain CPEs ...
+            add_keywords = []
+
+            # ... e.g. libraries if vuln affects a library, .e.g. CVE-2025-10492/GHSA-7c3f-cg9x-f3gr
+            if "library" in advisory["details"].lower():
+                add_keywords.append("library")
+
+            # attempt matching with CPE in NVD entry
             for pname in advisory_affected_pnames:
                 if pname in pname_cpe_map:
                     continue
@@ -229,7 +237,7 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                     # try to retrieve a CPE for the product name by comparing it with the NVD's affected CPEs
                     most_similar = None
                     for cpe in all_nvd_cpes:
-                        sim = compute_cosine_similarity(cpe[10:], pname, r"[a-zA-Z0-9]+")
+                        sim = compute_cosine_similarity(cpe[10:], pname + " " + " ".join(add_keywords), r"[a-zA-Z0-9]+")
                         if not most_similar or sim > most_similar[1]:
                             most_similar = (cpe, sim)
 
