@@ -58,7 +58,7 @@ search_vulns' search engine is designed in a modular fashion. Therefore, new dat
 | Module ID | Description |
 |----------|-------------|
 | [nvd.<wbr>search_vulns_nvd](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/nvd/search_vulns_nvd.py) | Integrates CVE information and exploits from the [National Vulnerability (NVD) database](https://nvd.nist.gov/) |
-| [vulncheck.<wbr>search_vulns_nvdpp](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/vulncheck/search_vulns_nvdpp.py) | Integrates additional enrichment of the CVE/NVD data via [VulnCheck's NVD++](https://www.vulncheck.com/nvd2) |
+| [vulncheck.<wbr>search_vulns_nvdpp](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/vulncheck/search_vulns_nvdpp.py) | Integrates additional enrichment of the CVE/NVD data via [VulnCheck's NVD++](https://www.vulncheck.com/nvd2) alongside [its KEV data](https://www.vulncheck.com/kev)|
 | [ghsa.<wbr>search_vulns_ghsa](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/ghsa/search_vulns_ghsa.py) | Integrates CVE and non-CVE vulnerabilties from the [GitHub Security Advisory (GHSA) database](https://github.com/github/advisory-database) |
 | [exploit_db.<wbr>search_vulns_edb](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/exploit_db/search_vulns_edb.py) | Integrates publicly available exploits from the [Exploit-DB](https://www.exploit-db.com/) |
 | [poc_in_github.<wbr>search_vulns_poc_in_github](https://github.com/ra1nb0rn/search_vulns/blob/master/src/search_vulns/modules/poc_in_github/search_vulns_poc_in_github.py) | Integrates exploit information from [PoC-in-GitHub](https://github.com/nomi-sec/PoC-in-GitHub) |

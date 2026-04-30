@@ -36,7 +36,7 @@ def search_vulns(
 
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
-    # check and append tracking information
+    # check and append tracking, exploit and KEV information
     for vuln_id, vuln in vulns.items():
         # get all CVE IDs
         vuln_cve_ids = set()
@@ -51,6 +51,7 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
             in_str += "%s," % cve_id
         in_str = in_str[:-1]  # remove last comma
 
+        # tracking information
         if DataSource.NVDPP not in vuln.tracked_by and in_str:
             vuln_db_cursor.execute(
                 "SELECT COUNT(*) FROM vulncheck_nvd_cpe WHERE cve_id IN (?)", (in_str,)
@@ -59,3 +60,14 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
             if count and int(count[0]) > 0:
                 # add track reference
                 vuln.add_tracked_by(DataSource.NVDPP, VULN_TRACK_BASE_URL + vuln_id)
+
+        # exploits
+        if in_str:
+            vuln_db_cursor.execute(
+                "SELECT url FROM vulncheck_exploits WHERE cve_id IN (?)", (in_str,)
+            )
+            for exploit in vuln_db_cursor.fetchall():
+                vuln.add_exploit(exploit[0])
+
+        # TODO: check and append KEV
+        # resulting KEV URL for proof later: https://api.vulncheck.com/v3/index/vulncheck-kev?cve=CVE-2025-2825

@@ -237,7 +237,9 @@ def parse_ghsa_data(vulndb_cursor, productdb_config):
                     # try to retrieve a CPE for the product name by comparing it with the NVD's affected CPEs
                     most_similar = None
                     for cpe in all_nvd_cpes:
-                        sim = compute_cosine_similarity(cpe[10:], pname + " " + " ".join(add_keywords), r"[a-zA-Z0-9]+")
+                        sim = compute_cosine_similarity(
+                            cpe[10:], pname + " " + " ".join(add_keywords), r"[a-zA-Z0-9]+"
+                        )
                         if not most_similar or sim > most_similar[1]:
                             most_similar = (cpe, sim)
 
