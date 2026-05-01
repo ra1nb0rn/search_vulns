@@ -35,7 +35,7 @@ REQUIRES_BUILT_MODULES = [
 ]
 LOGGER = logging.getLogger()
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-UBUNTU_RELEASES_API_URL = "https://ubuntu.com/security/releases.json"
+UBUNTU_RELEASES_URL = "https://salsa.debian.org/debian/distro-info-data/-/raw/main/ubuntu.csv"
 UBUNTU_DATAFEED_DIR = os.path.join(SCRIPT_DIR, "ubuntu_data_feeds")
 UBUNTU_RELEASES = {}
 DISTRO_CODENAMES = []
@@ -53,66 +53,43 @@ def create_ubuntu_release_codename_mapping(vulndb_config):
 
     global UBUNTU_RELEASES
 
-    # initial request to set paramters
-    headers = {
-        "accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:112.0) Gecko/20100101 Firefox/112.0",
-    }
-
-    # try multiple times over, since the API has connection issues
-    success = False
-    for _ in range(10):
-        try:
-            # time out after 1s
-            ubuntu_api_initial_response = requests.get(
-                UBUNTU_RELEASES_API_URL, headers=headers, timeout=1
-            )
-            ubuntu_api_initial_response.raise_for_status()  # Optional: treat HTTP errors as failures
-            success = True
-            break
-        except requests.RequestException as e:
-            pass
-
-    if not success:
-        LOGGER.error(
-            "Could not retrieve Ubuntu releases from https://ubuntu.com/security/releases.json"
-        )
+    try:
+        resp = requests.get(UBUNTU_RELEASES_URL)
+        resp.raise_for_status()
+    except:
+        LOGGER.error("Could not retrieve Ubuntu releases from %s" % UBUNTU_RELEASES_URL)
         return False
-    releases_raw = ubuntu_api_initial_response.json()["releases"]
 
+    # store release data in DB and create UBUNTU_RELEASES mapping
     db_conn = get_database_connection(vulndb_config, sqlite_timeout=SQLITE_TIMEOUT)
     db_cursor = db_conn.cursor()
-
-    # create codename-version table in vulndb
     if vulndb_config["TYPE"] == "sqlite":
         db_cursor.execute("DROP TABLE IF EXISTS ubuntu_codename_version_mapping;")
         create_mapping_table = "CREATE TABLE ubuntu_codename_version_mapping (version VARCHAR(23), codename VARCHAR(25), support_expires DATETIME, esm_lts_expires DATETIME, PRIMARY KEY(codename));"
     elif vulndb_config["TYPE"] == "mariadb":
         create_mapping_table = "CREATE OR REPLACE TABLE ubuntu_codename_version_mapping (version VARCHAR(15) CHARACTER SET ascii, codename VARCHAR(25) CHARACTER SET ascii, support_expires DATETIME, esm_lts_expires DATETIME, PRIMARY KEY(codename));"
     db_cursor.execute(create_mapping_table)
-
     query = "INSERT INTO ubuntu_codename_version_mapping (version, codename, support_expires, esm_lts_expires) VALUES (?, ?, ?, ?)"
 
-    # extract codename and version from json
-    for release in releases_raw:
-        codename = release["codename"]
-
-        if codename == "upstream":
-            # use big number as version for upstream
-            if not release["version"]:
-                version = 999
-            if not release["support_expires"]:
-                support_expires = "9999-12-31"
-            if not release["esm_expires"]:
-                esm_expires = "9999-12-31"
-        else:
-            version = release["version"]
-            support_expires = str(release["support_expires"]).split("T")[0]
-            esm_expires = str(release["esm_expires"]).split("T")[0]
+    # parse simple CSV data, skipping header
+    for release_raw in resp.text.splitlines()[1:]:
+        release_data = release_raw.split(",")
+        if len(release_data) > 5:
+            version = release_data[0].replace(" LTS", "")
+            codename = release_data[2]
+            support_expires = release_data[5]
+            if len(release_data) > 7:
+                esm_expires = release_data[7]
+            else:
+                esm_expires = support_expires
 
         # add information to database and dict
         db_cursor.execute(query, (version, codename, support_expires, esm_expires))
         UBUNTU_RELEASES[codename] = version
+
+    # add artificial upstream
+    db_cursor.execute(query, (999, "upstream", "9999-12-31", "9999-12-31"))
+    UBUNTU_RELEASES["upstream"] = 999
 
     db_conn.commit()
     db_conn.close()
