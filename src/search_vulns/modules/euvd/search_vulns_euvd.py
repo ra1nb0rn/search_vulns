@@ -58,19 +58,45 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
     # Add EUVD aliases to vulnerabilities having CVE identifiers
-    for vuln_id, vuln in vulns.items():
-        if vuln_id.startswith("CVE-") and not any("EUVD-" in alias for alias in vuln.aliases):
-            vuln_db_cursor.execute(
-                "SELECT euvd_id FROM euvd WHERE cve_id = ?",
-                (vuln_id,),
-            )
-            for alias in vuln_db_cursor.fetchall():
-                alias = alias[0]
-                href = VULN_TRACK_BASE_URL + alias
-                vuln.add_alias(alias, href)
 
-                # no actual tracking of vulns yet
-                # if alias not in vuln.aliases:
-                #     vuln.add_tracked_by_with_alias(DataSource.GHSA, href, alias)
+    # gather all cve_ids
+    all_cve_ids = set()
+    for vuln_id, vuln in vulns.items():
+        if vuln_id.startswith("CVE-"):
+            all_cve_ids.add(vuln_id)
+        for alias in vuln.aliases:
+            if alias.startswith("CVE-"):
+                all_cve_ids.add(alias)
+
+    # make one joint SQL query with all involved cve_ids
+    placeholders = ",".join(["?"] * len(all_cve_ids))  # → "?,?,?,..."
+    if all_cve_ids:
+        vuln_db_cursor.execute(
+            f"SELECT cve_id, euvd_id FROM euvd WHERE cve_id IN ({placeholders})",
+            list(all_cve_ids),
+        )
+        cve_euvd = vuln_db_cursor.fetchall()
+    else:
+        cve_euvd = []
+
+    # create cve_id --> euvd_id map
+    cve_euvd_map = {}
+    for cve_id, euvd_id in cve_euvd:
+        if cve_id not in cve_euvd_map:
+            cve_euvd_map[cve_id] = set()
+        cve_euvd_map[cve_id].add(euvd_id)
+
+    # finally, add EUVD aliases
+    for vuln_id, vuln in vulns.items():
+        for alias in vuln.aliases | {vuln.id: ""}:
+            if alias.startswith("CVE-"):
+                for euvd_id in cve_euvd_map.get(alias, []):
+                    if euvd_id not in vuln.aliases:
+                        href = VULN_TRACK_BASE_URL + alias
+                        vuln.add_alias(euvd_id, href)
+
+                        # no actual tracking of vulns yet
+                        # if alias not in vuln.aliases:
+                        #     vuln.add_tracked_by_with_alias(DataSource.GHSA, href, alias)
 
     # TODO: EUVD KEV

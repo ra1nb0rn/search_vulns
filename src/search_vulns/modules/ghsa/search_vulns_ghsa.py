@@ -129,17 +129,46 @@ def search_vulns(
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
     # Add GHSA aliases to vulnerabilities having CVE identifiers
+
+    # gather all cve_ids
+    all_cve_ids = set()
     for vuln_id, vuln in vulns.items():
-        if vuln_id.startswith("CVE-") and not any("GHSA-" in alias for alias in vuln.aliases):
-            vuln_db_cursor.execute(
-                "SELECT ghsa_id FROM ghsa WHERE aliases = ? OR aliases LIKE ?",
-                (vuln_id, "%%" + vuln_id + ",%%"),
-            )
-            for alias in vuln_db_cursor.fetchall():
-                alias = alias[0]
-                href = VULN_TRACK_BASE_URL + alias
-                if alias not in vuln.aliases:
-                    vuln.add_tracked_by_with_alias(DataSource.GHSA, href, alias)
+        if vuln_id.startswith("CVE-"):
+            all_cve_ids.add(vuln_id)
+        for alias in vuln.aliases:
+            if alias.startswith("CVE-"):
+                all_cve_ids.add(alias)
+
+    # make one joint SQL query with all involved cve_ids
+    if all_cve_ids:
+        conditions = " OR ".join(["(aliases = ? OR aliases LIKE ?)"] * len(all_cve_ids))
+        params = [param for cve_id in all_cve_ids for param in (cve_id, "%" + cve_id + ",%")]
+        vuln_db_cursor.execute(
+            f"SELECT ghsa_id, aliases FROM ghsa WHERE {conditions}",
+            params,
+        )
+        cve_ghsa = vuln_db_cursor.fetchall()
+    else:
+        cve_ghsa = []
+
+    # create cve_id --> ghsa_id map
+    cve_ghsa_map = {}
+    for ghsa_id, aliases in cve_ghsa:
+        for alias in aliases.split(","):
+            if alias.startswith("CVE-"):
+                if alias not in cve_ghsa_map:
+                    cve_ghsa_map[alias] = set()
+                cve_ghsa_map[alias].add(ghsa_id)
+
+    # finally, add GHSA aliases
+    for vuln_id, vuln in vulns.items():
+        for alias in vuln.aliases | {vuln.id: ""}:
+            if alias.startswith("CVE-"):
+                for ghsa_id in cve_ghsa_map.get(alias, []):
+                    if ghsa_id not in vuln.aliases:
+                        href = VULN_TRACK_BASE_URL + alias
+                        if alias not in vuln.aliases:
+                            vuln.add_tracked_by_with_alias(DataSource.GHSA, href, alias)
 
 
 def postprocess_results(
