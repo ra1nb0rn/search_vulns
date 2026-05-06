@@ -40,7 +40,8 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
     for vuln in vulns.values():
         # create SQL IN condition string
         in_str = ""
-        for cve_id in vuln.get_all_cve_ids():
+        all_cve_ids = vuln.get_all_cve_ids()
+        for cve_id in all_cve_ids:
             in_str += "%s," % cve_id
         in_str = in_str[:-1]  # remove last comma
 
@@ -52,7 +53,7 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
             count = vuln_db_cursor.fetchone()
             if count and int(count[0]) > 0:
                 # add track reference
-                vuln.add_tracked_by(DataSource.NVDPP, VULN_TRACK_BASE_URL + vuln.id)
+                vuln.add_tracked_by(DataSource.NVDPP, VULN_TRACK_BASE_URL + next(iter(all_cve_ids)))
 
         # exploits
         if in_str:
