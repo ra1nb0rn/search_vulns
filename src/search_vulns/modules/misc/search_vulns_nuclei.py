@@ -6,7 +6,9 @@ import ujson
 from search_vulns.models.Vulnerability import Vulnerability
 from search_vulns.modules.utils import (
     SQLITE_TIMEOUT,
+    extract_all_cve_ids_from_vulns,
     get_database_connection,
+    select_from_where_in_to_map,
 )
 
 NUCLEI_CVE_TEMPLATE_MAP_URL = "https://raw.githubusercontent.com/projectdiscovery/nuclei-templates/refs/heads/main/cves.json"
@@ -53,13 +55,17 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
 
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
+    # Add info about Nuclei templates to vulns
+    all_cve_ids = extract_all_cve_ids_from_vulns(vulns)
+    cve_nuclei_paths_map = select_from_where_in_to_map(
+        vuln_db_cursor, "cve_id", "filepath", "nuclei_cve_templates", "cve_id", all_cve_ids
+    )
+
     for vuln in vulns.values():
         exploits = set()
         for cve_id in vuln.get_all_cve_ids():
-            vuln_db_cursor.execute(
-                "SELECT filepath FROM nuclei_cve_templates WHERE cve_id = ?", (cve_id,)
-            )
-            if vuln_db_cursor:
-                urls = [NUCLEI_FILES_BASE_URL + path[0] for path in vuln_db_cursor.fetchall()]
+            nuclei_paths = cve_nuclei_paths_map.get(cve_id, None)
+            if nuclei_paths:
+                urls = [NUCLEI_FILES_BASE_URL + path for path in nuclei_paths]
                 exploits |= set(urls)
         vuln.add_exploits(exploits)

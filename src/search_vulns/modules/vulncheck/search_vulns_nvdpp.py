@@ -3,7 +3,11 @@ from typing import Dict
 from search_vulns.models.SearchVulnsResult import ProductIDsResult
 from search_vulns.models.Vulnerability import DataSource, Match, Vulnerability
 from search_vulns.modules.nvd.search_vulns_nvd import get_detailed_vulns
-from search_vulns.modules.utils import search_vulns_by_cpes_simple
+from search_vulns.modules.utils import (
+    extract_all_cve_ids_from_vulns,
+    search_vulns_by_cpes_simple,
+    select_from_where_in_to_map,
+)
 from search_vulns.modules.vulncheck.build import REQUIRES_BUILT_MODULES, full_update
 
 VULN_TRACK_BASE_URL = "https://api.vulncheck.com/v3/index/nist-nvd2?cve="
@@ -36,6 +40,12 @@ def search_vulns(
 
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
+    # retrieve and store all exploit information jointly
+    all_cve_ids = extract_all_cve_ids_from_vulns(vulns)
+    cve_vulncheck_exploit_map = select_from_where_in_to_map(
+        vuln_db_cursor, "cve_id", "url", "vulncheck_exploits", "cve_id", all_cve_ids
+    )
+
     # check and append tracking, exploit and KEV information
     for vuln in vulns.values():
         # create SQL IN condition string
@@ -53,15 +63,12 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
             count = vuln_db_cursor.fetchone()
             if count and int(count[0]) > 0:
                 # add track reference
-                vuln.add_tracked_by(DataSource.NVDPP, VULN_TRACK_BASE_URL + next(iter(all_cve_ids)))
+                vuln.add_tracked_by(
+                    DataSource.NVDPP, VULN_TRACK_BASE_URL + next(iter(all_cve_ids))
+                )
 
         # exploits
-        if in_str:
-            vuln_db_cursor.execute(
-                "SELECT url FROM vulncheck_exploits WHERE cve_id IN (?)", (in_str,)
-            )
-            for exploit in vuln_db_cursor.fetchall():
-                vuln.add_exploit(exploit[0])
+        vuln.add_exploits(cve_vulncheck_exploit_map.get(cve_id, set()))
 
         # TODO: check and append KEV
         # resulting KEV URL for proof later: https://api.vulncheck.com/v3/index/vulncheck-kev?cve=CVE-2025-2825

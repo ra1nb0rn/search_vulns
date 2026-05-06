@@ -6,7 +6,12 @@ import requests
 
 from search_vulns.models.Severity import SeverityEPSS
 from search_vulns.models.Vulnerability import Vulnerability
-from search_vulns.modules.utils import SQLITE_TIMEOUT, get_database_connection
+from search_vulns.modules.utils import (
+    SQLITE_TIMEOUT,
+    extract_all_cve_ids_from_vulns,
+    get_database_connection,
+    select_from_where_in_to_map,
+)
 
 LOGGER = logging.getLogger()
 
@@ -55,14 +60,19 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
 
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
+    # Add EPSS scores by CVE IDs
+    all_cve_ids = extract_all_cve_ids_from_vulns(vulns)
+    cve_epss_map = select_from_where_in_to_map(
+        vuln_db_cursor, "cve_id", "epss", "cve_epss", "cve_id", all_cve_ids
+    )
+
     for vuln in vulns.values():
         # in case of multiple CVEs being mapped to one vuln, use highest EPSS
         epss = -1
         for cve_id in vuln.get_all_cve_ids():
-            vuln_db_cursor.execute("SELECT epss FROM cve_epss WHERE cve_id = ?", (cve_id,))
-            cur_epss = vuln_db_cursor.fetchone()
+            cur_epss = cve_epss_map.get(cve_id, None)
             if cur_epss:
-                cur_epss = cur_epss[0]
+                cur_epss = next(iter(cur_epss))
                 if cur_epss > epss:
                     epss = cur_epss
 

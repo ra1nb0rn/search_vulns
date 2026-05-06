@@ -5,7 +5,12 @@ import requests
 import ujson
 
 from search_vulns.models.Vulnerability import Vulnerability
-from search_vulns.modules.utils import SQLITE_TIMEOUT, get_database_connection
+from search_vulns.modules.utils import (
+    SQLITE_TIMEOUT,
+    extract_all_cve_ids_from_vulns,
+    get_database_connection,
+    select_from_where_in_to_map,
+)
 
 VULN_TRACK_BASE_URL = "https://euvd.enisa.europa.eu/vulnerability/"
 LOGGER = logging.getLogger()
@@ -58,32 +63,11 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
     # Add EUVD aliases to vulnerabilities having CVE identifiers
-
-    # gather all cve_ids
-    all_cve_ids = set()
+    all_cve_ids = extract_all_cve_ids_from_vulns(vulns)
+    cve_euvd_map = select_from_where_in_to_map(
+        vuln_db_cursor, "cve_id", "euvd_id", "euvd", "cve_id", all_cve_ids
+    )
     for vuln in vulns.values():
-        all_cve_ids |= vuln.get_all_cve_ids()
-
-    # make one joint SQL query with all involved cve_ids
-    placeholders = ",".join(["?"] * len(all_cve_ids))  # → "?,?,?,..."
-    if all_cve_ids:
-        vuln_db_cursor.execute(
-            f"SELECT cve_id, euvd_id FROM euvd WHERE cve_id IN ({placeholders})",
-            list(all_cve_ids),
-        )
-        cve_euvd = vuln_db_cursor.fetchall()
-    else:
-        cve_euvd = []
-
-    # create cve_id --> euvd_id map
-    cve_euvd_map = {}
-    for cve_id, euvd_id in cve_euvd:
-        if cve_id not in cve_euvd_map:
-            cve_euvd_map[cve_id] = set()
-        cve_euvd_map[cve_id].add(euvd_id)
-
-    # finally, add EUVD aliases
-    for vuln_id, vuln in vulns.items():
         for alias in vuln.aliases | {vuln.id: ""}:
             if alias.startswith("CVE-"):
                 for euvd_id in cve_euvd_map.get(alias, []):

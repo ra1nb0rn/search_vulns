@@ -5,7 +5,7 @@ import sqlite3
 import subprocess
 import time
 from collections import Counter
-from typing import Tuple
+from typing import Dict, Tuple
 
 import requests
 
@@ -18,7 +18,7 @@ from cpe_search.database_wrapper_functions import (
 from tqdm import tqdm
 
 from ..models.CPEVersion import CPEVersion
-from ..models.Vulnerability import MatchReason
+from ..models.Vulnerability import MatchReason, Vulnerability
 
 CPE_COMPARISON_STOP_CHARS_RE = re.compile(r"[\+\-\_\~]")
 NUMERIC_VERSION_RE = re.compile(r"[\d\.]+")
@@ -454,3 +454,36 @@ def execute_sql_query_retry_on_locked(
             max_tries -= 1
             time.sleep(timeout)
     return success
+
+
+def extract_all_cve_ids_from_vulns(vulns: Dict[str, Vulnerability]):
+    all_cve_ids = set()
+    for vuln in vulns.values():
+        all_cve_ids |= vuln.get_all_cve_ids()
+    return all_cve_ids
+
+
+def select_from_where_in_to_map(db_cursor, idx_attr, val_attr, table, where_attr, in_list):
+    """Run SQL query in the form of 'SELECT <idx_attr>, <val_attr> FROM <table> WHERE
+    <where_attr> IN (<in_list>)' and return a map storing lists of the second select
+    attribute indexed by the first."""
+
+    # create a joint SQL query and run it
+    placeholders = ",".join(["?"] * len(in_list))  # → "?,?,?,..."
+    if in_list:
+        db_cursor.execute(
+            f"SELECT {idx_attr}, {val_attr} FROM {table} WHERE {where_attr} IN ({placeholders})",
+            list(in_list),
+        )
+        data = db_cursor.fetchall()
+    else:
+        data = []
+
+    # create idx_attr --> val_attr map
+    result_map = {}
+    for key, val in data:
+        if key not in result_map:
+            result_map[key] = set()
+        result_map[key].add(val)
+
+    return result_map

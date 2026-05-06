@@ -13,7 +13,11 @@ from search_vulns.models.Vulnerability import DataSource, MatchReason, Vulnerabi
 
 # implement update procedures in separate file
 from search_vulns.modules.nvd.build import REQUIRES_BUILT_MODULES, full_update, install
-from search_vulns.modules.utils import search_vulns_by_cpes_simple
+from search_vulns.modules.utils import (
+    extract_all_cve_ids_from_vulns,
+    search_vulns_by_cpes_simple,
+    select_from_where_in_to_map,
+)
 
 MATCH_CVE_IDS_RE = re.compile(
     r"(CVE-[0-9]{4}-[0-9]{4,19})"
@@ -176,27 +180,30 @@ def search_vulns(
 
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
+
+    # retrieve and store all exploit information jointly
+    all_cve_ids = extract_all_cve_ids_from_vulns(vulns)
+    cve_nvd_exploit_ref_map = select_from_where_in_to_map(
+        vuln_db_cursor, "cve_id", "exploit_ref", "nvd_exploits_refs_view", "cve_id", all_cve_ids
+    )
+
     for vuln in vulns.values():
         # add exploits and check tracking information
         in_str = ""
         vuln_cve_ids = vuln.get_all_cve_ids()
         for cve_id in vuln_cve_ids:
-            query = "SELECT exploit_ref FROM nvd_exploits_refs_view WHERE cve_id = ?"
-            nvd_exploit_refs = ""
-            vuln_db_cursor.execute(query, (cve_id,))
-            if vuln_db_cursor:
-                nvd_exploit_refs = vuln_db_cursor.fetchall()
-            vuln.add_exploits([exploit[0] for exploit in nvd_exploit_refs])
+            exploit_refs = cve_nvd_exploit_ref_map.get(cve_id, set())
+            vuln.add_exploits(exploit_refs)
             in_str += "%s," % cve_id
         in_str = in_str[:-1]  # remove last comma or opening parenthesis
 
+        # add tracking information
         if DataSource.NVD not in vuln.tracked_by and in_str:
             vuln_db_cursor.execute(
                 "SELECT COUNT(*) FROM nvd_cpe WHERE cve_id IN (?)", (in_str,)
             )
             count = vuln_db_cursor.fetchone()
             if count and int(count[0]) > 0:
-                # add track reference
                 vuln.add_tracked_by(
                     DataSource.NVD, VULN_TRACK_BASE_URL + next(iter(vuln_cve_ids))
                 )
