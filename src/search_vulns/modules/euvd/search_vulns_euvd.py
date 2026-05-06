@@ -61,12 +61,8 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
 
     # gather all cve_ids
     all_cve_ids = set()
-    for vuln_id, vuln in vulns.items():
-        if vuln_id.startswith("CVE-"):
-            all_cve_ids.add(vuln_id)
-        for alias in vuln.aliases:
-            if alias.startswith("CVE-"):
-                all_cve_ids.add(alias)
+    for vuln in vulns.values():
+        all_cve_ids |= vuln.get_all_cve_ids()
 
     # make one joint SQL query with all involved cve_ids
     placeholders = ",".join(["?"] * len(all_cve_ids))  # → "?,?,?,..."

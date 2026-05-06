@@ -132,16 +132,9 @@ def postprocess_results(
 
     # go over vulnerabilities and mark them as patched if that is the case
     if results.product_ids.cpe:
-        for vuln_id, vuln in results.vulns.items():
-            cve_ids = set()
-            if vuln_id.startswith("CVE-"):
-                cve_ids.add(vuln_id)
-            for alias_id in vuln.aliases:
-                if alias_id.startswith("CVE-"):
-                    cve_ids.add(alias_id)
-
+        for vuln in results.vulns.values():
             is_patched, is_tracked_by = False, False
-            for cve_id in cve_ids:
+            for cve_id in vuln.get_all_cve_ids():
                 # assumption: all product IDs have same version
                 for cpe in results.product_ids.cpe:
                     cpe_prefix = get_cpe_product_prefix(cpe)

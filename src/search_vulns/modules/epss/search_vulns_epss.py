@@ -55,17 +55,10 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
 
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
-    for vuln_id, vuln in vulns.items():
-        vuln_cve_ids = set()
-        if vuln_id.startswith("CVE-"):
-            vuln_cve_ids.add(vuln_id)
-        for alias in vuln.aliases:
-            if alias.startswith("CVE-"):
-                vuln_cve_ids.add(alias)
-
+    for vuln in vulns.values():
         # in case of multiple CVEs being mapped to one vuln, use highest EPSS
         epss = -1
-        for cve_id in vuln_cve_ids:
+        for cve_id in vuln.get_all_cve_ids():
             vuln_db_cursor.execute("SELECT epss FROM cve_epss WHERE cve_id = ?", (cve_id,))
             cur_epss = vuln_db_cursor.fetchone()
             if cur_epss:

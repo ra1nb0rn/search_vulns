@@ -193,16 +193,8 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
         all_tracked_cves = [cve[0] for cve in all_tracked_cves if cve and cve[0]]
 
         # add tracking statement
-        for vuln_id, vuln in vulns.items():
+        for vuln in vulns.values():
             if DataSource.PRODUCT_SPECIFIC not in vuln.tracked_by:
-                # get all CVE IDs
-                vuln_cve_ids = set()
-                if vuln_id.startswith("CVE-"):
-                    vuln_cve_ids.add(vuln_id)
-                for alias in vuln.aliases:
-                    if alias.startswith("CVE-"):
-                        vuln_cve_ids.add(alias)
-
                 # set tracking
-                if any(cve in all_tracked_cves for cve in vuln_cve_ids):
+                if any(cve in all_tracked_cves for cve in vuln.get_all_cve_ids()):
                     vuln.add_tracked_by(DataSource.PRODUCT_SPECIFIC, NGINX_ADVISORIES_URL)

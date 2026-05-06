@@ -176,17 +176,10 @@ def search_vulns(
 
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
-    for vuln_id, vuln in vulns.items():
-        # get all CVE IDs
-        vuln_cve_ids = set()
-        if vuln_id.startswith("CVE-"):
-            vuln_cve_ids.add(vuln_id)
-        for alias in vuln.aliases:
-            if alias.startswith("CVE-"):
-                vuln_cve_ids.add(alias)
-
+    for vuln in vulns.values():
         # add exploits and check tracking information
         in_str = ""
+        vuln_cve_ids = vuln.get_all_cve_ids()
         for cve_id in vuln_cve_ids:
             query = "SELECT exploit_ref FROM nvd_exploits_refs_view WHERE cve_id = ?"
             nvd_exploit_refs = ""
@@ -211,7 +204,7 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
         # add general vuln info if not present
         for cve_id in vuln_cve_ids:
             query = "SELECT description, published, last_modified, cvss_version, base_score, vector, cwe_ids, cisa_known_exploited FROM nvd WHERE cve_id = ?"
-            vuln_db_cursor.execute(query, (vuln_id,))
+            vuln_db_cursor.execute(query, (vuln.id,))
             queried_info = vuln_db_cursor.fetchone()
 
             if queried_info:
