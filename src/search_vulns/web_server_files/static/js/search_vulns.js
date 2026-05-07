@@ -1,5 +1,5 @@
 
-var curVulnData = {}, curVulnsSorted = [], curEOLData = {}, onlyShowTheseVulns = null;
+var curVulnData = {}, curShownVulnCount = -1, curVulnsSorted = [], curEOLData = {}, onlyShowTheseVulns = null;
 var exploit_url_show_max_length = 52, exploit_url_show_max_length_md = 42;
 var ignoreGeneralProductVulns = false, onlyShowEDBExploits = false;
 var showSingleVersionVulns = false, isGoodProductID = true, showPatchedVulns = true;
@@ -530,11 +530,12 @@ function renderSearchResults(sourceFilterID) {
     vulns_html += "</tr></thead>";
     vulns_html += `<tbody id="vulns-tbody">`;
 
-    var filter_vulns_html = filterVulnDropdownButtonHtml, has_vulns = false;
+    var filter_vulns_html = filterVulnDropdownButtonHtml;
     var involved_data_sources = new Set(), allVulnIDTypes = new Set();
     var excludedDataSources = JSON.parse(localStorage.getItem('excludedDataSources'));
     var hiddenVulnsViaDataSources, hiddenVulnViaFilter = false, hiddenVulnViaFilter = false;
     curVulnTableRowIndex = 0;
+    curShownVulnCount = 0;
     for (var i = 0; i < curVulnsSorted.length; i++) {
         // append involved data sources
         for (const data_source of Object.keys(curVulnsSorted[i].tracked_by)) {
@@ -555,7 +556,6 @@ function renderSearchResults(sourceFilterID) {
         }
 
         // extract secondary information
-        has_vulns = true;
         var checked_html = "", margin_html = "";
         if (onlyShowTheseVulns == null || onlyShowTheseVulns.includes(curVulnsSorted[i].id)) {
             checked_html = 'checked="checked"';
@@ -567,6 +567,7 @@ function renderSearchResults(sourceFilterID) {
 
         // add Vuln ID to filter
         filter_vulns_html += `<div class="form-control filter-vulns ${margin_html}"><label class="label cursor-pointer flex items-center gap-4 min-w-0 text-sm"><span class="label-text text-nowrap whitespace-nowrap text-base-content flex-1 min-w-0 text-left">${curVulnsSorted[i]["id"]}</span><input type="checkbox" class="checkbox checkbox-accent rounded-md shrink-0" onclick="changeFilterVulns()" ${checked_html} /></label></div>`;
+        curShownVulnCount++;
     }
 
     // get HTML for vuln row batch and add it to table
@@ -601,7 +602,11 @@ function renderSearchResults(sourceFilterID) {
         rerenderOnVulnIDTypesSelection([...allVulnIDTypes], false);
     }
 
-    if (has_vulns) {
+    // update vuln count display
+    document.getElementById("vuln-count-display").innerText = curShownVulnCount;
+
+    // display table
+    if (curShownVulnCount > 0) {
         // use Template/DocumentFragment for faster operation than jQuery's .html
         const template = document.createElement('template');
         template.innerHTML = vulns_html;
@@ -626,8 +631,6 @@ function renderSearchResults(sourceFilterID) {
 
     initFlowbite();
     fixDropdownClicking();
-
-    return has_vulns;
 }
 
 function createVulnsMarkDownTable() {
@@ -1019,7 +1022,12 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
                         }
                         search_display_html += `)`;
                     }
+                    // add vuln count placeholder
+                    search_display_html += ` [<span class="text-sm"><i class="fa-solid fa-bug"></i>&nbsp;<span id="vuln-count-display">15</span></span>]`
+
                     search_display_html += `</h5></div></div>`;
+
+                    // show EoL data
                     curEOLData = { 'query': query, 'version_status': search_results.version_status };
                     if (search_results.version_status) {
                         if (search_results.version_status.status == 'EOL') {
@@ -1063,8 +1071,8 @@ function searchVulns(query, product_id, url_query, recaptcha_response) {
 
             $("#search-display").html(search_display_html);
             onlyShowTheseVulns = null;
-            var hasVulns = renderSearchResults();
-            if (!hasVulns && !queryError)
+            renderSearchResults();
+            if (curShownVulnCount < 1 && !queryError)
                 $('#vulns').html(noVulnsFoundHtml);
 
             $("#related-queries-display").html(related_queries_html);
@@ -1104,6 +1112,7 @@ function searchVulnsFromState(state) {
     $("#buttonExportResults").addClass("btn-disabled");
     $('#productIDSuggestions').addClass("hidden");
     $('#productIDSuggestions').html("");
+    curShownVulnCount = -1;
     curSelectedProductIDSuggestion = -1;
     searchIgnoreNextKeyup = true;
 
@@ -1172,8 +1181,8 @@ function searchVulnsAction(actionElement) {
 function reorderVulns(sortColumnIdx, asc) {
     curSortColIdx = sortColumnIdx;
     curSortColAsc = asc;
-    var hasVulns = renderSearchResults();
-    if (!hasVulns)
+    renderSearchResults();
+    if (curShownVulnCount < 1)
         $('#vulns').html(noVulnsFoundHtml);
 }
 
@@ -1252,8 +1261,8 @@ function changeSearchConfig(configElement) {
     }
 
     if (!$.isEmptyObject(curVulnData)) {
-        var hasVulns = renderSearchResults();
-        if (!hasVulns)
+        renderSearchResults();
+        if (curShownVulnCount < 1)
             $('#vulns').html(noVulnsFoundHtml);
     }
 }
@@ -1360,8 +1369,8 @@ function changeDataSourcesConfig(dataSourcesElement) {
     });
 
     if (!$.isEmptyObject(curVulnData))
-        var hasVulns = renderSearchResults("filterDataSourcesDropdown");
-    if (!hasVulns)
+        renderSearchResults("filterDataSourcesDropdown");
+    if (curShownVulnCount < 1)
         $('#vulns').html(noVulnsFoundHtml);
 }
 
@@ -1667,8 +1676,8 @@ function rerenderOnVulnIDTypesSelection(allTypes, rerenderVulns) {
     placeholder.className = `flex-1 ${shownTypes.length ? 'text-base-content' : 'text-base-content/40'}`;
 
     if (!$.isEmptyObject(curVulnData) && rerenderVulns) {
-        var hasVulns = renderSearchResults("excludedVulnIDTypes");
-        if (!hasVulns)
+        renderSearchResults("excludedVulnIDTypes");
+        if (curShownVulnCount < 1)
             $('#vulns').html(noVulnsFoundHtml);
     }
 }
