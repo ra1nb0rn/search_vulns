@@ -3,109 +3,46 @@
 import argparse
 import json
 import os
-import re
 import sys
 
+from .cli_backend import DEFAULT_API_URL, select_backend
+from .cli_formatters import (
+    BRIGHT_BLUE,
+    RED,
+    YELLOW,
+    format_ansi,
+    format_json_batch,
+    format_md,
+    parse_md_cols,
+    print_vulns,
+    printit,
+    sort_and_cap_vulns,
+    strip_ansi,
+)
+from .cli_interactive import run_interactive_loop
 from .core import (
     DEFAULT_CONFIG_FILE,
     _load_config,
-    check_and_try_sv_rerun_with_created_cpes,
     get_modules,
     get_version,
     is_fully_installed,
-    search_vulns,
 )
 
-# define ANSI color escape sequences
-# Taken from: http://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
-# and: http://www.topmudsites.com/forums/showthread.php?t=413
-SANE = "\u001b[0m"
-GREEN = "\u001b[32m"
-BRIGHT_GREEN = "\u001b[32;1m"
-RED = "\u001b[31m"
-YELLOW = "\u001b[33m"
-BRIGHT_BLUE = "\u001b[34;1m"
-MAGENTA = "\u001b[35m"
-BRIGHT_CYAN = "\u001b[36;1m"
 
-DEDUP_LINEBREAKS_RE_1 = re.compile(r"(\r\n)+")
-DEDUP_LINEBREAKS_RE_2 = re.compile(r"\n+")
+# ------------------------------------------------ helpers
+def _read_query_file(path: str) -> list:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return [
+                line.strip() for line in fh
+                if line.strip() and not line.strip().startswith("#")
+            ]
+    except OSError as exc:
+        print(f"Error: Cannot read query file '{path}': {exc}", file=sys.stderr)
+        sys.exit(1)
 
 
-def printit(text: str = "", end: str = "\n", color=SANE):
-    """A small print wrapper function"""
-
-    print(color, end="")
-    print(text, end=end)
-    if color != SANE:
-        print(SANE, end="")
-    sys.stdout.flush()
-
-
-def print_vulns(vulns, to_string=False):
-    """Print the supplied vulnerabilities"""
-
-    out_string = ""
-    vuln_ids_sorted = sorted(
-        list(vulns), key=lambda vuln_Id: vulns[vuln_Id].get_cvss_score(), reverse=True
-    )
-    for vuln_id in vuln_ids_sorted:
-        vuln_node = vulns[vuln_id]
-        description = DEDUP_LINEBREAKS_RE_2.sub(
-            "\n", DEDUP_LINEBREAKS_RE_1.sub("\r\n", vuln_node.description.strip())
-        )
-
-        if not to_string:
-            print_str = GREEN + vuln_node.id + SANE
-            print_str += (
-                " ("
-                + MAGENTA
-                + "CVSSv"
-                + str(vuln_node.get_cvss_version())
-                + "/"
-                + str(vuln_node.get_cvss_score())
-                + SANE
-                + ")"
-            )
-            if vuln_node.cisa_kev:
-                print_str += " (" + RED + "Actively exploited" + SANE + ")"
-        else:
-            print_str = vuln_node.id
-            print_str += (
-                " ("
-                "CVSSv"
-                + vuln_node.get_cvss_version()
-                + "/"
-                + str(vuln_node.get_cvss_score())
-                + ")"
-            )
-            if vuln_node.cisa_kev:
-                print_str += " (Actively exploited)"
-        print_str += ": " + description + "\n"
-
-        if vuln_node.exploits:
-            vuln_exploits = list(vuln_node.exploits)
-            if not to_string:
-                print_str += YELLOW + "Exploits:  " + SANE + vuln_exploits[0] + "\n"
-            else:
-                print_str += "Exploits:  " + vuln_exploits[0] + "\n"
-
-            if len(vuln_exploits) > 1:
-                for edb_link in vuln_exploits[1:]:
-                    print_str += len("Exploits:  ") * " " + edb_link + "\n"
-
-        print_str += "Reference: " + vuln_node.aliases[vuln_node.id]
-        if vuln_node.published:
-            print_str += ", " + vuln_node.published.strftime("%Y-%m-%d")
-        if not to_string:
-            printit(print_str)
-        else:
-            out_string += print_str + "\n"
-
-    if to_string:
-        return out_string
-
-
+# ------------------------------------------------ arg parsing
 def parse_args():
     """Parse command line arguments"""
 
@@ -146,8 +83,8 @@ def parse_args():
         "--format",
         type=str,
         default="txt",
-        choices={"txt", "json"},
-        help="Output format, either 'txt' or 'json' (default: 'txt')",
+        choices={"txt", "json", "ansi", "md"},
+        help="Output format: txt, json, ansi, or md (default: txt)",
     )
     parser.add_argument(
         "-o", "--output", type=str, help="File to write found vulnerabilities to"
@@ -199,6 +136,42 @@ def parse_args():
         action="store_true",
         help="Include vulnerabilities reported as (back)patched, e.g. by Debian Security Tracker, in results",
     )
+    parser.add_argument(
+        "--api-key",
+        type=str,
+        default=None,
+        help="API key for remote search (overrides SV_API_KEY env var)",
+    )
+    parser.add_argument(
+        "--api-url",
+        type=str,
+        default=None,
+        help=f"API base URL (default: {DEFAULT_API_URL})",
+    )
+    parser.add_argument(
+        "--query-file",
+        type=str,
+        default=None,
+        help="File with queries, one per line (# comments and blank lines skipped)",
+    )
+    parser.add_argument(
+        "-i",
+        "--interactive",
+        action="store_true",
+        help="Interactive mode: suggest product IDs, pick, then search",
+    )
+    parser.add_argument(
+        "--vuln-count",
+        type=int,
+        default=None,
+        help="Max number of vulnerabilities per query (sorted by criticality)",
+    )
+    parser.add_argument(
+        "--md-cols",
+        type=str,
+        default=None,
+        help="Columns for markdown format (default: id,cvss,description)",
+    )
 
     args = parser.parse_args()
     if (
@@ -209,11 +182,14 @@ def parse_args():
         and not args.version
         and not args.full_install
         and not args.list_modules
+        and not args.interactive
+        and not args.query_file
     ):
         parser.print_help()
     return args
 
 
+# ------------------------------------------------ main
 def main():
     # parse args and run update routine if requested
     args = parse_args()
@@ -283,107 +259,138 @@ def main():
         else:
             print("[+] Update successful")
 
-    if not args.queries:
+    # Collect queries
+    queries = list(args.queries or [])
+    if args.query_file:
+        queries.extend(_read_query_file(args.query_file))
+
+    if not queries and not args.interactive:
         return
 
-    # retrieve known vulnerabilities for every query and print them
+    # Select backend and build search kwargs
     config = _load_config(args.config)
+    backend = select_backend(args, config)
+
+    search_kwargs = {
+        "ignore_general_product_vulns": args.ignore_general_product_vulns,
+        "include_single_version_vulns": args.include_single_version_vulns,
+        "include_patched": args.include_patched,
+        "use_created_product_ids": args.use_created_product_ids,
+    }
+
+    fmt = args.format.lower()
+    if args.interactive and fmt == "txt":
+        fmt = "ansi"
+
+    md_cols = parse_md_cols(args.md_cols or "id,cvss,description")
+
+    # Interactive mode
+    if args.interactive:
+        def render_result(query, sv_result):
+            if args.vuln_count is not None:
+                sv_result.vulns = sort_and_cap_vulns(sv_result.vulns, args.vuln_count)
+            if fmt == "ansi":
+                print(format_ansi(query, sv_result))
+            elif fmt == "md":
+                print(format_md(sv_result, md_cols))
+            elif fmt == "txt":
+                all_product_ids = sv_result.product_ids.get_all()
+                printit("[+] %s (" % query, color=BRIGHT_BLUE, end="")
+                printit("/".join(all_product_ids) + ")", color=BRIGHT_BLUE)
+                print_vulns(sv_result.vulns)
+            elif fmt == "json":
+                print(json.dumps({query: sv_result.model_dump(exclude_none=True)}))
+
+        run_interactive_loop(
+            backend,
+            seed_queries=queries or None,
+            render_result=render_result,
+            search_kwargs=search_kwargs,
+        )
+        return
+
+    # Batch mode
     all_vulns = {}
     out_string = ""
-    for query in args.queries:
-        # Prepare arguments and search for vulnerabilities
+    md_blocks = []
+
+    for query in queries:
         query = query.strip()
 
-        if args.cpe_search_threshold:
-            config["MODULES"]["cpe_search.search_vulns_cpe_search"][
-                "CPE_SEARCH_THRESHOLD"
-            ] = args.cpe_search_threshold
-        config["MODULES"]["cpe_search.search_vulns_cpe_search"][
-            "CPE_SEARCH_COUNT"
-        ] = 1  # limit for CLI usage
-
-        if args.format.lower() == "txt":
+        if fmt == "txt":
             if not args.output:
                 printit("[+] %s (" % query, color=BRIGHT_BLUE, end="")
             else:
                 out_string += "[+] %s (" % query
 
-        sv_result = search_vulns(
-            query,
-            None,
-            None,
-            None,
-            False,
-            args.ignore_general_product_vulns,
-            args.include_single_version_vulns,
-            args.include_patched,
-            config,
-        )
-
-        # check if result is good, i.e. vulns or product IDs were found
-        is_good_result, sv_result = check_and_try_sv_rerun_with_created_cpes(
-            query,
-            sv_result,
-            args.ignore_general_product_vulns,
-            args.include_single_version_vulns,
-            args.include_patched,
-            args.use_created_product_ids,
-            config,
-        )
+        is_good_result, sv_result = backend.search(query, **search_kwargs)
         all_product_ids = sv_result.product_ids.get_all()
 
         if not is_good_result:
-            if args.format.lower() == "txt":
+            if fmt == "txt":
                 if not args.output:
                     printit(")", color=BRIGHT_BLUE)
                     printit("Warning: Could not find matching software for query", color=RED)
                     printit()
-                    continue
                 else:
                     out_string += ")\nWarning: Could not find matching software for query\n\n"
-            else:
+            elif fmt == "json":
                 all_vulns[query] = "Warning: Could not find matching software for query"
             continue
 
-        if args.format.lower() == "txt":
+        if fmt == "txt":
             if not args.output:
                 printit("/".join(all_product_ids) + ")", color=BRIGHT_BLUE)
             else:
                 out_string += "/".join(all_product_ids) + ")\n"
 
-        # "sort" vulnerabilities by CVSS score
-        if sv_result.vulns:
+        # Apply vuln-count capping
+        if args.vuln_count is not None:
+            sv_result.vulns = sort_and_cap_vulns(sv_result.vulns, args.vuln_count)
+
+        # Sort vulns by CVSS for txt/json (preserves original behavior)
+        if fmt in ("txt", "json") and sv_result.vulns:
             vuln_ids_sorted = sorted(
                 list(sv_result.vulns),
                 key=lambda vuln_id: sv_result.vulns[vuln_id].get_cvss_score(),
                 reverse=True,
             )
-            sorted_vulns = {}
-            for vuln_id in vuln_ids_sorted:
-                sorted_vulns[vuln_id] = sv_result.vulns[vuln_id]
-            sv_result.vulns = sorted_vulns
+            sv_result.vulns = {vid: sv_result.vulns[vid] for vid in vuln_ids_sorted}
 
-        # prepare output
-        if args.format.lower() == "txt":
-            # print found vulnerabilities
+        if fmt == "txt":
             if not args.output:
                 print_vulns(sv_result.vulns)
             else:
-                out_string += print_vulns(sv_result.vulns, to_string=True)
-        else:
-            sv_result = sv_result.model_dump(exclude_none=True)
+                out_string += print_vulns(sv_result.vulns, to_string=True) or ""
+        elif fmt == "ansi":
+            block = format_ansi(query, sv_result)
+            if not args.output:
+                print(block)
+            else:
+                out_string += strip_ansi(block) + "\n"
+        elif fmt == "md":
+            md_blocks.append(format_md(sv_result, md_cols))
 
         all_vulns[query] = sv_result
 
-    # provide final output
-    if args.output:
+    # Final output
+    if fmt == "json":
+        json_str = format_json_batch(all_vulns)
+        if args.output:
+            with open(args.output, "w") as f:
+                f.write(json_str)
+        else:
+            print(json_str)
+    elif fmt == "md":
+        md_output = "\n\n".join(md_blocks)
+        if args.output:
+            with open(args.output, "w") as f:
+                f.write(md_output)
+        else:
+            print(md_output)
+    elif args.output:
         with open(args.output, "w") as f:
-            if args.format.lower() == "json":
-                f.write(json.dumps(all_vulns))
-            else:
-                f.write(out_string)
-    elif args.format.lower() == "json":
-        print(json.dumps(all_vulns))
+            f.write(out_string)
 
 
 if __name__ == "__main__":
