@@ -30,9 +30,17 @@ def _make_vuln(vid="CVE-FAKE"):
         id=vid,
         match_reason=MatchReason.VERSION_IN_RANGE,
         tracked_by={DataSource.NVD: f"https://nvd.nist.gov/vuln/detail/{vid}"},
-        matched_by={DataSource.NVD: Match(match_reason=MatchReason.VERSION_IN_RANGE, confidence=1.0)},
+        matched_by={
+            DataSource.NVD: Match(match_reason=MatchReason.VERSION_IN_RANGE, confidence=1.0)
+        },
         description="Test",
-        severity={SeverityType.CVSS: SeverityCVSS(score="7.5", version="3.1", vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N")},
+        severity={
+            SeverityType.CVSS: SeverityCVSS(
+                score="7.5",
+                version="3.1",
+                vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            )
+        },
         aliases={vid: f"https://nvd.nist.gov/vuln/detail/{vid}"},
         published=datetime(2024, 1, 1),
     )
@@ -42,7 +50,8 @@ def _make_result(cpes=None, pot_cpes=None, purls=None, pot_purls=None):
     return SearchVulnsResult(
         product_ids=ProductIDsResult(cpe=cpes or [], purl=purls or []),
         pot_product_ids=PotProductIDsResult(
-            cpe=pot_cpes or [], purl=pot_purls or [],
+            cpe=pot_cpes or [],
+            purl=pot_purls or [],
         ),
         vulns={},
         version_status=VersionStatusResult(),
@@ -166,7 +175,10 @@ class TestRunInteractiveLoop(unittest.TestCase):
         run_interactive_loop(backend, render_result=render, search_kwargs={})
         backend.suggest.assert_not_called()
 
-    @patch("search_vulns.cli_interactive._pick_from_menu", return_value="cpe:2.3:a:apache:tomcat:9.0.22:*:*:*:*:*:*:*")
+    @patch(
+        "search_vulns.cli_interactive._pick_from_menu",
+        return_value="cpe:2.3:a:apache:tomcat:9.0.22:*:*:*:*:*:*:*",
+    )
     @patch("search_vulns.cli_interactive._prompt", side_effect=["q"])
     def test_seed_queries_consumed_first(self, mock_prompt, mock_pick):
         backend = _mock_backend()
@@ -180,7 +192,10 @@ class TestRunInteractiveLoop(unittest.TestCase):
         backend.suggest.assert_called_once_with("Apache 2.4")
         render.assert_called_once()
 
-    @patch("search_vulns.cli_interactive._pick_from_menu", return_value="cpe:2.3:a:apache:tomcat:9.0.22:*:*:*:*:*:*:*")
+    @patch(
+        "search_vulns.cli_interactive._pick_from_menu",
+        return_value="cpe:2.3:a:apache:tomcat:9.0.22:*:*:*:*:*:*:*",
+    )
     @patch("search_vulns.cli_interactive._prompt", side_effect=["q"])
     def test_render_result_called(self, mock_prompt, mock_pick):
         backend = _mock_backend()

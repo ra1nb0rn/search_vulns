@@ -46,7 +46,9 @@ def _make_vuln(
     severity = {}
     if cvss >= 0:
         severity[SeverityType.CVSS] = SeverityCVSS(
-            score=str(cvss), version=str(cvss_ver), vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+            score=str(cvss),
+            version=str(cvss_ver),
+            vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
         )
     if epss > 0:
         severity[SeverityType.EPSS] = SeverityEPSS(score=str(epss))
@@ -55,7 +57,9 @@ def _make_vuln(
         id=vid,
         match_reason=MatchReason.VERSION_IN_RANGE,
         tracked_by={DataSource.NVD: f"https://nvd.nist.gov/vuln/detail/{vid}"},
-        matched_by={DataSource.NVD: Match(match_reason=MatchReason.VERSION_IN_RANGE, confidence=1.0)},
+        matched_by={
+            DataSource.NVD: Match(match_reason=MatchReason.VERSION_IN_RANGE, confidence=1.0)
+        },
         description=desc,
         severity=severity,
         cisa_kev=cisa_kev,
@@ -81,13 +85,15 @@ class TestSortAndCap(unittest.TestCase):
         return {v.id: v for v in [_make_vuln(vid=s[0], cvss=s[1], epss=s[2]) for s in specs]}
 
     def test_sort_by_cvss_desc(self):
-        vulns = self._vulns_dict([
-            ("CVE-A", 9.8, 0.1),
-            ("CVE-B", 4.0, 0.1),
-            ("CVE-C", 7.5, 0.1),
-            ("CVE-D", 0.0, 0.0),
-            ("CVE-E", 6.1, 0.1),
-        ])
+        vulns = self._vulns_dict(
+            [
+                ("CVE-A", 9.8, 0.1),
+                ("CVE-B", 4.0, 0.1),
+                ("CVE-C", 7.5, 0.1),
+                ("CVE-D", 0.0, 0.0),
+                ("CVE-E", 6.1, 0.1),
+            ]
+        )
         result = sort_and_cap_vulns(vulns, None)
         ids = list(result.keys())
         self.assertEqual(ids, ["CVE-A", "CVE-C", "CVE-E", "CVE-B", "CVE-D"])
@@ -136,7 +142,9 @@ class TestFormatMd(unittest.TestCase):
         self.assertIn("Description", header_line)
 
     def test_all_cols(self):
-        result = _make_result([_make_vuln(cwe_ids=["CWE-79"], exploits=["https://exploit.example"])])
+        result = _make_result(
+            [_make_vuln(cwe_ids=["CWE-79"], exploits=["https://exploit.example"])]
+        )
         out = format_md(result, list(ALLOWED_MD_COLS))
         header_line = [l for l in out.split("\n") if l.startswith("| Vuln")][0]
         for col_name in ("Vuln ID", "CVSS", "Description", "EPSS", "CWE", "Exploits"):
@@ -161,13 +169,21 @@ class TestFormatMd(unittest.TestCase):
     def test_pipe_escaping(self):
         result = _make_result([_make_vuln(desc="a | b")])
         out = format_md(result, ["description"])
-        data_lines = [l for l in out.split("\n") if l.startswith("|") and "Description" not in l and ":---" not in l]
+        data_lines = [
+            l
+            for l in out.split("\n")
+            if l.startswith("|") and "Description" not in l and ":---" not in l
+        ]
         self.assertTrue(any("a \\| b" in l for l in data_lines))
 
     def test_newline_escaping(self):
         result = _make_result([_make_vuln(desc="line1\nline2")])
         out = format_md(result, ["description"])
-        data_lines = [l for l in out.split("\n") if l.startswith("|") and "Description" not in l and ":---" not in l]
+        data_lines = [
+            l
+            for l in out.split("\n")
+            if l.startswith("|") and "Description" not in l and ":---" not in l
+        ]
         self.assertTrue(any("line1 line2" in l for l in data_lines))
 
     def test_cvss_cell(self):
@@ -180,7 +196,11 @@ class TestFormatMd(unittest.TestCase):
         v.severity = {}
         result = _make_result([v])
         out = format_md(result, ["cvss"])
-        data_lines = [l for l in out.split("\n") if l.startswith("|") and "CVSS" not in l and ":---" not in l]
+        data_lines = [
+            l
+            for l in out.split("\n")
+            if l.startswith("|") and "CVSS" not in l and ":---" not in l
+        ]
         self.assertTrue(any("| - |" in l for l in data_lines))
 
     def test_epss_cell(self):
@@ -191,7 +211,11 @@ class TestFormatMd(unittest.TestCase):
     def test_epss_cell_zero(self):
         result = _make_result([_make_vuln(epss=0)])
         out = format_md(result, ["epss"])
-        data_lines = [l for l in out.split("\n") if l.startswith("|") and "EPSS" not in l and ":---" not in l]
+        data_lines = [
+            l
+            for l in out.split("\n")
+            if l.startswith("|") and "EPSS" not in l and ":---" not in l
+        ]
         self.assertTrue(any("| - |" in l for l in data_lines))
 
     def test_cwe_cell(self):

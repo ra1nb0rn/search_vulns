@@ -19,15 +19,15 @@ from search_vulns.models.SearchVulnsResult import SearchVulnsResult
 
 
 # ------------------------------------------------ fixtures
-def _fake_api_json(
-    cpes=None, pot_cpes=None, vulns=None, version_status=None
-):
-    return json.dumps({
-        "product_ids": {"cpe": cpes or [], "purl": [], "raw": []},
-        "pot_product_ids": {"cpe": pot_cpes or [], "purl": [], "raw": []},
-        "vulns": vulns or {},
-        "version_status": version_status or {},
-    }).encode()
+def _fake_api_json(cpes=None, pot_cpes=None, vulns=None, version_status=None):
+    return json.dumps(
+        {
+            "product_ids": {"cpe": cpes or [], "purl": [], "raw": []},
+            "pot_product_ids": {"cpe": pot_cpes or [], "purl": [], "raw": []},
+            "vulns": vulns or {},
+            "version_status": version_status or {},
+        }
+    ).encode()
 
 
 def _mock_urlopen(response_bytes, status=200):
@@ -119,6 +119,7 @@ class TestApiBackend(unittest.TestCase):
     @patch("search_vulns.cli_backend.urlopen")
     def test_http_error_non_fatal(self, mock_urlopen):
         from urllib.error import HTTPError
+
         mock_urlopen.side_effect = HTTPError(
             "http://x", 500, "fail", {}, BytesIO(b'{"message":"err"}')
         )
@@ -128,6 +129,7 @@ class TestApiBackend(unittest.TestCase):
     @patch("search_vulns.cli_backend.urlopen")
     def test_http_error_fatal(self, mock_urlopen):
         from urllib.error import HTTPError
+
         mock_urlopen.side_effect = HTTPError(
             "http://x", 500, "fail", {}, BytesIO(b'{"message":"err"}')
         )
@@ -164,7 +166,12 @@ class TestParseApiResult(unittest.TestCase):
                 "matched_by": {"nvd": {"match_reason": "version_in_range", "confidence": 1.0}},
                 "description": "Test vuln",
                 "severity": {
-                    "CVSS": {"type": "CVSS", "score": "7.5", "version": "3.1", "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"},
+                    "CVSS": {
+                        "type": "CVSS",
+                        "score": "7.5",
+                        "version": "3.1",
+                        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                    },
                 },
                 "cisa_kev": False,
                 "exploits": [],

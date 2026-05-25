@@ -23,7 +23,6 @@ from search_vulns.models.Vulnerability import (
     Vulnerability,
 )
 
-
 # ------------------------------------------------ fixtures
 _DUMMY_CONFIG = {"DATABASE_CONNECTION": "none"}
 
@@ -33,9 +32,17 @@ def _make_vuln(vid="CVE-FAKE", cvss_score="7.5"):
         id=vid,
         match_reason=MatchReason.VERSION_IN_RANGE,
         tracked_by={DataSource.NVD: f"https://nvd.nist.gov/vuln/detail/{vid}"},
-        matched_by={DataSource.NVD: Match(match_reason=MatchReason.VERSION_IN_RANGE, confidence=1.0)},
+        matched_by={
+            DataSource.NVD: Match(match_reason=MatchReason.VERSION_IN_RANGE, confidence=1.0)
+        },
         description="Test vulnerability",
-        severity={SeverityType.CVSS: SeverityCVSS(score=cvss_score, version="3.1", vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N")},
+        severity={
+            SeverityType.CVSS: SeverityCVSS(
+                score=cvss_score,
+                version="3.1",
+                vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            )
+        },
         aliases={vid: f"https://nvd.nist.gov/vuln/detail/{vid}"},
         published=datetime(2024, 1, 1),
     )
@@ -67,10 +74,12 @@ def _run_main(argv, backend=None):
     if backend is None:
         backend = _mock_backend()
     captured = StringIO()
-    with patch("sys.argv", ["search_vulns"] + argv), \
-         patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG), \
-         patch("search_vulns.cli.select_backend", return_value=backend), \
-         patch("sys.stdout", captured):
+    with (
+        patch("sys.argv", ["search_vulns"] + argv),
+        patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG),
+        patch("search_vulns.cli.select_backend", return_value=backend),
+        patch("sys.stdout", captured),
+    ):
         main()
     return captured.getvalue()
 
@@ -177,7 +186,9 @@ class TestQueryFileReading(unittest.TestCase):
     def test_combined_with_cli_queries(self):
         path = self._write_tmp("C\nD\n")
         try:
-            with patch("sys.argv", ["search_vulns", "-q", "A", "-q", "B", "--query-file", path]):
+            with patch(
+                "sys.argv", ["search_vulns", "-q", "A", "-q", "B", "--query-file", path]
+            ):
                 args = parse_args()
             queries = list(args.queries or [])
             queries.extend(_read_query_file(path))
@@ -285,57 +296,71 @@ class TestOutputRouting(unittest.TestCase):
 # ------------------------------------------------ interactive mode
 class TestInteractiveMode(unittest.TestCase):
     def test_interactive_dispatches(self):
-        with patch("sys.argv", ["search_vulns", "-i"]), \
-             patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG), \
-             patch("search_vulns.cli.select_backend", return_value=_mock_backend()), \
-             patch("search_vulns.cli.run_interactive_loop") as mock_loop:
+        with (
+            patch("sys.argv", ["search_vulns", "-i"]),
+            patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG),
+            patch("search_vulns.cli.select_backend", return_value=_mock_backend()),
+            patch("search_vulns.cli.run_interactive_loop") as mock_loop,
+        ):
             main()
         mock_loop.assert_called_once()
 
     def test_interactive_seed_queries(self):
-        with patch("sys.argv", ["search_vulns", "-i", "-q", "Apache"]), \
-             patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG), \
-             patch("search_vulns.cli.select_backend", return_value=_mock_backend()), \
-             patch("search_vulns.cli.run_interactive_loop") as mock_loop:
+        with (
+            patch("sys.argv", ["search_vulns", "-i", "-q", "Apache"]),
+            patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG),
+            patch("search_vulns.cli.select_backend", return_value=_mock_backend()),
+            patch("search_vulns.cli.run_interactive_loop") as mock_loop,
+        ):
             main()
         call_kwargs = mock_loop.call_args[1]
         self.assertEqual(call_kwargs["seed_queries"], ["Apache"])
 
     def test_interactive_default_format_ansi(self):
-        with patch("sys.argv", ["search_vulns", "-i"]), \
-             patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG), \
-             patch("search_vulns.cli.select_backend", return_value=_mock_backend()), \
-             patch("search_vulns.cli.run_interactive_loop") as mock_loop:
+        with (
+            patch("sys.argv", ["search_vulns", "-i"]),
+            patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG),
+            patch("search_vulns.cli.select_backend", return_value=_mock_backend()),
+            patch("search_vulns.cli.run_interactive_loop") as mock_loop,
+        ):
             main()
 
         call_kwargs = mock_loop.call_args[1]
         render_fn = call_kwargs["render_result"]
 
-        with patch("search_vulns.cli.format_ansi", return_value="ansi") as mock_ansi, \
-             patch("sys.stdout", StringIO()):
+        with (
+            patch("search_vulns.cli.format_ansi", return_value="ansi") as mock_ansi,
+            patch("sys.stdout", StringIO()),
+        ):
             render_fn("test", _make_search_result())
         mock_ansi.assert_called_once()
 
     def test_interactive_explicit_format_md(self):
-        with patch("sys.argv", ["search_vulns", "-i", "-f", "md"]), \
-             patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG), \
-             patch("search_vulns.cli.select_backend", return_value=_mock_backend()), \
-             patch("search_vulns.cli.run_interactive_loop") as mock_loop:
+        with (
+            patch("sys.argv", ["search_vulns", "-i", "-f", "md"]),
+            patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG),
+            patch("search_vulns.cli.select_backend", return_value=_mock_backend()),
+            patch("search_vulns.cli.run_interactive_loop") as mock_loop,
+        ):
             main()
 
         call_kwargs = mock_loop.call_args[1]
         render_fn = call_kwargs["render_result"]
 
-        with patch("search_vulns.cli.format_md", return_value="md") as mock_md, \
-             patch("sys.stdout", StringIO()):
+        with (
+            patch("search_vulns.cli.format_md", return_value="md") as mock_md,
+            patch("sys.stdout", StringIO()),
+        ):
             render_fn("test", _make_search_result())
         mock_md.assert_called_once()
 
     def test_interactive_search_kwargs(self):
-        with patch("sys.argv", ["search_vulns", "-i", "--ignore-general-product-vulns"]), \
-             patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG), \
-             patch("search_vulns.cli.select_backend", return_value=_mock_backend()), \
-             patch("search_vulns.cli.run_interactive_loop") as mock_loop:
+        with (
+            patch("sys.argv", ["search_vulns", "-i", "--ignore-general-product-vulns"]),
+            patch("search_vulns.cli._load_config", return_value=_DUMMY_CONFIG),
+            patch("search_vulns.cli.select_backend", return_value=_mock_backend()),
+            patch("search_vulns.cli.run_interactive_loop") as mock_loop,
+        ):
             main()
         call_kwargs = mock_loop.call_args[1]
         self.assertTrue(call_kwargs["search_kwargs"]["ignore_general_product_vulns"])

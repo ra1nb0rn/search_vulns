@@ -34,8 +34,7 @@ def _read_query_file(path: str) -> list:
     try:
         with open(path, encoding="utf-8") as fh:
             return [
-                line.strip() for line in fh
-                if line.strip() and not line.strip().startswith("#")
+                line.strip() for line in fh if line.strip() and not line.strip().startswith("#")
             ]
     except OSError as exc:
         print(f"Error: Cannot read query file '{path}': {exc}", file=sys.stderr)
@@ -286,6 +285,7 @@ def main():
 
     # Interactive mode
     if args.interactive:
+
         def render_result(query, sv_result):
             if args.vuln_count is not None:
                 sv_result.vulns = sort_and_cap_vulns(sv_result.vulns, args.vuln_count)

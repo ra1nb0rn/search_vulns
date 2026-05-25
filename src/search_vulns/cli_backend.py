@@ -3,12 +3,12 @@
 import json
 import os
 import sys
-
 from typing import Protocol, Tuple
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
+from .core import check_and_try_sv_rerun_with_created_cpes, search_vulns
 from .models.SearchVulnsResult import (
     PotProductIDsResult,
     ProductIDsResult,
@@ -18,10 +18,6 @@ from .models.SearchVulnsResult import (
 )
 from .models.Severity import SeverityCVSS, SeverityEPSS, SeverityType
 from .models.Vulnerability import DataSource, Match, MatchReason, Vulnerability
-
-from .core import search_vulns
-from .core import check_and_try_sv_rerun_with_created_cpes, search_vulns
-
 
 DEFAULT_API_URL = "https://search-vulns.com/api/"
 
@@ -43,8 +39,12 @@ class LocalBackend:
 
     def _apply_overrides(self, config: dict) -> dict:
         import copy
+
         cfg = copy.deepcopy(config)
-        if "cpe_search_threshold" in self._overrides and self._overrides["cpe_search_threshold"]:
+        if (
+            "cpe_search_threshold" in self._overrides
+            and self._overrides["cpe_search_threshold"]
+        ):
             cfg["MODULES"]["cpe_search.search_vulns_cpe_search"]["CPE_SEARCH_THRESHOLD"] = (
                 self._overrides["cpe_search_threshold"]
             )
@@ -186,7 +186,8 @@ def _parse_vuln(vid: str, raw: dict) -> Vulnerability:
         id=vid,
         match_reason=match_reason,
         tracked_by=tracked_by or {DataSource.OTHER: ""},
-        matched_by=matched_by or {DataSource.OTHER: Match(match_reason=match_reason, confidence=1.0)},
+        matched_by=matched_by
+        or {DataSource.OTHER: Match(match_reason=match_reason, confidence=1.0)},
         description=raw.get("description", ""),
         severity=_parse_severity(raw.get("severity", {})),
         cisa_kev=raw.get("cisa_kev", False),

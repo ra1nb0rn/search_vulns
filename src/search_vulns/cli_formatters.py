@@ -94,7 +94,9 @@ def _ansi(value: str, color: bool) -> str:
 
 
 def _md_escape(text: str) -> str:
-    return text.replace("\\", "\\\\").replace("|", "\\|").replace("\r\n", " ").replace("\n", " ")
+    return (
+        text.replace("\\", "\\\\").replace("|", "\\|").replace("\r\n", " ").replace("\n", " ")
+    )
 
 
 def _parse_cpe(cpe: str) -> tuple:
@@ -221,12 +223,17 @@ def print_vulns(vulns: Dict[str, Vulnerability], to_string: bool = False) -> Opt
     if to_string:
         return out_string
 
+
 # ------------------------------------------------ ansi
 def _format_version_status(version_status, color: bool = True) -> str:
     if not version_status or not version_status.status:
         return ""
 
-    status = version_status.status.value if hasattr(version_status.status, "value") else str(version_status.status)
+    status = (
+        version_status.status.value
+        if hasattr(version_status.status, "value")
+        else str(version_status.status)
+    )
     if status == "N/A":
         return ""
 
@@ -236,7 +243,9 @@ def _format_version_status(version_status, color: bool = True) -> str:
         "CURRENT": GREEN,
     }.get(status, DIM)
 
-    parts = [f"{_ansi(BOLD, color)}Status:{_ansi(SANE, color)} {_ansi(status_color, color)}{status}{_ansi(SANE, color)}"]
+    parts = [
+        f"{_ansi(BOLD, color)}Status:{_ansi(SANE, color)} {_ansi(status_color, color)}{status}{_ansi(SANE, color)}"
+    ]
     if version_status.latest:
         parts.append(f"{_ansi(BOLD, color)}Latest:{_ansi(SANE, color)} {version_status.latest}")
     if version_status.reference:
@@ -321,9 +330,7 @@ def format_ansi(query: str, sv_result: SearchVulnsResult, color: bool = True) ->
         parts.append(vs_str)
 
     n = len(sv_result.vulns)
-    parts.append(
-        f"\n  {bold}{n} vulnerabilit{'y' if n == 1 else 'ies'} found{sane}\n"
-    )
+    parts.append(f"\n  {bold}{n} vulnerabilit{'y' if n == 1 else 'ies'} found{sane}\n")
     parts.append(_format_vuln_table(sv_result.vulns, color))
 
     return "\n".join(parts)
