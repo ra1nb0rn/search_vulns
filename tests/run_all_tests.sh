@@ -61,5 +61,13 @@ echo '[+] Running test_redhat_backpatches.py'
 python3 "${SCRIPT_DIR}/test_redhat_backpatches.py"
 EXIT_12=$?
 
+echo '[+] Running test_cli_backend.py'
+python3 "${SCRIPT_DIR}/test_cli_backend.py"
+EXIT_13=$?
+
+echo '[+] Running test_cli_integration.py'
+python3 "${SCRIPT_DIR}/test_cli_integration.py"
+EXIT_14=$?
+
 # https://stackoverflow.com/a/16358989
-! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_7 || $EXIT_8 || $EXIT_9 || $EXIT_10 || $EXIT_11 || $EXIT_12 ))
+! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_7 || $EXIT_8 || $EXIT_9 || $EXIT_10 || $EXIT_11 || $EXIT_12  || $EXIT_13 || $EXIT_14 ))
