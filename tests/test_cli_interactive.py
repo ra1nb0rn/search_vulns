@@ -126,26 +126,30 @@ class TestPickFromMenu(unittest.TestCase):
     def test_empty_items_returns_none(self):
         self.assertIsNone(_pick_from_menu([]))
 
+    @patch("builtins.print")
     @patch("search_vulns.cli_interactive._prompt", return_value="1")
-    def test_valid_selection(self, _):
+    def test_valid_selection(self, *_):
         items = [("cpe:a", 0.9, "cpe"), ("cpe:b", 0.8, "cpe")]
         result = _pick_from_menu(items)
         self.assertEqual(result, "cpe:a")
 
+    @patch("builtins.print")
     @patch("search_vulns.cli_interactive._prompt", return_value="0")
-    def test_zero_skips(self, _):
+    def test_zero_skips(self, *_):
         items = [("cpe:a", 0.9, "cpe")]
         result = _pick_from_menu(items)
         self.assertIsNone(result)
 
+    @patch("builtins.print")
     @patch("search_vulns.cli_interactive._prompt", return_value="q")
-    def test_quit_returns_none(self, _):
+    def test_quit_returns_none(self, *_):
         items = [("cpe:a", 0.9, "cpe")]
         result = _pick_from_menu(items)
         self.assertIsNone(result)
 
+    @patch("builtins.print")
     @patch("search_vulns.cli_interactive._prompt", side_effect=["abc", "1"])
-    def test_invalid_then_valid(self, _):
+    def test_invalid_then_valid(self, *_):
         items = [("cpe:a", 0.9, "cpe")]
         result = _pick_from_menu(items)
         self.assertEqual(result, "cpe:a")
@@ -168,19 +172,21 @@ class TestRunInteractiveLoop(unittest.TestCase):
         run_interactive_loop(backend, render_result=render, search_kwargs={})
         backend.suggest.assert_not_called()
 
+    @patch("builtins.print")
     @patch("builtins.input", side_effect=EOFError)
-    def test_quit_on_eof(self, _):
+    def test_quit_on_eof(self, *_):
         backend = _mock_backend()
         render = MagicMock()
         run_interactive_loop(backend, render_result=render, search_kwargs={})
         backend.suggest.assert_not_called()
 
+    @patch("builtins.print")
     @patch(
         "search_vulns.cli_interactive._pick_from_menu",
         return_value="cpe:2.3:a:apache:tomcat:9.0.22:*:*:*:*:*:*:*",
     )
     @patch("search_vulns.cli_interactive._prompt", side_effect=["q"])
-    def test_seed_queries_consumed_first(self, mock_prompt, mock_pick):
+    def test_seed_queries_consumed_first(self, *_):
         backend = _mock_backend()
         render = MagicMock()
         run_interactive_loop(
@@ -192,12 +198,13 @@ class TestRunInteractiveLoop(unittest.TestCase):
         backend.suggest.assert_called_once_with("Apache 2.4")
         render.assert_called_once()
 
+    @patch("builtins.print")
     @patch(
         "search_vulns.cli_interactive._pick_from_menu",
         return_value="cpe:2.3:a:apache:tomcat:9.0.22:*:*:*:*:*:*:*",
     )
     @patch("search_vulns.cli_interactive._prompt", side_effect=["q"])
-    def test_render_result_called(self, mock_prompt, mock_pick):
+    def test_render_result_called(self, *_):
         backend = _mock_backend()
         render = MagicMock()
         run_interactive_loop(
@@ -210,9 +217,10 @@ class TestRunInteractiveLoop(unittest.TestCase):
         args = render.call_args[0]
         self.assertEqual(args[0], "test")
 
+    @patch("builtins.print")
     @patch("search_vulns.cli_interactive._pick_from_menu", return_value=None)
     @patch("search_vulns.cli_interactive._prompt", side_effect=["q"])
-    def test_menu_skip_no_search(self, mock_prompt, mock_pick):
+    def test_menu_skip_no_search(self, *_):
         backend = _mock_backend()
         render = MagicMock()
         run_interactive_loop(
@@ -224,16 +232,18 @@ class TestRunInteractiveLoop(unittest.TestCase):
         backend.search.assert_not_called()
         render.assert_not_called()
 
+    @patch("builtins.print")
     @patch("search_vulns.cli_interactive._prompt", side_effect=["Apache 2.4", "1", "q"])
-    def test_prompts_for_query(self, _):
+    def test_prompts_for_query(self, *_):
         backend = _mock_backend()
         render = MagicMock()
         run_interactive_loop(backend, render_result=render, search_kwargs={})
         backend.suggest.assert_called_once_with("Apache 2.4")
 
+    @patch("builtins.print")
     @patch("search_vulns.cli_interactive._pick_from_menu", return_value="cpe:x")
     @patch("search_vulns.cli_interactive._prompt", side_effect=["q"])
-    def test_search_kwargs_passed(self, mock_prompt, mock_pick):
+    def test_search_kwargs_passed(self, *_):
         backend = _mock_backend()
         render = MagicMock()
         run_interactive_loop(

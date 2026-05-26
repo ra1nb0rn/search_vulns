@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import sys
 import unittest
 from io import BytesIO
 from unittest.mock import MagicMock, patch
@@ -126,8 +127,9 @@ class TestApiBackend(unittest.TestCase):
         with self.assertRaises(ApiError):
             self._backend()._api_get("/test", {}, fatal=False)
 
+    @patch("builtins.print")
     @patch("search_vulns.cli_backend.urlopen")
-    def test_http_error_fatal(self, mock_urlopen):
+    def test_http_error_fatal(self, mock_urlopen, mock_print):
         from urllib.error import HTTPError
 
         mock_urlopen.side_effect = HTTPError(
@@ -135,6 +137,7 @@ class TestApiBackend(unittest.TestCase):
         )
         with self.assertRaises(SystemExit):
             self._backend()._api_get("/test", {}, fatal=True)
+        mock_print.assert_called_with("Error: HTTP 500: err", file=sys.stderr)
 
     @patch("search_vulns.cli_backend.urlopen")
     def test_custom_api_url(self, mock_urlopen):

@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 import tempfile
 import unittest
 from datetime import datetime
@@ -126,9 +127,11 @@ class TestArgParsing(unittest.TestCase):
         args = self._parse(["-f", "md", "-q", "test"])
         self.assertEqual(args.format, "md")
 
-    def test_format_rejects_invalid(self):
+    @patch("sys.stderr", new_callable=StringIO)
+    def test_format_rejects_invalid(self, mock_stderr):
         with self.assertRaises(SystemExit):
             self._parse(["-f", "invalid", "-q", "test"])
+        self.assertIn("invalid choice: 'invalid'", mock_stderr.getvalue())
 
     def test_existing_flags_unchanged(self):
         self.assertTrue(self._parse(["-u"]).update)
@@ -172,9 +175,14 @@ class TestQueryFileReading(unittest.TestCase):
         finally:
             os.unlink(path)
 
-    def test_missing_file_exits(self):
+    @patch("builtins.print")
+    def test_missing_file_exits(self, mock_print):
         with self.assertRaises(SystemExit):
             _read_query_file("/nonexistent/path/file.txt")
+        mock_print.assert_called_with(
+            "Error: Cannot read query file '/nonexistent/path/file.txt': [Errno 2] No such file or directory: '/nonexistent/path/file.txt'",
+            file=sys.stderr,
+        )
 
     def test_empty_file(self):
         path = self._write_tmp("# only comments\n\n")
