@@ -4,8 +4,8 @@ import json
 import re
 from typing import Dict, Optional
 
-from .models.SearchVulnsResult import SearchVulnsResult
-from .models.Vulnerability import Vulnerability
+from ..models.SearchVulnsResult import SearchVulnsResult
+from ..models.Vulnerability import Vulnerability
 
 SANE = "\033[0m"
 GREEN = "\033[32m"

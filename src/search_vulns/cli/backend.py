@@ -8,16 +8,16 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
-from .core import check_and_try_sv_rerun_with_created_cpes, search_vulns
-from .models.SearchVulnsResult import (
+from ..core import check_and_try_sv_rerun_with_created_cpes, search_vulns
+from ..models.SearchVulnsResult import (
     PotProductIDsResult,
     ProductIDsResult,
     SearchVulnsResult,
     VersionStatus,
     VersionStatusResult,
 )
-from .models.Severity import SeverityCVSS, SeverityEPSS, SeverityType
-from .models.Vulnerability import DataSource, Match, MatchReason, Vulnerability
+from ..models.Severity import SeverityCVSS, SeverityEPSS, SeverityType
+from ..models.Vulnerability import DataSource, Match, MatchReason, Vulnerability
 
 DEFAULT_API_URL = "https://search-vulns.com/api/"
 

@@ -4,7 +4,7 @@ import json
 import unittest
 from datetime import datetime
 
-from search_vulns.cli_formatters import (
+from search_vulns.cli.formatters import (
     ALLOWED_MD_COLS,
     format_ansi,
     format_json_batch,

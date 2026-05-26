@@ -3,9 +3,9 @@
 import sys
 from typing import Callable
 
-from .cli_backend import SearchBackend
-from .cli_formatters import BOLD, CYAN, DIM, GREEN, RED, SANE, score_bar
-from .models.SearchVulnsResult import SearchVulnsResult
+from ..models.SearchVulnsResult import SearchVulnsResult
+from .backend import SearchBackend
+from .formatters import BOLD, CYAN, DIM, GREEN, RED, SANE, score_bar
 
 _QUIT_WORDS = {"q", "quit", "exit"}
 

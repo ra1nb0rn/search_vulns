@@ -73,7 +73,7 @@ all = [
 ]
 
 [project.scripts]
-search_vulns = "search_vulns.cli:main"
+search_vulns = "search_vulns.cli.main:main"
 
 [project.urls]
 Homepage = "https://search-vulns.com"

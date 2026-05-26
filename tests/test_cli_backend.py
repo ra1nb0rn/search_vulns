@@ -8,7 +8,7 @@ import unittest
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
-from search_vulns.cli_backend import (
+from search_vulns.cli.backend import (
     DEFAULT_API_URL,
     ApiBackend,
     ApiError,
@@ -79,7 +79,7 @@ class TestApiBackend(unittest.TestCase):
     def _backend(self, api_url=None):
         return ApiBackend("test-key", api_url or DEFAULT_API_URL)
 
-    @patch("search_vulns.cli_backend.urlopen")
+    @patch("search_vulns.cli.backend.urlopen")
     def test_suggest_calls_correct_endpoint(self, mock_urlopen):
         mock_urlopen.return_value = _mock_urlopen(_fake_api_json())
         self._backend().suggest("Apache 2.4")
@@ -88,14 +88,14 @@ class TestApiBackend(unittest.TestCase):
         self.assertIn("/product-id-suggestions", req.full_url)
         self.assertIn("query=Apache", req.full_url)
 
-    @patch("search_vulns.cli_backend.urlopen")
+    @patch("search_vulns.cli.backend.urlopen")
     def test_suggest_sends_api_key_header(self, mock_urlopen):
         mock_urlopen.return_value = _mock_urlopen(_fake_api_json())
         self._backend().suggest("test")
         req = mock_urlopen.call_args[0][0]
         self.assertEqual(req.get_header("Api-key"), "test-key")
 
-    @patch("search_vulns.cli_backend.urlopen")
+    @patch("search_vulns.cli.backend.urlopen")
     def test_suggest_parses_response(self, mock_urlopen):
         pot = [["cpe:2.3:a:apache:tomcat:9.0.22:*:*:*:*:*:*:*", 0.95]]
         mock_urlopen.return_value = _mock_urlopen(_fake_api_json(pot_cpes=pot))
@@ -103,21 +103,21 @@ class TestApiBackend(unittest.TestCase):
         self.assertIsInstance(result, SearchVulnsResult)
         self.assertEqual(len(result.pot_product_ids.cpe), 1)
 
-    @patch("search_vulns.cli_backend.urlopen")
+    @patch("search_vulns.cli.backend.urlopen")
     def test_search_calls_correct_endpoint(self, mock_urlopen):
         mock_urlopen.return_value = _mock_urlopen(_fake_api_json())
         self._backend().search("cpe:2.3:a:apache:tomcat:9.0.22:*:*:*:*:*:*:*")
         req = mock_urlopen.call_args[0][0]
         self.assertIn("/search-vulns", req.full_url)
 
-    @patch("search_vulns.cli_backend.urlopen")
+    @patch("search_vulns.cli.backend.urlopen")
     def test_search_passes_flags(self, mock_urlopen):
         mock_urlopen.return_value = _mock_urlopen(_fake_api_json())
         self._backend().search("test", ignore_general_product_vulns=True)
         req = mock_urlopen.call_args[0][0]
         self.assertIn("ignore-general-product-vulns=true", req.full_url)
 
-    @patch("search_vulns.cli_backend.urlopen")
+    @patch("search_vulns.cli.backend.urlopen")
     def test_http_error_non_fatal(self, mock_urlopen):
         from urllib.error import HTTPError
 
@@ -128,7 +128,7 @@ class TestApiBackend(unittest.TestCase):
             self._backend()._api_get("/test", {}, fatal=False)
 
     @patch("builtins.print")
-    @patch("search_vulns.cli_backend.urlopen")
+    @patch("search_vulns.cli.backend.urlopen")
     def test_http_error_fatal(self, mock_urlopen, mock_print):
         from urllib.error import HTTPError
 
@@ -139,7 +139,7 @@ class TestApiBackend(unittest.TestCase):
             self._backend()._api_get("/test", {}, fatal=True)
         mock_print.assert_called_with("Error: HTTP 500: err", file=sys.stderr)
 
-    @patch("search_vulns.cli_backend.urlopen")
+    @patch("search_vulns.cli.backend.urlopen")
     def test_custom_api_url(self, mock_urlopen):
         mock_urlopen.return_value = _mock_urlopen(_fake_api_json())
         self._backend(api_url="https://custom.example.com/api/").suggest("test")

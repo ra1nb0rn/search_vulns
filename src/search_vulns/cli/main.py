@@ -5,8 +5,15 @@ import json
 import os
 import sys
 
-from .cli_backend import DEFAULT_API_URL, select_backend
-from .cli_formatters import (
+from ..core import (
+    DEFAULT_CONFIG_FILE,
+    _load_config,
+    get_modules,
+    get_version,
+    is_fully_installed,
+)
+from .backend import DEFAULT_API_URL, select_backend
+from .formatters import (
     BRIGHT_BLUE,
     RED,
     YELLOW,
@@ -19,14 +26,7 @@ from .cli_formatters import (
     sort_and_cap_vulns,
     strip_ansi,
 )
-from .cli_interactive import run_interactive_loop
-from .core import (
-    DEFAULT_CONFIG_FILE,
-    _load_config,
-    get_modules,
-    get_version,
-    is_fully_installed,
-)
+from .interactive import run_interactive_loop
 
 
 # ------------------------------------------------ helpers
