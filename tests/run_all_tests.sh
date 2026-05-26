@@ -69,5 +69,13 @@ echo '[+] Running test_cli_integration.py'
 python3 "${SCRIPT_DIR}/test_cli_integration.py"
 EXIT_14=$?
 
+echo '[+] Running test_cli_interactive.py'
+python3 "${SCRIPT_DIR}/test_cli_interactive.py"
+EXIT_15=$?
+
+echo '[+] Running test_cli_formatters.py'
+python3 "${SCRIPT_DIR}/test_cli_formatters.py"
+EXIT_16=$?
+
 # https://stackoverflow.com/a/16358989
-! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_7 || $EXIT_8 || $EXIT_9 || $EXIT_10 || $EXIT_11 || $EXIT_12  || $EXIT_13 || $EXIT_14 ))
+! (( $EXIT_1 || $EXIT_2 || $EXIT_3 || $EXIT_4 || $EXIT_7 || $EXIT_8 || $EXIT_9 || $EXIT_10 || $EXIT_11 || $EXIT_12  || $EXIT_13 || $EXIT_14 || $EXIT_15 || $EXIT_16 ))
