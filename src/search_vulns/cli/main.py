@@ -32,7 +32,7 @@ from .interactive import run_interactive_loop
 # ------------------------------------------------ helpers
 def _read_query_file(path: str) -> list:
     try:
-        with open(path, encoding="utf-8") as fh:
+        with open(path) as fh:
             return [
                 line.strip() for line in fh if line.strip() and not line.strip().startswith("#")
             ]
