@@ -10,14 +10,8 @@ from urllib.request import Request, urlopen
 
 from ..core import check_and_try_sv_rerun_with_created_cpes, search_vulns
 from ..models.SearchVulnsResult import (
-    PotProductIDsResult,
-    ProductIDsResult,
     SearchVulnsResult,
-    VersionStatus,
-    VersionStatusResult,
 )
-from ..models.Severity import SeverityCVSS, SeverityEPSS, SeverityType
-from ..models.Vulnerability import DataSource, Match, MatchReason, Vulnerability
 
 DEFAULT_API_URL = "https://search-vulns.com/api/"
 
@@ -116,7 +110,7 @@ class ApiBackend:
 
     def suggest(self, query: str) -> SearchVulnsResult:
         data = self._api_get("/product-id-suggestions", {"query": query})
-        return _parse_api_result(data)
+        return SearchVulnsResult.model_validate(data)
 
     def search(self, query: str, **kwargs) -> Tuple[bool, SearchVulnsResult]:
         params: dict = {"query": query}
@@ -134,113 +128,9 @@ class ApiBackend:
                 params[param] = str(val).lower()
 
         data = self._api_get("/search-vulns", params)
-        result = _parse_api_result(data)
+        result = SearchVulnsResult.model_validate(data)
         is_good = bool(result.product_ids.get_all()) or bool(result.vulns)
         return is_good, result
-
-
-# ------------------------------------------------ API response parsing
-def _parse_severity(raw: dict) -> dict:
-    severity = {}
-    for _, entry in raw.items():
-        stype = entry.get("type", "")
-        if stype == "CVSS":
-            severity[SeverityType.CVSS] = SeverityCVSS(
-                score=str(entry.get("score", "0")),
-                version=str(entry.get("version", "0")),
-                vector=entry.get("vector", "n/a"),
-            )
-        elif stype == "EPSS":
-            severity[SeverityType.EPSS] = SeverityEPSS(
-                score=str(entry.get("score", "0")),
-            )
-    return severity
-
-
-def _parse_vuln(vid: str, raw: dict) -> Vulnerability:
-    tracked_by = {}
-    for src, ref in raw.get("tracked_by", {}).items():
-        try:
-            tracked_by[DataSource(src)] = ref
-        except ValueError:
-            tracked_by[src] = ref
-
-    matched_by = {}
-    for src, match_data in raw.get("matched_by", {}).items():
-        try:
-            ds = DataSource(src)
-        except ValueError:
-            ds = src
-        matched_by[ds] = Match(
-            match_reason=MatchReason(match_data.get("match_reason", "n_a")),
-            confidence=match_data.get("confidence", 1.0),
-        )
-
-    match_reason_str = raw.get("match_reason", "n_a")
-    try:
-        match_reason = MatchReason(match_reason_str)
-    except ValueError:
-        match_reason = MatchReason.N_A
-
-    kwargs = dict(
-        id=vid,
-        match_reason=match_reason,
-        tracked_by=tracked_by or {DataSource.OTHER: ""},
-        matched_by=matched_by
-        or {DataSource.OTHER: Match(match_reason=match_reason, confidence=1.0)},
-        description=raw.get("description", ""),
-        severity=_parse_severity(raw.get("severity", {})),
-        cisa_kev=raw.get("cisa_kev", False),
-        exploits=set(raw.get("exploits", [])),
-        cwe_ids=set(raw.get("cwe_ids", [])),
-        aliases=raw.get("aliases", {vid: ""}),
-    )
-    if raw.get("published"):
-        kwargs["published"] = raw["published"]
-    if raw.get("modified"):
-        kwargs["modified"] = raw["modified"]
-
-    return Vulnerability(**kwargs)
-
-
-def _parse_api_result(data: dict) -> SearchVulnsResult:
-    pids = data.get("product_ids", {})
-    product_ids = ProductIDsResult(
-        cpe=pids.get("cpe", []),
-        purl=pids.get("purl", []),
-        raw=pids.get("raw", []),
-    )
-
-    pot = data.get("pot_product_ids", {})
-    pot_product_ids = PotProductIDsResult(
-        cpe=[(e[0], e[1]) for e in pot.get("cpe", [])],
-        purl=[(e[0], e[1]) for e in pot.get("purl", [])],
-        raw=[(e[0], e[1]) for e in pot.get("raw", [])],
-    )
-
-    vulns = {}
-    for vid, raw_vuln in data.get("vulns", {}).items():
-        vulns[vid] = _parse_vuln(vid, raw_vuln)
-
-    vs_data = data.get("version_status", {})
-    vs_status = None
-    if vs_data.get("status"):
-        try:
-            vs_status = VersionStatus(vs_data["status"])
-        except ValueError:
-            pass
-    version_status = VersionStatusResult(
-        status=vs_status,
-        latest=vs_data.get("latest"),
-        reference=vs_data.get("reference"),
-    )
-
-    return SearchVulnsResult(
-        product_ids=product_ids,
-        pot_product_ids=pot_product_ids,
-        vulns=vulns,
-        version_status=version_status,
-    )
 
 
 # ------------------------------------------------ backend selection
