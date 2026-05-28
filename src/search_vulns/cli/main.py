@@ -81,9 +81,8 @@ def parse_args():
         "-f",
         "--format",
         type=str,
-        default="txt",
         choices={"txt", "json", "ansi", "md"},
-        help="Output format: txt, json, ansi, or md (default: txt)",
+        help="Output format: txt, json, ansi, or md (default: ansi (interactive), txt (otherwise))",
     )
     parser.add_argument(
         "-o", "--output", type=str, help="File to write found vulnerabilities to"
@@ -277,9 +276,11 @@ def main():
         "use_created_product_ids": args.use_created_product_ids,
     }
 
-    fmt = args.format.lower()
-    if args.interactive and fmt == "txt":
-        fmt = "ansi"
+    fmt = args.format
+    if not fmt:
+        # default format "ansi" in interactive, "txt" otherwise
+        fmt = "ansi" if args.interactive else "txt"
+    fmt = fmt.lower()
 
     md_cols = parse_md_cols(args.md_cols or "id,cvss,description")
 
