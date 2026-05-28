@@ -111,19 +111,19 @@ class PotProductIDsResult(BaseModel):
         return sorted(value, key=lambda pot_pid: abs(pot_pid[1]), reverse=True)
 
     def add_cpes(self, cpes: List[Tuple[str, float]]):
-        self.cpe = list(set(self.cpe + cpes))
+        self.cpe = sorted(set(self.cpe + cpes), key=lambda pot_cpe: pot_cpe[1])
 
     def add_cpe(self, cpe: str, score: float):
         self.add_cpes([(cpe, score)])
 
     def add_purls(self, purls: List[Tuple[str, float]]):
-        self.purl = list(set(self.purl + purls))
+        self.purl = sorted(set(self.purl + purls), key=lambda pot_purl: pot_purl[1])
 
     def add_purl(self, purl: str, score: float):
         self.add_purls([(purl, score)])
 
     def add_raws(self, raws: List[Tuple[str, float]]):
-        self.raw = list(set(self.raw + raws))
+        self.raw = sorted(set(self.raw + raws), key=lambda pot_raw: pot_raw[1])
 
     def add_raw(self, raw: str, score: float):
         self.add_raws([(raw, score)])

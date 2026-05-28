@@ -461,7 +461,8 @@ def check_and_try_sv_rerun_with_created_cpes(
     # if a good product ID couldn't be found, use a created one if configured and appropriate
     if not is_good_result and sv_result.pot_product_ids.cpe and use_created_product_ids:
         created_cpe = None
-        for pot_cpe in sv_result.pot_product_ids.cpe:
+        # iterate over potential CPEs, sorted by match score, until a good one is found
+        for pot_cpe in sorted(sv_result.pot_product_ids.cpe, key=lambda pc: pc[1]):
             if cpe_matches_query(pot_cpe[0], query):
                 created_cpe = pot_cpe[0]
                 is_good_result = True
