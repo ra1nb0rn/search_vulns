@@ -42,7 +42,6 @@ class LocalBackend:
             cfg["MODULES"]["cpe_search.search_vulns_cpe_search"]["CPE_SEARCH_THRESHOLD"] = (
                 self._overrides["cpe_search_threshold"]
             )
-        cfg["MODULES"]["cpe_search.search_vulns_cpe_search"]["CPE_SEARCH_COUNT"] = 1
         return cfg
 
     def suggest(self, query: str) -> SearchVulnsResult:
@@ -51,14 +50,18 @@ class LocalBackend:
 
     def search(self, query: str, **kwargs) -> Tuple[bool, SearchVulnsResult]:
         cfg = self._apply_overrides(self._config)
-        is_product_id = kwargs.get("is_good_product_id", False)
+
+        # when searching vulns locally, only one CPE needs to be retrieved
+        cfg["MODULES"]["cpe_search.search_vulns_cpe_search"]["CPE_SEARCH_COUNT"] = 1
+
+        is_good_product_id = kwargs.get("is_good_product_id", False)
 
         sv_result = search_vulns(
             query,
             None,
             None,
             None,
-            is_product_id,
+            is_good_product_id,
             kwargs.get("ignore_general_product_vulns", False),
             kwargs.get("include_single_version_vulns", False),
             kwargs.get("include_patched", False),
