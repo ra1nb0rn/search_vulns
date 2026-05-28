@@ -139,7 +139,7 @@ class ApiBackend:
 # ------------------------------------------------ backend selection
 def select_backend(args, config: dict) -> SearchBackend:
     api_key = getattr(args, "api_key", None) or os.environ.get("SV_API_KEY")
-    api_url = getattr(args, "api_url", None)
+    api_url = getattr(args, "api_url", None) or os.environ.get("SV_API_URL")
 
     if api_key or (api_url and api_url != DEFAULT_API_URL):
         if not api_key:
