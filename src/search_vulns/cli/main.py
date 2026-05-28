@@ -193,7 +193,7 @@ def main():
     args = parse_args()
 
     if args.full_install:
-        from .installer import full_install
+        from ..installer import full_install
 
         success = full_install()
         if not success:
@@ -222,7 +222,7 @@ def main():
         print("\n".join(module_ids))
         sys.exit(0)
     if args.update == True:
-        from .updater import update
+        from ..updater import update
 
         success, artifacts = update(config)
         if args.artifacts:
@@ -237,7 +237,7 @@ def main():
             )
             sys.exit(1)
 
-        from .updater import full_update
+        from ..updater import full_update
 
         success, artifacts = full_update(config)
         if args.artifacts:
@@ -249,7 +249,7 @@ def main():
         return
 
     if args.full_update_module:
-        from .updater import _run_full_update_modules
+        from ..updater import _run_full_update_modules
 
         success, artifacts = _run_full_update_modules(config, args.full_update_module)
         if not success:
