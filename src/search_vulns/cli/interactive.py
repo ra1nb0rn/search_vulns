@@ -20,25 +20,36 @@ def _prompt(text: str) -> str:
 
 
 def _gather_suggestions(sv_result: SearchVulnsResult) -> list:
-    items = []
-    for cpe in sv_result.product_ids.cpe:
-        items.append((cpe, 1.0, "cpe"))
-    for purl in sv_result.product_ids.purl:
-        items.append((purl, 1.0, "purl"))
-    for raw in sv_result.product_ids.raw:
-        items.append((raw, 1.0, "raw"))
-
+    items, collected_pids = [], set()
+    # gather all potential IDs, which may include matched IDs
     for cpe, score in sv_result.pot_product_ids.cpe:
-        if not any(i[0] == cpe for i in items):
+        if cpe not in collected_pids:
             items.append((cpe, abs(score), "cpe"))
+            collected_pids.add(cpe)
     for purl, score in sv_result.pot_product_ids.purl:
-        if not any(i[0] == purl for i in items):
+        if purl not in collected_pids:
             items.append((purl, abs(score), "purl"))
+            collected_pids.add(purl)
     for raw, score in sv_result.pot_product_ids.raw:
-        if not any(i[0] == raw for i in items):
+        if raw not in collected_pids:
             items.append((raw, abs(score), "raw"))
+            collected_pids.add(raw)
 
-    items.sort(key=lambda x: -x[1])
+    # add matched IDs not already collected
+    for cpe in sv_result.product_ids.cpe:
+        if cpe not in collected_pids:
+            items.append((cpe, 1.0, "cpe"))
+            collected_pids.add(cpe)
+    for purl in sv_result.product_ids.purl:
+        if purl not in collected_pids:
+            items.append((purl, 1.0, "purl"))
+            collected_pids.add(cpe)
+    for raw in sv_result.product_ids.raw:
+        if raw not in collected_pids:
+            items.append((raw, 1.0, "raw"))
+            collected_pids.add(cpe)
+
+    items.sort(key=lambda x: x[1], reverse=True)
     return items
 
 
