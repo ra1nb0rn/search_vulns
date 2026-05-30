@@ -112,7 +112,7 @@ def parse_args():
         "--cpe-search-threshold",
         type=float,
         default=None,
-        help="Similarity threshold used for retrieving a CPE via the cpe_search tool",
+        help="Similarity threshold used for matching a CPE to a query via the cpe_search module",
     )
     parser.add_argument(
         "--ignore-general-product-vulns",
