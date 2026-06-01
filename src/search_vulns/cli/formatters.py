@@ -43,7 +43,7 @@ _MD_COL_ALIGN = {
     "description": ":---",
     "epss": ":---:",
     "cwe": ":---:",
-    "exploits": ":---:",
+    "exploits": ":---",
     "#exploits": ":---:",
 }
 
