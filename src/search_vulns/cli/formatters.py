@@ -24,7 +24,7 @@ DEDUP_LINEBREAKS_RE_2 = re.compile(r"\n+")
 
 _ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 
-ALLOWED_MD_COLS = ("id", "cvss", "description", "epss", "cwe", "exploits")
+ALLOWED_MD_COLS = ("id", "cvss", "description", "epss", "cwe", "exploits", "#exploits")
 DEFAULT_MD_COLS = ("id", "cvss", "description")
 
 _MD_COL_HEADERS = {
@@ -34,6 +34,7 @@ _MD_COL_HEADERS = {
     "epss": "EPSS",
     "cwe": "CWE",
     "exploits": "Exploits",
+    "#exploits": "#Exploits",
 }
 
 _MD_COL_ALIGN = {
@@ -43,6 +44,7 @@ _MD_COL_ALIGN = {
     "epss": ":---:",
     "cwe": ":---:",
     "exploits": ":---:",
+    "#exploits": ":---:",
 }
 
 _SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}
@@ -390,6 +392,11 @@ def _md_cell(vuln: Vulnerability, col: str) -> str:
         return "-"
 
     if col == "exploits":
+        if vuln.exploits:
+            return "<br>".join(vuln.exploits)
+        return "-"
+
+    if col == "#exploits":
         if vuln.exploits:
             return str(len(vuln.exploits))
         return "-"
