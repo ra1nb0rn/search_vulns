@@ -184,6 +184,21 @@ def parse_args():
         and not args.query_file
     ):
         parser.print_help()
+
+    # lower format
+    args.format = args.format.lower()
+
+    # parse MD cols if MD format is used
+    if args.format == "md":
+        try:
+            md_cols = parse_md_cols(args.md_cols or "id,cvss,description")
+        except ValueError as e:
+            if "Unknown markdown column" in str(e):
+                parser.error(str(e))
+            else:
+                raise e
+        args.md_cols = md_cols
+
     return args
 
 
@@ -282,8 +297,6 @@ def main():
         fmt = "ansi" if args.interactive else "txt"
     fmt = fmt.lower()
 
-    md_cols = parse_md_cols(args.md_cols or "id,cvss,description")
-
     # Interactive mode
     if args.interactive:
 
@@ -293,7 +306,7 @@ def main():
             if fmt == "ansi":
                 print(format_ansi(query, sv_result))
             elif fmt == "md":
-                print(format_md(sv_result, md_cols))
+                print(format_md(sv_result, args.md_cols))
             elif fmt == "txt":
                 all_product_ids = sv_result.product_ids.get_all()
                 printit("[+] %s (" % query, color=BRIGHT_BLUE, end="")
@@ -370,7 +383,7 @@ def main():
             else:
                 out_string += strip_ansi(block) + "\n"
         elif fmt == "md":
-            md_blocks.append(format_md(sv_result, md_cols))
+            md_blocks.append(format_md(sv_result, args.md_cols))
 
         all_vulns[query] = sv_result
 
