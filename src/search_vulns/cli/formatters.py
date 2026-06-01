@@ -1,7 +1,9 @@
 """Provides txt, ansi, md, and json output formats"""
 
 import json
+import os
 import re
+import sys
 from typing import Dict, Optional
 
 from ..models.SearchVulnsResult import SearchVulnsResult
@@ -261,6 +263,7 @@ def _format_vuln_table(vulns: Dict[str, Vulnerability], color: bool = True) -> s
         return f"  {_ansi(GREEN, color)}No vulnerabilities found.{_ansi(SANE, color)}\n"
 
     rows = []
+    col_count = os.get_terminal_size()[0] if sys.stdout.isatty() else 120
     for vid, vuln in vulns.items():
         cvss = float(vuln.get_cvss_score())
         epss_raw = vuln.get_epss_score()
@@ -276,9 +279,6 @@ def _format_vuln_table(vulns: Dict[str, Vulnerability], color: bool = True) -> s
         epss_str = f"{epss:.2f}" if epss > 0 else "-"
         published = vuln.published.strftime("%Y-%m-%d") if vuln.published else ""
         desc = vuln.description or ""
-        if len(desc) > 60:
-            desc = desc[:57] + "..."
-
         badges = ""
         if vuln.cisa_kev:
             badges += f" {_ansi(RED, color)}KEV{_ansi(SANE, color)}"
@@ -290,8 +290,16 @@ def _format_vuln_table(vulns: Dict[str, Vulnerability], color: bool = True) -> s
         line = (
             f"  {sev_color}{vid:<20}{sane} "
             f"{sev_color}{cvss_str:>7}{sane}  "
-            f"{epss_str:>5}  {published:<10}  {desc}{badges}"
+            f"{epss_str:>5}  {published:<10}  "
         )
+
+        # add as much description as possible for everything to fit on one line
+        # reserve 14 chars for badges to keep it simple (fits " KEV EXP x999 ")
+        max_descr_len = col_count - len(strip_ansi(line)) - 14
+        if len(desc) > max_descr_len:
+            desc = desc[: max_descr_len - 3] + "..."
+        line += f"{desc} {badges}"
+
         rows.append((sev_order, -cvss, vid, line))
 
     rows.sort(key=lambda r: (r[0], r[1], r[2]))
