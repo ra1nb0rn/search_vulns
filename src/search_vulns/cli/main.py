@@ -186,7 +186,7 @@ def parse_args():
         parser.print_help()
 
     # lower format
-    args.format = args.format.lower()
+    args.format = args.format.lower() if args.format else args.format
 
     # parse MD cols if MD format is used
     if args.format == "md":
