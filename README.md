@@ -274,10 +274,11 @@ To improve the performance of search_vulns with MariaDB, it is recommend to add 
 [mariadb]
 query_cache_type = 1
 query_cache_size = 192M
-innodb_buffer_pool_size = 8G
+innodb_buffer_pool_size = 2560M
+innodb_buffer_pool_size_auto_min = 1GB
 thread_handling = pool-of-threads
 ```
-``innodb_buffer_pool_size`` should be set to approximately 80% of available memory (see [MariaDB's official documentation](https://mariadb.com/kb/en/innodb-system-variables/#innodb_buffer_pool_size)).
+``innodb_buffer_pool_size`` can be set to approximately 80% of available memory on a pure database server (see [MariaDB's official documentation](https://mariadb.com/kb/en/innodb-system-variables/#innodb_buffer_pool_size)).
 
 
 ## License
