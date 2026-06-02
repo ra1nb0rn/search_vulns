@@ -137,25 +137,29 @@ The port forwarding is optional, in case you do not intend on using the web serv
 *search_vulns*'s usage information is shown in the following:
 ```
 usage: search_vulns [-h] [-u] [--full-update] [--full-update-module MODULE_ID [MODULE_ID ...]]
-                    [--full-install] [-a] [-f {json,txt}] [-o OUTPUT] [-q QUERY] [-c CONFIG]
-                    [-V] [--list-modules] [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
+                    [--full-install] [-a] [-f {json,txt,md,ansi}] [-o OUTPUT] [-q QUERY]
+                    [-c CONFIG] [-V] [--list-modules]
+                    [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
                     [--ignore-general-product-vulns] [--include-single-version-vulns]
-                    [--use-created-product-ids] [--include-patched]
+                    [--use-created-product-ids] [--include-patched] [--api-key API_KEY]
+                    [--api-url API_URL] [--query-file QUERY_FILE] [-i] [--vuln-count VULN_COUNT]
+                    [--md-cols MD_COLS]
 
 Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)
 
 options:
   -h, --help            show this help message and exit
-  -u, --update          Download the latest version of the the local vulnerability and
-                        software database from GitHub repo
+  -u, --update          Download the latest version of the the local vulnerability and software
+                        database from GitHub repo
   --full-update         Fully (re)build the local vulnerability and software database
   --full-update-module MODULE_ID [MODULE_ID ...]
                         Fully (re)build the local database for the given module(s) in-place
-  --full-install        Fully install search_vulns, including all dependencies (python
-                        packages, system packages etc.)
+  --full-install        Fully install search_vulns, including all dependencies (python packages,
+                        system packages etc.)
   -a, --artifacts       Print JSON list of artifacts created during full update
-  -f {json,txt}, --format {json,txt}
-                        Output format, either 'txt' or 'json' (default: 'txt')
+  -f {json,txt,md,ansi}, --format {json,txt,md,ansi}
+                        Output format: txt, json, ansi, or md (default: ansi (interactive), txt
+                        (otherwise))
   -o OUTPUT, --output OUTPUT
                         File to write found vulnerabilities to
   -q QUERY, --query QUERY
@@ -166,20 +170,29 @@ options:
   -V, --version         Print the version of search_vulns
   --list-modules        Print all available modules
   --cpe-search-threshold CPE_SEARCH_THRESHOLD
-                        Similarity threshold used for retrieving a CPE via the cpe_search tool
+                        Similarity threshold used for matching a CPE to a query via the
+                        cpe_search module
   --ignore-general-product-vulns
-                        Ignore vulnerabilities that only affect a general product (i.e.
-                        without version)
+                        Ignore vulnerabilities that only affect a general product (i.e. without
+                        version)
   --include-single-version-vulns
                         Include vulnerabilities that only affect one specific version of a
                         product when querying a lower version
   --use-created-product-ids
-                        If no matching product ID exists in the software database,
-                        automatically use matching ones created by search_vulns
+                        If no matching product ID exists in the software database, automatically
+                        use matching ones created by search_vulns
   --include-patched     Include vulnerabilities reported as (back)patched, e.g. by Debian
                         Security Tracker, in results
+  --api-key API_KEY     API key for remote search (overrides SV_API_KEY env var)
+  --api-url API_URL     API base URL (default: https://search-vulns.com/api/)
+  --query-file QUERY_FILE
+                        File with queries, one per line (# comments and blank lines skipped)
+  -i, --interactive     Interactive mode: suggest product IDs, pick, then search
+  --vuln-count VULN_COUNT
+                        Max number of vulnerabilities per query (sorted by criticality)
+  --md-cols MD_COLS     Columns for markdown format (default: id,cvss,description)
 ```
-Note that when querying software with ``-q`` you have to put the software information in quotes if it contains any spaces. Also, you can use ``-q`` multiple times to make multiple queries at once. For one, a query can be a software name / title like 'Apache 2.4.39' or 'Wordpress 5.7.2'. Furthermore, a query can also be a [CPE 2.3](https://csrc.nist.gov/projects/security-content-automation-protocol/specifications/cpe) string.
+Note that when querying software with ``-q`` you have to put the software information in quotes if it contains any spaces. Also, to make multiple queries at once, you can use ``-q`` multiple times or use the interactive mode (``-i``). For one, a query can be a software name / title like 'Apache 2.4.39' or 'Wordpress 5.7.2'. Furthermore, a query can also be a [CPE 2.3](https://csrc.nist.gov/projects/security-content-automation-protocol/specifications/cpe) string.
 
 Here are some examples:
 * Query *Sudo 1.8.2* for known vulnerabilities:
