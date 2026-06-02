@@ -21,7 +21,10 @@ def _prompt(text: str) -> str:
 
 def _gather_suggestions(sv_result: SearchVulnsResult) -> list:
     items, collected_pids = [], set()
-    # gather all potential IDs, which may include matched IDs
+    # gather all potential product IDs
+    # at least one matched PID per type will always be tracked as potential PID
+    # all other matched PIDs do not need to be collected here, since they are
+    # considered equivalent and will be added back in the subsequent search
     for cpe, score in sv_result.pot_product_ids.cpe:
         if cpe not in collected_pids:
             items.append((cpe, abs(score), "cpe"))
@@ -34,20 +37,6 @@ def _gather_suggestions(sv_result: SearchVulnsResult) -> list:
         if raw not in collected_pids:
             items.append((raw, abs(score), "raw"))
             collected_pids.add(raw)
-
-    # add matched IDs not already collected
-    for cpe in sv_result.product_ids.cpe:
-        if cpe not in collected_pids:
-            items.append((cpe, 1.0, "cpe"))
-            collected_pids.add(cpe)
-    for purl in sv_result.product_ids.purl:
-        if purl not in collected_pids:
-            items.append((purl, 1.0, "purl"))
-            collected_pids.add(cpe)
-    for raw in sv_result.product_ids.raw:
-        if raw not in collected_pids:
-            items.append((raw, 1.0, "raw"))
-            collected_pids.add(cpe)
 
     items.sort(key=lambda x: x[1], reverse=True)
     return items
