@@ -53,15 +53,12 @@ class LocalBackend:
 
         # when searching vulns locally, only one CPE needs to be retrieved
         cfg["MODULES"]["cpe_search.search_vulns_cpe_search"]["CPE_SEARCH_COUNT"] = 1
-
-        is_good_product_id = kwargs.get("is_good_product_id", False)
-
         sv_result = search_vulns(
             query,
             None,
             None,
             None,
-            is_good_product_id,
+            False,
             kwargs.get("ignore_general_product_vulns", False),
             kwargs.get("include_single_version_vulns", False),
             kwargs.get("include_patched", False),
@@ -123,7 +120,6 @@ class ApiBackend:
             "include_single_version_vulns": "include-single-version-vulns",
             "include_patched": "include-patched",
             "use_created_product_ids": "use-created-product-ids",
-            "is_good_product_id": "is-good-product-id",
         }
         for attr, param in flag_map.items():
             val = kwargs.get(attr)

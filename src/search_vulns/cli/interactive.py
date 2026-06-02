@@ -119,7 +119,7 @@ def run_interactive_loop(
             continue
 
         print(f"{DIM}Searching vulnerabilities...{SANE}", file=sys.stderr)
-        is_good, sv_result = backend.search(selected, is_good_product_id=True, **search_kwargs)
+        is_good, sv_result = backend.search(selected, **search_kwargs)
 
         if not is_good:
             print(f"{RED}No results for '{selected}'.{SANE}")
