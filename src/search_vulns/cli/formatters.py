@@ -279,6 +279,7 @@ def _format_vuln_table(vulns: Dict[str, Vulnerability], color: bool = True) -> s
         epss_str = f"{epss:.2f}" if epss > 0 else "-"
         published = vuln.published.strftime("%Y-%m-%d") if vuln.published else ""
         desc = vuln.description or ""
+        desc = desc.replace("\n", "\\n")  # escape newlines
         badges = ""
         if vuln.cisa_kev:
             badges += f" {_ansi(RED, color)}KEV{_ansi(SANE, color)}"
