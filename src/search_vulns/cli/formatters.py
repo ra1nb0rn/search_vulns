@@ -189,7 +189,7 @@ def print_vulns(vulns: Dict[str, Vulnerability], to_string: bool = False) -> Opt
                 + SANE
                 + ")"
             )
-            if vuln_node.cisa_kev:
+            if vuln_node.kev:
                 print_str += " (" + RED + "Actively exploited" + SANE + ")"
         else:
             print_str = vuln_node.id
@@ -201,7 +201,7 @@ def print_vulns(vulns: Dict[str, Vulnerability], to_string: bool = False) -> Opt
                 + str(vuln_node.get_cvss_score())
                 + ")"
             )
-            if vuln_node.cisa_kev:
+            if vuln_node.kev:
                 print_str += " (Actively exploited)"
         print_str += ": " + description + "\n"
 
@@ -281,7 +281,7 @@ def _format_vuln_table(vulns: Dict[str, Vulnerability], color: bool = True) -> s
         desc = vuln.description or ""
         desc = desc.replace("\n", "\\n")  # escape newlines
         badges = ""
-        if vuln.cisa_kev:
+        if vuln.kev:
             badges += f" {_ansi(RED, color)}KEV{_ansi(SANE, color)}"
         if vuln.exploits:
             badges += f" {_ansi(MAGENTA, color)}EXP x{len(vuln.exploits)}{_ansi(SANE, color)}"

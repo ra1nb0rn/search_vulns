@@ -160,8 +160,8 @@ class VersionStatusResult(BaseModel):
 
 
 class SearchVulnsResult(BaseModel):
-    schema_version: Literal["1.0.0"] = Field(
-        "1.0.0", description="Schema version of this model"
+    schema_version: Literal["1.1.0"] = Field(
+        "1.1.0", description="Schema version of this model"
     )
     product_ids: ProductIDsResult = Field(
         default_factory=ProductIDsResult, description="Stores successfully matched product IDs"

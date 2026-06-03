@@ -82,6 +82,11 @@ def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
         )
         if severity is None:
             match_reason = MatchReason.N_A
+        kev = None
+        if cisa_known_exploited:
+            kev = {
+                f"https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search={vuln_id}&field_cve="
+            }
 
         vuln = Vulnerability.from_vuln_match_complete(
             vuln_id,
@@ -94,7 +99,7 @@ def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
             last_mod,
             severity,
             cwe_ids,
-            cisa_known_exploited,
+            kev,
             [],
         )
         detailed_vulns[vuln_id] = vuln
@@ -219,12 +224,17 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
                     get_detailed_vuln_data(cve_id, vuln_db_cursor)
                 )
 
-                for attr in ("description", "published", "modified", "cwe_ids", "cisa_kev"):
+                for attr in ("description", "published", "modified", "cwe_ids"):
                     if not (getattr(vuln, attr)):
                         setattr(vuln, attr, locals()[attr])
 
                 if severity and severity.type not in vuln.severity:
                     vuln.add_severity(severity)
+
+                if cisa_kev:
+                    vuln.add_kev(
+                        f"https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search={cve_id}&field_cve="
+                    )
 
             if cve_id not in vuln.aliases:
                 vuln.add_alias(cve_id, href)
