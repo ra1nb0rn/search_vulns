@@ -216,7 +216,7 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
         # add general vuln info if not present
         for cve_id in vuln_cve_ids:
             query = "SELECT description, published, last_modified, cvss_version, base_score, vector, cwe_ids, cisa_known_exploited FROM nvd WHERE cve_id = ?"
-            vuln_db_cursor.execute(query, (vuln.id,))
+            vuln_db_cursor.execute(query, (cve_id,))
             queried_info = vuln_db_cursor.fetchone()
 
             if queried_info:
