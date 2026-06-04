@@ -162,9 +162,8 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
             if alias.startswith("CVE-"):
                 for ghsa_id in cve_ghsa_map.get(alias, []):
                     if ghsa_id not in vuln.aliases:
-                        href = VULN_TRACK_BASE_URL + alias
-                        if alias not in vuln.aliases:
-                            vuln.add_tracked_by_with_alias(DataSource.GHSA, href, alias)
+                        href = VULN_TRACK_BASE_URL + ghsa_id
+                        vuln.add_tracked_by_with_alias(DataSource.GHSA, href, ghsa_id)
 
 
 def postprocess_results(

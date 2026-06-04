@@ -72,7 +72,7 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
             if alias.startswith("CVE-"):
                 for euvd_id in cve_euvd_map.get(alias, []):
                     if euvd_id not in vuln.aliases:
-                        href = VULN_TRACK_BASE_URL + alias
+                        href = VULN_TRACK_BASE_URL + euvd_id
                         vuln.add_alias(euvd_id, href)
 
                         # no actual tracking of vulns yet
