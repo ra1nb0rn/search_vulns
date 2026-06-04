@@ -100,7 +100,9 @@ class TestSearches(unittest.TestCase):
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
-                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    expected_vulns[vuln_id]["aliases"][vuln_id], vuln.aliases[vuln_id]
+                )
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
                         sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
@@ -174,7 +176,9 @@ class TestSearches(unittest.TestCase):
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
-                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    expected_vulns[vuln_id]["aliases"][vuln_id], vuln.aliases[vuln_id]
+                )
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
                         sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
@@ -251,6 +255,9 @@ class TestSearches(unittest.TestCase):
                     "GHSA-6hcq-hmm3-jj3c": "https://github.com/advisories/GHSA-6hcq-hmm3-jj3c",
                 },
             },
+            "CVE-2026-22741": "GHSA-wg35-8jpf-2xv3",
+            "CVE-2026-22745": "GHSA-6p4f-wcwh-5vvm",
+            "CVE-2026-22740": "GHSA-5843-p793-ghmm",
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
@@ -297,7 +304,9 @@ class TestSearches(unittest.TestCase):
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
-                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    expected_vulns[vuln_id]["aliases"][vuln_id], vuln.aliases[vuln_id]
+                )
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
                         sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
@@ -360,7 +369,9 @@ class TestSearches(unittest.TestCase):
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
-                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    expected_vulns[vuln_id]["aliases"][vuln_id], vuln.aliases[vuln_id]
+                )
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
                         sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
@@ -389,6 +400,22 @@ class TestSearches(unittest.TestCase):
             },
             "CVE-2024-46993": "GHSA-6r2x-8pq8-9489",
             "CVE-2025-55305": "GHSA-vmqv-hx8q-j7mg",
+            "CVE-2026-34772": "GHSA-9w97-2464-8783",
+            "CVE-2026-34765": "GHSA-f3pv-wv63-48x8",
+            "CVE-2026-34768": "GHSA-jfqx-fxh3-c62j",
+            "CVE-2026-34777": "GHSA-r5p7-gp4j-qhrx",
+            "CVE-2026-34778": "GHSA-xj5x-m3f3-5x3h",
+            "CVE-2026-34766": "GHSA-9899-m83m-qhpj",
+            "CVE-2026-34774": "GHSA-532v-xpq5-8h95",
+            "CVE-2026-34771": "GHSA-8337-3p73-46f4",
+            "CVE-2026-34776": "GHSA-3c8v-cfp5-9885",
+            "CVE-2026-34769": "GHSA-9wfr-w7mm-pc7f",
+            "CVE-2026-34767": "GHSA-4p4r-m79c-wq3v",
+            "CVE-2026-34779": "GHSA-5rqw-r77c-jp79",
+            "CVE-2026-34773": "GHSA-mwmh-mq4g-g6gr",
+            "CVE-2026-34775": "GHSA-xwr5-m59h-vwqr",
+            "CVE-2026-34770": "GHSA-jjp3-mq3x-295m",
+            "CVE-2026-34781": "GHSA-f37v-82c4-4x64",
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
@@ -435,7 +462,9 @@ class TestSearches(unittest.TestCase):
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
-                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    expected_vulns[vuln_id]["aliases"][vuln_id], vuln.aliases[vuln_id]
+                )
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
                         sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])
@@ -719,7 +748,9 @@ class TestSearches(unittest.TestCase):
                     )
                 else:
                     self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
-                self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])
+                self.assertEqual(
+                    expected_vulns[vuln_id]["aliases"][vuln_id], vuln.aliases[vuln_id]
+                )
                 if "exploits" in expected_vulns[vuln_id]:
                     self.assertEqual(
                         sorted(vuln.exploits), sorted(expected_vulns[vuln_id]["exploits"])

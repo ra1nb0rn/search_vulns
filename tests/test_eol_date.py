@@ -14,7 +14,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.N_A,
-            "latest": "6.9.4",
+            "latest": "7.0.0",
             "reference": "https://endoflife.date/wordpress",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -25,7 +25,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.EOL,
-            "latest": "6.9.4",
+            "latest": "7.0.0",
             "reference": "https://endoflife.date/wordpress",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -58,7 +58,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.EOL,
-            "latest": "8.2.6",
+            "latest": "8.3.1",
             "reference": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -69,7 +69,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.OUTDATED,
-            "latest": "7.0.31",
+            "latest": "7.0.32",
             "reference": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -80,7 +80,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.OUTDATED,
-            "latest": "15.0.4465.1 CU32+GDR",
+            "latest": "15.0.4470.1 CU32+GDR",
             "reference": "https://endoflife.date/mssqlserver",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)

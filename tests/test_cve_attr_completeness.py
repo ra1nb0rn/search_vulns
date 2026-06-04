@@ -181,7 +181,7 @@ class TestSearches(unittest.TestCase):
                     vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
-                    vuln.cisa_kev,
+                    bool(vuln.kev),
                     expected_attrs[vuln_id]["cisa_kev"],
                 )
 
@@ -877,6 +877,69 @@ class TestSearches(unittest.TestCase):
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L",
                 "cisa_kev": False,
             },
+            "CVE-2026-33006": {
+                "published": "2026-05-04 15:16:03",
+                "cvss_ver": "3.1",
+                "cvss": "4.8",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N",
+                "cisa_kev": False,
+            },
+            "CVE-2026-24072": {
+                "published": "2026-05-04 13:16:00",
+                "cvss_ver": "3.1",
+                "cvss": "8.8",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+                "cisa_kev": False,
+            },
+            "CVE-2026-33857": {
+                "published": "2026-05-04 14:16:33",
+                "cvss_ver": "3.1",
+                "cvss": "5.3",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                "cisa_kev": False,
+            },
+            "CVE-2026-33007": {
+                "published": "2026-05-04 15:16:04",
+                "cvss_ver": "3.1",
+                "cvss": "5.3",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                "cisa_kev": False,
+            },
+            "CVE-2026-34059": {
+                "published": "2026-05-04 13:16:00",
+                "cvss_ver": "3.1",
+                "cvss": "7.5",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                "cisa_kev": False,
+            },
+            "CVE-2026-29169": {
+                "published": "2026-05-04 15:16:03",
+                "cvss_ver": "3.1",
+                "cvss": "7.5",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+                "cisa_kev": False,
+            },
+            "CVE-2026-33523": {
+                "published": "2026-05-04 15:16:04",
+                "cvss_ver": "3.1",
+                "cvss": "6.5",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+                "cisa_kev": False,
+            },
+            "CVE-2026-28780": {
+                "published": "2026-05-05 22:16:00",
+                "cvss_ver": "3.1",
+                "cvss": "9.8",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                "cisa_kev": False,
+            },
+            "CVE-2026-34032": {
+                "published": "2026-05-04 14:16:33",
+                "cvss_ver": "3.1",
+                "cvss": "5.3",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                "cisa_kev": False,
+            },
         }
 
         for vuln_id, vuln in result.vulns.items():
@@ -897,7 +960,7 @@ class TestSearches(unittest.TestCase):
                     vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
-                    vuln.cisa_kev,
+                    bool(vuln.kev),
                     expected_attrs[vuln_id]["cisa_kev"],
                 )
 
@@ -981,7 +1044,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-9094": {
                 "published": "2025-08-17 23:15:27",
                 "cvss_ver": "4.0",
-                "cvss": "5.3",
+                "cvss": "2.1",
                 "cvss_vec": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N/E:P/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
                 "cisa_kev": False,
             },
@@ -1005,7 +1068,7 @@ class TestSearches(unittest.TestCase):
                     vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
-                    vuln.cisa_kev,
+                    bool(vuln.kev),
                     expected_attrs[vuln_id]["cisa_kev"],
                 )
 
@@ -1139,7 +1202,7 @@ class TestSearches(unittest.TestCase):
                     vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
-                    vuln.cisa_kev,
+                    bool(vuln.kev),
                     expected_attrs[vuln_id]["cisa_kev"],
                 )
 
@@ -1435,6 +1498,13 @@ class TestSearches(unittest.TestCase):
                 "cvss_vec": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:P/VC:N/VI:N/VA:N/SC:L/SI:L/SA:N/E:U/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
                 "cisa_kev": False,
             },
+            "CVE-2026-40300": {
+                "published": "2026-05-12 17:16:20",
+                "cvss_ver": "4.0",
+                "cvss": "6.0",
+                "cvss_vec": "CVSS:4.0/AV:N/AC:L/AT:P/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
+                "cisa_kev": False,
+            },
         }
 
         for vuln_id, vuln in result.vulns.items():
@@ -1455,7 +1525,7 @@ class TestSearches(unittest.TestCase):
                     vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
-                    vuln.cisa_kev,
+                    bool(vuln.kev),
                     expected_attrs[vuln_id]["cisa_kev"],
                 )
 
@@ -1519,7 +1589,7 @@ class TestSearches(unittest.TestCase):
                     vuln.severity[SeverityType.CVSS].vector, expected_attrs[vuln_id]["cvss_vec"]
                 )
                 self.assertEqual(
-                    vuln.cisa_kev,
+                    bool(vuln.kev),
                     expected_attrs[vuln_id]["cisa_kev"],
                 )
 

@@ -82,11 +82,11 @@ class TestGatherSuggestions(unittest.TestCase):
     def test_exact_cpes_first(self):
         result = _make_result(
             cpes=["cpe:exact"],
-            pot_cpes=[("cpe:fuzzy", 0.8)],
+            pot_cpes=[("cpe:exact", 0.8), ("cpe:fuzzy", 0.8)],
         )
         items = _gather_suggestions(result)
         self.assertEqual(items[0][0], "cpe:exact")
-        self.assertEqual(items[0][1], 1.0)
+        self.assertEqual(items[0][1], 0.8)
 
     def test_pot_sorted_by_score(self):
         result = _make_result(
@@ -111,9 +111,10 @@ class TestGatherSuggestions(unittest.TestCase):
 
     def test_mixed_kinds(self):
         result = _make_result(
-            cpes=["cpe:a"],
+            cpes=["cpe:b"],
             purls=["pkg:npm/foo"],
             pot_cpes=[("cpe:b", 0.5)],
+            pot_purls=[("pkg:npm/foo", 0.4)],
         )
         items = _gather_suggestions(result)
         kinds = {i[2] for i in items}

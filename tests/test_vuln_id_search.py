@@ -57,7 +57,7 @@ class TestSearches(unittest.TestCase):
             else:
                 self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
             self.assertEqual(
-                vuln.cisa_kev,
+                bool(vuln.kev),
                 expected_vulns[vuln_id]["cisa_kev"],
             )
 
@@ -78,6 +78,7 @@ class TestSearches(unittest.TestCase):
                 "aliases": {
                     "CVE-2015-9251": "https://nvd.nist.gov/vuln/detail/CVE-2015-9251",
                     "GHSA-rmxg-73gg-4p98": "https://github.com/advisories/GHSA-rmxg-73gg-4p98",
+                    "EUVD-2018-0165": "https://euvd.enisa.europa.eu/vulnerability/EUVD-2018-0165",
                 },
             },
             "CVE-2019-11358": {
@@ -89,6 +90,7 @@ class TestSearches(unittest.TestCase):
                 "aliases": {
                     "CVE-2019-11358": "https://nvd.nist.gov/vuln/detail/CVE-2019-11358",
                     "GHSA-6c3j-c64m-qhgq": "https://github.com/advisories/GHSA-6c3j-c64m-qhgq",
+                    "EUVD-2019-0403": "https://euvd.enisa.europa.eu/vulnerability/EUVD-2019-0403",
                 },
             },
             "CVE-2007-2379": {
@@ -97,7 +99,10 @@ class TestSearches(unittest.TestCase):
                 "cvss": "5.0",
                 "cvss_vec": "AV:N/AC:L/Au:N/C:P/I:N/A:N",
                 "cisa_kev": False,
-                "aliases": {"CVE-2007-2379": "https://nvd.nist.gov/vuln/detail/CVE-2007-2379"},
+                "aliases": {
+                    "CVE-2007-2379": "https://nvd.nist.gov/vuln/detail/CVE-2007-2379",
+                    "EUVD-2007-2374": "https://euvd.enisa.europa.eu/vulnerability/EUVD-2007-2374",
+                },
             },
         }
         self.assertEqual(set(expected_vulns.keys()), set(result.vulns.keys()))
@@ -120,7 +125,7 @@ class TestSearches(unittest.TestCase):
             else:
                 self.assertTrue(expected_vulns[vuln_id]["cvss"] == "-1.0")
             self.assertEqual(
-                vuln.cisa_kev,
+                bool(vuln.kev),
                 expected_vulns[vuln_id]["cisa_kev"],
             )
             self.assertEqual(vuln.aliases, expected_vulns[vuln_id]["aliases"])

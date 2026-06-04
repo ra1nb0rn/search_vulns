@@ -38,7 +38,7 @@ def _make_vuln(
     cvss_ver="3.1",
     epss=0.5,
     desc="Test vulnerability",
-    cisa_kev=False,
+    kev=[],
     exploits=None,
     cwe_ids=None,
     published=None,
@@ -62,7 +62,7 @@ def _make_vuln(
         },
         description=desc,
         severity=severity,
-        cisa_kev=cisa_kev,
+        kev=kev,
         exploits=set(exploits or []),
         cwe_ids=set(cwe_ids or []),
         aliases={vid: f"https://nvd.nist.gov/vuln/detail/{vid}"},
@@ -223,9 +223,9 @@ class TestFormatMd(unittest.TestCase):
         out = format_md(result, ["cwe"])
         self.assertIn("CWE-79, CWE-89", out)
 
-    def test_exploits_cell(self):
+    def test_nr_exploits_cell(self):
         result = _make_result([_make_vuln(exploits=["http://a", "http://b", "http://c"])])
-        out = format_md(result, ["exploits"])
+        out = format_md(result, ["#exploits"])
         self.assertIn("3", out)
 
     def test_id_cell_with_link(self):
@@ -284,7 +284,7 @@ class TestFormatAnsi(unittest.TestCase):
         self.assertIn("LOW", plain)
 
     def test_kev_badge(self):
-        out = format_ansi("test", _make_result([_make_vuln(cisa_kev=True)]))
+        out = format_ansi("test", _make_result([_make_vuln(kev=["testkev"])]))
         plain = strip_ansi(out)
         self.assertIn("KEV", plain)
 
@@ -374,7 +374,7 @@ class TestPrintVulns(unittest.TestCase):
         self.assertIn("2024-03-15", out)  # type: ignore[arg-type]
 
     def test_kev_label(self):
-        vulns = {v.id: v for v in [_make_vuln(cisa_kev=True)]}
+        vulns = {v.id: v for v in [_make_vuln(kev=["testkev"])]}
         out = print_vulns(vulns, to_string=True)
         self.assertIsNotNone(out)
         self.assertIn("Actively exploited", out)  # type: ignore[arg-type]
