@@ -1,6 +1,33 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.1.0 - 2026-06-05
+### Added
+- Added EUVD IDs.
+- Added EUVD KEV data.
+- Added VulnCheck KEV data.
+- Added VulnCheck exploit data.
+- Added Nuclei templates as exploit source.
+- Added possibility to use API via CLI, thanks @s3mme .
+- Added interactive CLI mode, thanks @s3mme .
+- Added Markdown output format and different text format to CLI, thanks @s3mme .
+- Added an indicator of how many vulns were found in web app.
+- Added possibility to show or hide vuln ID types in web app.
+
+### Changed
+- Changed search_vulns result schema to accommodate multiple KEV references.
+- Moved some modules to different paths.
+- Directly show KEV references in web app.
+- Changed web app icon for search.
+- Use different website for retrieving Ubuntu release info.
+- Updated cpe_search.
+
+### Fixed
+- Enable (quicker) browsing of many vulnerabilities in web app via Infinite Scrolling.
+- Updated test cases.
+- Fixed some bugs.
+
+
 ## v1.0.9 - 2026-03-31
 ### Added
 - Added hardcoded data for Dell OMSA and nginx (differentiation to nginx+)
