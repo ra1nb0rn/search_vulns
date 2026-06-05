@@ -45,6 +45,9 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
     cve_vulncheck_exploit_map = select_from_where_in_to_map(
         vuln_db_cursor, "cve_id", "url", "vulncheck_exploits", "cve_id", all_cve_ids
     )
+    cve_kev_map = select_from_where_in_to_map(
+        vuln_db_cursor, "cve_id", "cve_id", "vulncheck_kev", "cve_id", all_cve_ids
+    )
 
     # check and append tracking, exploit and KEV information
     for vuln in vulns.values():
@@ -53,6 +56,9 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
         all_cve_ids = vuln.get_all_cve_ids()
         for cve_id in all_cve_ids:
             in_str += "%s," % cve_id
+            # add KEV
+            if cve_id in cve_kev_map:
+                vuln.add_kev(f"https://api.vulncheck.com/v3/index/vulncheck-kev?cve={cve_id}")
         in_str = in_str[:-1]  # remove last comma
 
         # tracking information

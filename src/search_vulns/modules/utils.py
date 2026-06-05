@@ -471,19 +471,29 @@ def select_from_where_in_to_map(db_cursor, idx_attr, val_attr, table, where_attr
     # create a joint SQL query and run it
     placeholders = ",".join(["?"] * len(in_list))  # → "?,?,?,..."
     if in_list:
-        db_cursor.execute(
-            f"SELECT {idx_attr}, {val_attr} FROM {table} WHERE {where_attr} IN ({placeholders})",
-            list(in_list),
-        )
+        if isinstance(val_attr, list):
+            db_cursor.execute(
+                f"SELECT {idx_attr}, {', '.join(val_attr)} FROM {table} WHERE {where_attr} IN ({placeholders})",
+                list(in_list),
+            )
+        else:
+            db_cursor.execute(
+                f"SELECT {idx_attr}, {val_attr} FROM {table} WHERE {where_attr} IN ({placeholders})",
+                list(in_list),
+            )
         data = db_cursor.fetchall()
     else:
         data = []
 
     # create idx_attr --> val_attr map
     result_map = {}
-    for key, val in data:
+    for row in data:
+        key, val = row[0], row[1:]
         if key not in result_map:
             result_map[key] = set()
-        result_map[key].add(val)
+        if len(val) < 2:
+            result_map[key].add(val[0])
+        else:
+            result_map[key].add(val)
 
     return result_map

@@ -65,18 +65,19 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
     # Add EUVD aliases to vulnerabilities having CVE identifiers
     all_cve_ids = extract_all_cve_ids_from_vulns(vulns)
     cve_euvd_map = select_from_where_in_to_map(
-        vuln_db_cursor, "cve_id", "euvd_id", "euvd", "cve_id", all_cve_ids
+        vuln_db_cursor, "cve_id", ["euvd_id", "euvd_kev"], "euvd", "cve_id", all_cve_ids
     )
+
     for vuln in vulns.values():
         for alias in vuln.aliases | {vuln.id: ""}:
             if alias.startswith("CVE-"):
-                for euvd_id in cve_euvd_map.get(alias, []):
+                for euvd_id, kev in cve_euvd_map.get(alias, []):
                     if euvd_id not in vuln.aliases:
                         href = VULN_TRACK_BASE_URL + euvd_id
                         vuln.add_alias(euvd_id, href)
+                    if kev:
+                        vuln.add_kev(href)
 
                         # no actual tracking of vulns yet
                         # if alias not in vuln.aliases:
-                        #     vuln.add_tracked_by_with_alias(DataSource.GHSA, href, alias)
-
-    # TODO: EUVD KEV
+                        #     vuln.add_tracked_by_with_alias(DataSource.EUVD, href, alias)

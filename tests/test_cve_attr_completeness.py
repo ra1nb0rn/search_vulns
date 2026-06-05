@@ -33,7 +33,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "5.4",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:L/I:L/A:N",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2021-39200": {
                 "published": "2021-09-09 22:15:09",
@@ -54,7 +54,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "8.0",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:C/C:H/I:H/A:H",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2021-39201": {
                 "published": "2021-09-09 22:15:09",
@@ -68,14 +68,14 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "8.0",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:C/C:H/I:H/A:H",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2022-3590": {
                 "published": "2022-12-14 09:15:09",
                 "cvss_ver": "3.1",
                 "cvss": "5.9",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2022-43497": {
                 "published": "2022-12-05 04:15:10",
@@ -159,7 +159,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "4.9",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:L/I:L/A:N",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
         }
 
@@ -252,7 +252,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "7.5",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2007-0450": {
                 "id": "CVE-2007-0450",
@@ -284,7 +284,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "6.1",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2017-3167": {
                 "id": "CVE-2017-3167",
@@ -300,7 +300,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.0",
                 "cvss": "5.9",
                 "cvss_vec": "CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2023-45802": {
                 "id": "CVE-2023-45802",
@@ -332,7 +332,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "9.8",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2017-9798": {
                 "id": "CVE-2017-9798",
@@ -340,7 +340,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.1",
                 "cvss": "7.5",
                 "cvss_vec": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2019-0211": {
                 "id": "CVE-2019-0211",
@@ -444,7 +444,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.0",
                 "cvss": "7.5",
                 "cvss_vec": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2019-10081": {
                 "id": "CVE-2019-10081",
@@ -652,7 +652,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.0",
                 "cvss": "7.5",
                 "cvss_vec": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-1999-0289": {
                 "id": "CVE-1999-0289",
@@ -668,7 +668,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.0",
                 "cvss": "9.1",
                 "cvss_vec": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:H",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-1999-1412": {
                 "id": "CVE-1999-1412",
@@ -708,7 +708,7 @@ class TestSearches(unittest.TestCase):
                 "cvss_ver": "3.0",
                 "cvss": "8.1",
                 "cvss_vec": "CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
-                "cisa_kev": False,
+                "cisa_kev": True,
             },
             "CVE-2022-22720": {
                 "id": "CVE-2022-22720",
