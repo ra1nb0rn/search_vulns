@@ -51,8 +51,8 @@
             "description": "Stores successfully matched product IDs"
           },
           "schema_version": {
-            "const": "1.0.0",
-            "default": "1.0.0",
+            "const": "1.1.0",
+            "default": "1.1.0",
             "description": "Schema version of this model",
             "title": "Schema Version",
             "type": "string"
@@ -357,12 +357,6 @@
             "title": "Aliases",
             "type": "object"
           },
-          "cisa_kev": {
-            "default": false,
-            "description": "Stores if the vulnerability is a CISA KEV",
-            "title": "Cisa Kev",
-            "type": "boolean"
-          },
           "cwe_ids": {
             "description": "Stores CWE-IDs for the vulnerability",
             "items": {
@@ -394,6 +388,16 @@
             "minLength": 1,
             "title": "Id",
             "type": "string"
+          },
+          "kev": {
+            "description": "Stores references to KEV entries for this vulnerability",
+            "items": {
+              "description": "Reference to a KEV entry, .e.g., a URL",
+              "type": "string"
+            },
+            "title": "Kev",
+            "type": "array",
+            "uniqueItems": true
           },
           "match_reason": {
             "$ref": "#/components/schemas/SearchVulnsResult.MatchReason",
@@ -437,12 +441,10 @@
                 },
                 {
                   "description": "Textual identifier for the data source",
-                  "minLength": 1,
                   "type": "string"
                 }
               ]
             },
-            "minItems": 1,
             "title": "Reported Patched By",
             "type": "array",
             "uniqueItems": true
@@ -556,7 +558,7 @@
       "url": "https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE"
     },
     "title": "search_vulns API",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "openapi": "3.0.3",
   "paths": {
