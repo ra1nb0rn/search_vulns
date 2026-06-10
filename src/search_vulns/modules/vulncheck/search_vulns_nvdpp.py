@@ -56,6 +56,9 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
         all_cve_ids = vuln.get_all_cve_ids()
         for cve_id in all_cve_ids:
             in_str += "%s," % cve_id
+            # add exploits
+            if cve_id in cve_vulncheck_exploit_map:
+                vuln.add_exploits(cve_vulncheck_exploit_map[cve_id])
             # add KEV
             if cve_id in cve_kev_map:
                 vuln.add_kev(f"https://api.vulncheck.com/v3/index/vulncheck-kev?cve={cve_id}")
@@ -72,9 +75,3 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
                 vuln.add_tracked_by(
                     DataSource.NVDPP, VULN_TRACK_BASE_URL + next(iter(all_cve_ids))
                 )
-
-        # exploits
-        vuln.add_exploits(cve_vulncheck_exploit_map.get(cve_id, set()))
-
-        # TODO: check and append KEV
-        # resulting KEV URL for proof later: https://api.vulncheck.com/v3/index/vulncheck-kev?cve=CVE-2025-2825
