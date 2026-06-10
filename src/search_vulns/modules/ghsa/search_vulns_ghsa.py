@@ -137,13 +137,17 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
 
     # make one joint SQL query with all involved cve_ids
     if all_cve_ids:
-        conditions = " OR ".join(["(aliases = ? OR aliases LIKE ?)"] * len(all_cve_ids))
-        params = [param for cve_id in all_cve_ids for param in (cve_id, "%" + cve_id + ",%")]
-        vuln_db_cursor.execute(
-            f"SELECT ghsa_id, aliases FROM ghsa WHERE {conditions}",
-            params,
-        )
-        cve_ghsa = vuln_db_cursor.fetchall()
+        cve_ghsa = []
+        ids = list(all_cve_ids)
+        CHUNK = 400
+        for i in range(0, len(ids), CHUNK):
+            batch = ids[i : i + CHUNK]
+            conditions = " OR ".join(["(aliases = ? OR aliases LIKE ?)"] * len(batch))
+            params = [param for cve_id in batch for param in (cve_id, "%" + cve_id + ",%")]
+            vuln_db_cursor.execute(
+                f"SELECT ghsa_id, aliases FROM ghsa WHERE {conditions}", params
+            )
+            cve_ghsa.extend(vuln_db_cursor.fetchall())
     else:
         cve_ghsa = []
 
