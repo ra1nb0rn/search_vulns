@@ -26,70 +26,90 @@ DESCR_VERSION_MATCH_RE = re.compile(r"\d\.[\d\w\.]+")
 VULN_TRACK_BASE_URL = "https://nvd.nist.gov/vuln/detail/"
 
 
-def get_detailed_vuln_data(vuln_id, vuln_db_cursor):
-    query = "SELECT description, published, last_modified, cvss_version, base_score, vector, cwe_ids, cisa_known_exploited FROM nvd WHERE cve_id = ?"
-    vuln_db_cursor.execute(query, (vuln_id,))
-    queried_info = vuln_db_cursor.fetchone()
-    if queried_info:
-        descr, publ, last_mod, cvss_ver, score, vector, cwe_ids, cisa_known_exploited = (
-            queried_info
+def get_detailed_vuln_data(cve_ids, vuln_db_cursor):
+    cve_data_map = select_from_where_in_to_map(
+        vuln_db_cursor,
+        "cve_id",
+        [
+            "description",
+            "published",
+            "last_modified",
+            "cvss_version",
+            "base_score",
+            "vector",
+            "cwe_ids",
+            "cisa_known_exploited",
+        ],
+        "nvd",
+        "cve_id",
+        cve_ids,
+    )
+
+    for cve_id in cve_ids:
+        if cve_id not in cve_data_map:
+            cve_data_map[cve_id] = [("", "", "", "", "-1.0", "NOT FOUND", "", False)]
+
+    for cve_id, vuln_data in cve_data_map.items():
+        descr, publ, last_mod, cvss_ver, score, vector, cwe_ids, cisa_known_exploited = next(
+            iter(vuln_data)
         )
-    else:
-        publ, last_mod, cvss_ver, vector, cwe_ids, cisa_known_exploited = (
-            "",
-            "",
-            "",
-            "",
-            "",
-            False,
+        href = VULN_TRACK_BASE_URL + cve_id
+
+        if publ and not isinstance(publ, datetime):
+            # sqlite returns a simple string instead of a datetime object
+            publ = datetime.strptime(publ, "%Y-%m-%d %H:%M:%S")
+        if last_mod and not isinstance(last_mod, datetime):
+            last_mod = datetime.strptime(last_mod, "%Y-%m-%d %H:%M:%S")
+        if cwe_ids:
+            cwe_ids = cwe_ids.split(",")
+        else:
+            cwe_ids = []
+
+        if float(score) < 0:
+            severity = None
+        else:
+            severity = SeverityCVSS(score=str(float(score)), version=cvss_ver, vector=vector)
+        cisa_known_exploited = bool(cisa_known_exploited)
+
+        cve_data_map[cve_id] = (
+            descr,
+            publ,
+            last_mod,
+            severity,
+            cwe_ids,
+            cisa_known_exploited,
+            href,
         )
-        score, descr = "-1.0", "NOT FOUND"
-    if cvss_ver:
-        cvss_ver = str(float(cvss_ver))
-    href = VULN_TRACK_BASE_URL + vuln_id
 
-    if publ and not isinstance(publ, datetime):
-        # sqlite returns a simple string instead of a datetime object
-        publ = datetime.strptime(publ, "%Y-%m-%d %H:%M:%S")
-    if last_mod and not isinstance(last_mod, datetime):
-        last_mod = datetime.strptime(last_mod, "%Y-%m-%d %H:%M:%S")
-    if cwe_ids:
-        cwe_ids = cwe_ids.split(",")
-    else:
-        cwe_ids = []
-
-    if float(score) < 0:
-        severity = None
-    else:
-        severity = SeverityCVSS(score=str(float(score)), version=cvss_ver, vector=vector)
-    cisa_known_exploited = bool(cisa_known_exploited)
-
-    return descr, publ, last_mod, severity, cwe_ids, cisa_known_exploited, href
+    return cve_data_map
 
 
 def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
     detailed_vulns = {}
+    cve_ids = [vuln[0] for vuln in vulns]
+    cve_data_map = get_detailed_vuln_data(cve_ids, vuln_db_cursor)
+
     for vuln_info in vulns:
-        vuln_id, match_reason = vuln_info
-        if vuln_id in detailed_vulns:
+        cve_id, match_reason = vuln_info
+        if cve_id in detailed_vulns:
             # update match reason, e.g. if better match happened with another CPE
-            if match_reason > detailed_vulns[vuln_id].match_reason:
-                detailed_vulns[vuln_id].match_reason = match_reason
+            if match_reason > detailed_vulns[cve_id].match_reason:
+                detailed_vulns[cve_id].match_reason = match_reason
             continue
 
-        descr, publ, last_mod, severity, cwe_ids, cisa_known_exploited, href = (
-            get_detailed_vuln_data(vuln_id, vuln_db_cursor)
-        )
+        descr, publ, last_mod, severity, cwe_ids, cisa_known_exploited, href = cve_data_map[
+            cve_id
+        ]
         if severity is None:
             match_reason = MatchReason.N_A
         kev = None
         if cisa_known_exploited:
             kev = {
-                f"https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search={vuln_id}&field_cve="
+                f"https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search={cve_id}&field_cve="
             }
 
         vuln = Vulnerability.from_vuln_match_complete(
-            vuln_id,
+            cve_id,
             match_reason,
             DataSource.NVD,
             href,
@@ -102,7 +122,7 @@ def get_detailed_vulns(vulns, vuln_db_cursor) -> Dict[str, Vulnerability]:
             kev,
             [],
         )
-        detailed_vulns[vuln_id] = vuln
+        detailed_vulns[cve_id] = vuln
 
     return detailed_vulns
 
@@ -191,37 +211,30 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
     cve_nvd_exploit_ref_map = select_from_where_in_to_map(
         vuln_db_cursor, "cve_id", "exploit_ref", "nvd_exploits_refs_view", "cve_id", all_cve_ids
     )
+    cve_data_map = get_detailed_vuln_data(all_cve_ids, vuln_db_cursor)
 
     for vuln in vulns.values():
         # add exploits and check tracking information
-        in_str = ""
         vuln_cve_ids = vuln.get_all_cve_ids()
         for cve_id in vuln_cve_ids:
             exploit_refs = cve_nvd_exploit_ref_map.get(cve_id, set())
             vuln.add_exploits(exploit_refs)
-            in_str += "%s," % cve_id
-        in_str = in_str[:-1]  # remove last comma or opening parenthesis
 
         # add tracking information
-        if DataSource.NVD not in vuln.tracked_by and in_str:
-            vuln_db_cursor.execute(
-                "SELECT COUNT(*) FROM nvd_cpe WHERE cve_id IN (?)", (in_str,)
+        if DataSource.NVD not in vuln.tracked_by and vuln_cve_ids:
+            cve_map = select_from_where_in_to_map(
+                vuln_db_cursor, "cve_id", "cve_id", "nvd_cpe", "cve_id", vuln_cve_ids
             )
-            count = vuln_db_cursor.fetchone()
-            if count and int(count[0]) > 0:
-                vuln.add_tracked_by(
-                    DataSource.NVD, VULN_TRACK_BASE_URL + next(iter(vuln_cve_ids))
-                )
+
+            for cve_id in cve_map:
+                vuln.add_tracked_by(DataSource.NVD, VULN_TRACK_BASE_URL + cve_id)
+                break
 
         # add general vuln info if not present
         for cve_id in vuln_cve_ids:
-            query = "SELECT description, published, last_modified, cvss_version, base_score, vector, cwe_ids, cisa_known_exploited FROM nvd WHERE cve_id = ?"
-            vuln_db_cursor.execute(query, (cve_id,))
-            queried_info = vuln_db_cursor.fetchone()
-
-            if queried_info:
+            if cve_id in cve_data_map:
                 description, published, modified, severity, cwe_ids, cisa_kev, href = (
-                    get_detailed_vuln_data(cve_id, vuln_db_cursor)
+                    cve_data_map[cve_id]
                 )
 
                 for attr in ("description", "published", "modified", "cwe_ids"):

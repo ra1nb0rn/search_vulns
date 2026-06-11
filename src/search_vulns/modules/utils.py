@@ -319,20 +319,20 @@ def compute_cosine_similarity(text_1: str, text_2: str, text_vector_regex=r"[a-z
 
 def get_versionless_cpes_of_nvd_cves(cve_ids, vulndb_cursor):
     """Return all CPEs affected by the given cve_ids with their version removed"""
+
     if not isinstance(cve_ids, list):
         cve_ids = [cve_ids]
 
+    cve_cpes_map = select_from_where_in_to_map(
+        vulndb_cursor, "cve_id", "cpe", "nvd_cpe", "cve_id", cve_ids
+    )
+
     all_nvd_cpes = set()
-    for cve_id in cve_ids:
-        vulndb_cursor.execute("SELECT cpe FROM nvd_cpe WHERE cve_id = ?", (cve_id,))
-        nvd_cpes = vulndb_cursor.fetchall()
-        if nvd_cpes:  # MariaDB returns None and SQLite an empty list
-            for cpe in nvd_cpes:
-                cpe_split = cpe[0].split(":")
-                cpe_version_wildcarded = (
-                    ":".join(cpe_split[:5]) + ":*:*:" + ":".join(cpe_split[7:])
-                )
-                all_nvd_cpes.add(cpe_version_wildcarded)
+    for cpes in cve_cpes_map.values():
+        for cpe in cpes:
+            cpe_split = cpe.split(":")
+            cpe_version_wildcarded = ":".join(cpe_split[:5]) + ":*:*:" + ":".join(cpe_split[7:])
+            all_nvd_cpes.add(cpe_version_wildcarded)
 
     return list(all_nvd_cpes)
 
@@ -468,22 +468,28 @@ def select_from_where_in_to_map(db_cursor, idx_attr, val_attr, table, where_attr
     <where_attr> IN (<in_list>)' and return a map storing lists of the second select
     attribute indexed by the first."""
 
-    # create a joint SQL query and run it
-    placeholders = ",".join(["?"] * len(in_list))  # → "?,?,?,..."
-    if in_list:
+    # SQLITE_MAX_VARIABLE_NUMBER (https://sqlite.org/limits.html)
+    CHUNK = 999
+    in_list = list(in_list)
+    data = []
+
+    # run in batches to prevent SQL errors with long lists
+    for i in range(0, len(in_list), CHUNK):
+        batch = in_list[i : i + CHUNK]
+
+        # create a joint SQL query and run it
+        placeholders = ",".join(["?"] * len(batch))  # → "?,?,?,..."
         if isinstance(val_attr, list):
             db_cursor.execute(
                 f"SELECT {idx_attr}, {', '.join(val_attr)} FROM {table} WHERE {where_attr} IN ({placeholders})",
-                list(in_list),
+                batch,
             )
         else:
             db_cursor.execute(
                 f"SELECT {idx_attr}, {val_attr} FROM {table} WHERE {where_attr} IN ({placeholders})",
-                list(in_list),
+                batch,
             )
-        data = db_cursor.fetchall()
-    else:
-        data = []
+        data.extend(db_cursor.fetchall())
 
     # create idx_attr --> val_attr map
     result_map = {}

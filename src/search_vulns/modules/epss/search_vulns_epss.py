@@ -36,7 +36,7 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
         # create EPSS table in vulndb
         if vulndb_config["TYPE"] == "sqlite":
             db_cursor.execute("DROP TABLE IF EXISTS cve_epss;")
-            create_cve_epps_table = "CREATE TABLE cve_epss (cve_id VARCHAR(25), epss REAL, percentile REAL, PRIMARY KEY (cve_id));"
+            create_cve_epps_table = "CREATE TABLE cve_epss (cve_id VARCHAR(25), epss REAL, percentile REAL, PRIMARY KEY (cve_id)) WITHOUT ROWID;"
         elif vulndb_config["TYPE"] == "mariadb":
             create_cve_epps_table = "CREATE OR REPLACE TABLE cve_epss (cve_id VARCHAR(25) CHARACTER SET ascii, epss DOUBLE, percentile DOUBLE, PRIMARY KEY (cve_id));"
         db_cursor.execute(create_cve_epps_table)
@@ -61,6 +61,7 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
 
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
     # Add EPSS scores by CVE IDs
+
     all_cve_ids = extract_all_cve_ids_from_vulns(vulns)
     cve_epss_map = select_from_where_in_to_map(
         vuln_db_cursor, "cve_id", "epss", "cve_epss", "cve_id", all_cve_ids

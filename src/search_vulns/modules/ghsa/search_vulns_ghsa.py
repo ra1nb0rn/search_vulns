@@ -12,16 +12,41 @@ from search_vulns.models.Vulnerability import DataSource, MatchReason, Vulnerabi
 
 # implement update procedures in separate file
 from search_vulns.modules.ghsa.build import REQUIRES_BUILT_MODULES, full_update
-from search_vulns.modules.utils import search_vulns_by_cpes_simple
+from search_vulns.modules.utils import (
+    search_vulns_by_cpes_simple,
+    select_from_where_in_to_map,
+)
 
 MATCH_GHSA_IDS_RE = re.compile(
     r"(GHSA(?:-[23456789cfghjmpqrvwx]{4}){3})"
 )  # Source: https://github.com/github/advisory-database#ghsa-ids
 VULN_TRACK_BASE_URL = "https://github.com/advisories/"
+ALIAS_SEARCH_BATCH_SIZE = 999
 
 
 def get_detailed_vulns(vulns: Dict[str, Vulnerability], vuln_db_cursor):
     detailed_vulns = {}
+    ghsa_ids = [vuln[0] for vuln in vulns]
+    ghsa_data_map = select_from_where_in_to_map(
+        vuln_db_cursor,
+        "ghsa_id",
+        [
+            "description",
+            "published",
+            "last_modified",
+            "cvss_version",
+            "base_score",
+            "vector",
+            "cwe_ids",
+        ],
+        "ghsa",
+        "ghsa_id",
+        ghsa_ids,
+    )
+    ghsa_aliases = select_from_where_in_to_map(
+        vuln_db_cursor, "ghsa_id", "alias", "ghsa_aliases", "ghsa_id", ghsa_ids
+    )
+
     for vuln_info in vulns:
         vuln_id, match_reason = vuln_info
         if vuln_id in detailed_vulns:
@@ -30,13 +55,12 @@ def get_detailed_vulns(vulns: Dict[str, Vulnerability], vuln_db_cursor):
                 detailed_vulns[vuln_id].match_reason = match_reason
             continue
 
-        query = "SELECT aliases, description, published, last_modified, cvss_version, base_score, vector, cwe_ids FROM ghsa WHERE ghsa_id = ?"
-        vuln_db_cursor.execute(query, (vuln_id,))
-        queried_info = vuln_db_cursor.fetchone()
+        # complete vuln data
+        queried_info = next(iter(ghsa_data_map[vuln_id]))
         if queried_info:
-            aliases, descr, publ, last_mod, cvss_ver, score, vector, cwe_ids = queried_info
+            descr, publ, last_mod, cvss_ver, score, vector, cwe_ids = queried_info
         else:
-            aliases, publ, last_mod, cvss_ver, vector, cwe_ids = [], "", "", "", "", ""
+            publ, last_mod, cvss_ver, vector, cwe_ids = [], "", "", "", "", ""
             score, descr = "-1.0", "NOT FOUND"
             match_reason = MatchReason.N_A
         if cvss_ver:
@@ -53,22 +77,16 @@ def get_detailed_vulns(vulns: Dict[str, Vulnerability], vuln_db_cursor):
         else:
             cwe_ids = []
 
-        if aliases:
-            if "," in aliases:
-                aliases = aliases.split(",")
+        # complete aliases
+        aliases_full = {vuln_id: href}
+        for alias in ghsa_aliases.get(vuln_id, []):
+            if alias.startswith("CVE-"):
+                aliases_full[alias] = "https://nvd.nist.gov/vuln/detail/" + alias
             else:
-                aliases = [aliases]
-            aliases_full = {}
-            for alias in aliases:
-                if alias.startswith("CVE-"):
-                    aliases_full[alias] = "https://nvd.nist.gov/vuln/detail/" + alias
-                else:
-                    aliases_full[alias] = ""
-            aliases = aliases_full
-        else:
-            aliases = {}
-        aliases[vuln_id] = href
+                aliases_full[alias] = ""
+        aliases = aliases_full
 
+        # create detailed vuln from data above
         if float(score) < 0:
             severity = None
         else:
@@ -135,39 +153,18 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
     for vuln in vulns.values():
         all_cve_ids |= vuln.get_all_cve_ids()
 
-    # make one joint SQL query with all involved cve_ids
-    if all_cve_ids:
-        cve_ghsa = []
-        ids = list(all_cve_ids)
-        CHUNK = 400
-        for i in range(0, len(ids), CHUNK):
-            batch = ids[i : i + CHUNK]
-            conditions = " OR ".join(["(aliases = ? OR aliases LIKE ?)"] * len(batch))
-            params = [param for cve_id in batch for param in (cve_id, "%" + cve_id + ",%")]
-            vuln_db_cursor.execute(
-                f"SELECT ghsa_id, aliases FROM ghsa WHERE {conditions}", params
-            )
-            cve_ghsa.extend(vuln_db_cursor.fetchall())
-    else:
-        cve_ghsa = []
-
     # create cve_id --> ghsa_id map
-    cve_ghsa_map = {}
-    for ghsa_id, aliases in cve_ghsa:
-        for alias in aliases.split(","):
-            if alias.startswith("CVE-"):
-                if alias not in cve_ghsa_map:
-                    cve_ghsa_map[alias] = set()
-                cve_ghsa_map[alias].add(ghsa_id)
+    cve_ghsa_map = select_from_where_in_to_map(
+        vuln_db_cursor, "alias", "ghsa_id", "ghsa_aliases", "alias", all_cve_ids
+    )
 
-    # finally, add GHSA aliases
+    # add GHSA aliases
     for vuln_id, vuln in vulns.items():
         for alias in vuln.aliases | {vuln.id: ""}:
-            if alias.startswith("CVE-"):
-                for ghsa_id in cve_ghsa_map.get(alias, []):
-                    if ghsa_id not in vuln.aliases:
-                        href = VULN_TRACK_BASE_URL + ghsa_id
-                        vuln.add_tracked_by_with_alias(DataSource.GHSA, href, ghsa_id)
+            for ghsa_id in cve_ghsa_map.get(alias, []):
+                if ghsa_id not in vuln.aliases:
+                    href = VULN_TRACK_BASE_URL + ghsa_id
+                    vuln.add_tracked_by_with_alias(DataSource.GHSA, href, ghsa_id)
 
 
 def postprocess_results(

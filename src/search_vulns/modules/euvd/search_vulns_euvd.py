@@ -37,11 +37,11 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
     db_conn = get_database_connection(vulndb_config, sqlite_timeout=SQLITE_TIMEOUT)
     db_cursor = db_conn.cursor()
     if vulndb_config["TYPE"] == "sqlite":
-        create_cve_edbids_table = "DROP TABLE IF EXISTS euvd; CREATE TABLE euvd (euvd_id VARCHAR(25), cve_id VARCHAR(25), euvd_kev BOOL, PRIMARY KEY (euvd_id));"
+        create_euvd_table = "DROP TABLE IF EXISTS euvd; CREATE TABLE euvd (euvd_id VARCHAR(25), cve_id VARCHAR(25), euvd_kev BOOL, PRIMARY KEY (cve_id, euvd_id)) WITHOUT ROWID;"
     elif vulndb_config["TYPE"] == "mariadb":
-        create_cve_edbids_table = "CREATE OR REPLACE TABLE euvd (euvd_id VARCHAR(25) CHARACTER SET ascii, cve_id VARCHAR(25) CHARACTER SET ascii, euvd_kev BOOL, PRIMARY KEY (euvd_id));"
+        create_euvd_table = "CREATE OR REPLACE TABLE euvd (euvd_id VARCHAR(25) CHARACTER SET ascii, cve_id VARCHAR(25) CHARACTER SET ascii, euvd_kev BOOL, PRIMARY KEY (cve_id, euvd_id));"
     # necessary because SQLite can't handle more than one query a time
-    for query in create_cve_edbids_table.split(";"):
+    for query in create_euvd_table.split(";"):
         if query:
             db_cursor.execute(query + ";")
     db_conn.commit()
