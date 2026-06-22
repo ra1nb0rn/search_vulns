@@ -58,7 +58,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.EOL,
-            "latest": "8.3.1",
+            "latest": "8.3.4",
             "reference": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -69,7 +69,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.OUTDATED,
-            "latest": "7.0.32",
+            "latest": "7.0.37",
             "reference": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)

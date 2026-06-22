@@ -699,6 +699,15 @@ class TestSearches(unittest.TestCase):
                 },
             },
             "CVE-2025-7900": "GHSA-rc5f-3hfv-jxp2",
+            "CVE-2026-49738": "GHSA-jf56-v8jc-jcc5",
+            "CVE-2026-47349": "GHSA-f34x-rx2w-7pm3",
+            "CVE-2026-47343": "GHSA-3v8v-4wg6-r7qh",
+            "CVE-2026-47347": "GHSA-3p42-w5ch-gg42",
+            "CVE-2026-11607": "GHSA-pjpj-v387-x4vq",
+            "CVE-2026-47346": "GHSA-hwvq-2w67-rvxp",
+            "CVE-2026-49740": "GHSA-c78m-c52x-jgwp",
+            "CVE-2026-47351": "GHSA-q93m-25xv-94hh",
+            "CVE-2026-47352": "GHSA-2j54-93q2-3hjq",
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
