@@ -24,6 +24,9 @@
             "CPE_SEARCH_COUNT": 10,
             "CPE_SEARCH_THRESHOLD": 0.67
         },
+        "misc.search_vulns_kevintel": {
+            "KEVINTEL_API_KEY": ""
+        },
         "nvd.search_vulns_nvd": {
             "NVD_API_KEY": ""
         },
