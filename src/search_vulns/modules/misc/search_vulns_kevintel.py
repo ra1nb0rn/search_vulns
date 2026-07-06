@@ -1,8 +1,6 @@
 import logging
-import sqlite3
 from typing import Dict
 
-import mariadb
 import requests
 
 from search_vulns.models.Vulnerability import Vulnerability
@@ -74,5 +72,6 @@ def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config,
             for cve_id in vuln.get_all_cve_ids():
                 if cve_id in cve_kev_map:
                     vuln.add_kev(KEVINTEL_REFERENCE_BASE_URL + f"{cve_id}#overview")
-    except (sqlite3.OperationalError, mariadb.ProgrammingError):
+    except:
+        # skip if KEVIntel is not set up
         pass
