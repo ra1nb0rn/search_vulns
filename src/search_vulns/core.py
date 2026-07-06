@@ -153,7 +153,7 @@ def get_modules():
                             missing_dep = getattr(exc, "name", str(exc))
                             opt_group = OPTIONAL_DEP_GROUPS.get(missing_dep)
                             if opt_group:
-                                from .cli import YELLOW, printit
+                                from .cli.formatters import YELLOW, printit
 
                                 printit(
                                     "[!] Skipping module '{module_id}' – missing optional dependency '{missing_dep}'.".format(
