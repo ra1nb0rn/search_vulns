@@ -1,6 +1,22 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.2.0 - 2026-07-06
+### Added
+* Added KEVIntel as data source (optional, since it requires a new API key)
+* Added note that a VulnCheck account is required to access their data
+* Added equivalent CPEs for Kubernetes and kube-apiserver
+
+### Changed
+* Improved schemas of search_vulns' internal DBs and its SQL queries for increased performance
+
+### Fixed
+* Use batching to avoid running into SQLite's max query depth
+* Prefer Debian EoL data over endoflife.date for Debian packages in default config
+* Updated test cases
+* Fixed bug with exploits for vulns without a CVE ID
+
+
 ## v1.1.0 - 2026-06-05
 ### Added
 - Added EUVD IDs.
