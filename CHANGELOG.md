@@ -1,6 +1,11 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.2.1 - 2026-07-06
+### Fixed
+* Fixed import error in new KEVIntel module
+
+
 ## v1.2.0 - 2026-07-06
 ### Added
 * Added KEVIntel as data source (optional, since it requires a new API key)
