@@ -29,7 +29,6 @@ class TestSearches(unittest.TestCase):
             "CVE-2026-40701",
             "CVE-2026-9256",
             "CVE-2026-42055",
-            "CVE-2026-49975",
             "CVE-2026-48142",
         ]
         expected_backpatched = ["CVE-2023-44487"]
@@ -68,6 +67,15 @@ class TestSearches(unittest.TestCase):
             "CVE-2026-6276",
             "CVE-2026-4873",
             "CVE-2026-5773",
+            "CVE-2026-11856",
+            "CVE-2026-9547",
+            "CVE-2026-8932",
+            "CVE-2026-8927",
+            "CVE-2026-8458",
+            "CVE-2026-10536",
+            "CVE-2026-12064",
+            "CVE-2026-8924",
+            "CVE-2026-8286",
         ]
         expected_backpatched = [
             "CVE-2023-46219",

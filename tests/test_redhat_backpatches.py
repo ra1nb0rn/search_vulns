@@ -20,7 +20,6 @@ class TestSearches(unittest.TestCase):
             "CVE-2026-42934",
             "CVE-2026-42946",
             "CVE-2026-40701",
-            "CVE-2026-49975",
             "CVE-2026-48142",
             "CVE-2026-42055",
         ]
