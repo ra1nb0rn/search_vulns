@@ -1,6 +1,16 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.2.2 - 2026-07-13
+### Changed
+* Daily GitHub update of databases runs an hour earlier now
+
+### Fixed
+* Daily GitHub update of databases now includes KEVIntel data
+* Updated versions of actions used in GitHub workflows
+* Updated test cases
+
+
 ## v1.2.1 - 2026-07-06
 ### Fixed
 * Fixed import error in new KEVIntel module
