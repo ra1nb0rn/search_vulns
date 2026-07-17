@@ -1,5 +1,8 @@
 project(cve-database-creation)
 
+# minimum CMake version
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
+
 SET(CMAKE_CXX_STANDARD 20)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 

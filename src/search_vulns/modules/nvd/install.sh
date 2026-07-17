@@ -32,8 +32,8 @@ setup_create_db() {
     ## download SQLiteCpp for create_db
     git clone --depth 1 "https://github.com/SRombauts/SQLiteCpp"
     cd SQLiteCpp
-    git fetch --depth 1 origin "beb2b2964036f7ec87394a0d7f32db170d4bcdfe"
-    git checkout "beb2b2964036f7ec87394a0d7f32db170d4bcdfe"
+    git fetch --depth 1 origin "a6537fe4c90a7e83b91fc899aa1fb43b979c0c93"
+    git checkout "a6537fe4c90a7e83b91fc899aa1fb43b979c0c93"
     git submodule init
     git submodule update
     cd ..
@@ -41,8 +41,8 @@ setup_create_db() {
     ## download mariadb-connector-cpp for create_db
     git clone --depth 1 "https://github.com/mariadb-corporation/mariadb-connector-cpp"
     cd mariadb-connector-cpp
-    git fetch --depth 1 origin "b09555de99ed4b1d054a88ff85acbae996bce1d1"
-    git checkout "b09555de99ed4b1d054a88ff85acbae996bce1d1"
+    git fetch --depth 1 origin "7a289771f92f2f625a26d6d69da9b586dcd815bf"
+    git checkout "7a289771f92f2f625a26d6d69da9b586dcd815bf"
     git submodule init
     git submodule update
     cd ..
