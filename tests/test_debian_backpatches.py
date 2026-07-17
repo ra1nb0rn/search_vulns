@@ -30,6 +30,10 @@ class TestSearches(unittest.TestCase):
             "CVE-2026-9256",
             "CVE-2026-42055",
             "CVE-2026-48142",
+            "CVE-2026-60005",
+            "CVE-2026-56434",
+            "CVE-2026-42533",
+
         ]
         expected_backpatched = ["CVE-2023-44487"]
         result_open, result_backpatched = [], []
