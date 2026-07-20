@@ -1,6 +1,13 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.2.3 - 2026-07-20
+### Fixed
+* Fix full install by updating dependencies and adding minimum CMake version
+* Fixed debian query preprocessing using incomplete release data
+* Updated test cases
+
+
 ## v1.2.2 - 2026-07-13
 ### Changed
 * Daily GitHub update of databases runs an hour earlier now
