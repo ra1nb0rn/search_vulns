@@ -119,6 +119,9 @@ def preprocess_query(
 
         extra_params["debian_orig_query"] = query
         for codename, release_number in CODENAME_RELEASE_NUMBER_MAP.items():
+            if not codename or not release_number:
+                continue
+
             # accept codename and release number at the same time, if identical release referenced
             found_release = False
             if " " + codename + " " in query_no_debian:
