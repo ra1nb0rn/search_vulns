@@ -33,7 +33,6 @@ class TestSearches(unittest.TestCase):
             "CVE-2026-60005",
             "CVE-2026-56434",
             "CVE-2026-42533",
-
         ]
         expected_backpatched = ["CVE-2023-44487"]
         result_open, result_backpatched = [], []
@@ -127,7 +126,14 @@ class TestSearches(unittest.TestCase):
         query = "squid 5.7-2 Debian 12"
         result = search_vulns(query=query, include_patched=True)
 
-        expected_open = ["CVE-2023-49288", "CVE-2026-33515", "CVE-2026-32748", "CVE-2026-33526"]
+        expected_open = [
+            "CVE-2023-49288",
+            "CVE-2026-33515",
+            "CVE-2026-32748",
+            "CVE-2026-33526",
+            "CVE-2026-47729",
+            "CVE-2026-50012",
+        ]
         expected_backpatched = [
             "CVE-2024-23638",
             "CVE-2023-50269",
