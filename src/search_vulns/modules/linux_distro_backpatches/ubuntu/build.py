@@ -132,6 +132,13 @@ def get_version_end_ubuntu(status, note):
             version_end = "-1"
         else:
             version_end = str(sys.maxsize)
+    # fix was released
+    elif status == "released":
+        if note and BASIC_VERSION_RE.match(note):
+            version_end = note
+        else:
+            # if no note about fixed version is provided, treat package as vulnerable still
+            version_end = str(sys.maxsize)
 
     # check if multiple versions are given, e.g. in CVE-2014-3547
     if " " in version_end:
