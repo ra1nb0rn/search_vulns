@@ -36,7 +36,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 REDHAT_DATAFEED_DIR = os.path.join(SCRIPT_DIR, "vuln-list-redhat")
 REDHAT_RELEASES = {}
 SIM_SCORE_THRES_NVD_CPE_RETRIEVAL = 0.35
-NEVRA_RE = re.compile(r"^(.+?)[-:]((?:\d+:)?[A-Za-z0-9_.~+]+)(?:-([A-Za-z0-9_.]+))?$")
+NEVRA_RE = re.compile(r"^(.+?)[-:]((?:\d+:)?[A-Za-z0-9_.~+]+)(?:-([A-Za-z0-9_.~+]+))?$")
 RHEL_IN_PKG_RE = re.compile(r"(-?rhel([\d\.]+))-?")
 PKG_REVERSE_STRUCTURE_FIX_RE = re.compile(r"([\w\-_]+)[:]([\d\.]+)\/(.*)")
 PKG_NAME_SPLIT_RE = re.compile(r"[^a-zA-Z\d]")
@@ -90,12 +90,15 @@ def get_package_details(redhat_package_data):
         package = match.group(1)
         version = match.group(2)
         release = match.group(3)
-        if "el" in release:
+
+        if release and "el" in release:
             before, release = release.split("." + nevra_keyword, 1)
             if before:
                 version += "-" + before
-        else:
+        elif release:
             version += "-" + release
+            release = ""
+        else:
             release = ""
     else:
         version, release = "", ""
