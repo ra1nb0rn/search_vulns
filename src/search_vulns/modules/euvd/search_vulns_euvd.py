@@ -2,6 +2,7 @@ import logging
 from typing import Dict
 
 import requests
+import time
 import ujson
 
 from search_vulns.models.Vulnerability import Vulnerability
@@ -17,18 +18,29 @@ LOGGER = logging.getLogger()
 
 
 def full_update(productdb_config, vulndb_config, module_config, stop_update):
-    # download and parse KEV data
-    resp = requests.get("https://euvdservices.enisa.europa.eu/api/kev/dump")
+    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0"}
+
+    # download and parse KEV data (try multiple times b/c of recent API errors)
+    for i in range(5):
+        time.sleep(i*1)
+        resp = requests.get("https://euvdservices.enisa.europa.eu/api/kev/dump", headers=headers)
+        if resp.status_code == 200:
+            break
     if resp.status_code != 200:
         LOGGER.error("Could not retrieve EUVD KEV data")
         return False, []
+
     euvd_kev = set()
     for kev_item in ujson.loads(resp.text):
         if "eukev_kev" in kev_item["sources"]:
             euvd_kev.add(kev_item["euvdId"])
 
-    # download EUVD <-> CVE mapping
-    resp = requests.get("https://euvdservices.enisa.europa.eu/api/dump/cve-euvd-mapping")
+    # download EUVD <-> CVE mapping (try multiple times b/c of recent API errors)
+    for i in range(5):
+        time.sleep((i+1)*1)
+        resp = requests.get("https://euvdservices.enisa.europa.eu/api/dump/cve-euvd-mapping", headers=headers)
+        if resp.status_code == 200:
+            break
     if resp.status_code != 200:
         LOGGER.error("Could not retrieve EUVD <-> CVE mapping")
         return False, []
