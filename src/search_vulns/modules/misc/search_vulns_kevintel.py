@@ -7,6 +7,7 @@ from search_vulns.models.Vulnerability import Vulnerability
 from search_vulns.modules.utils import (
     SQLITE_TIMEOUT,
     extract_all_cve_ids_from_vulns,
+    extract_all_ghsa_ids_from_vulns,
     get_database_connection,
     select_from_where_in_to_map,
 )
@@ -19,9 +20,9 @@ LOGGER = logging.getLogger()
 def full_update(productdb_config, vulndb_config, module_config, stop_update):
     # CREATE TABLE
     if vulndb_config["TYPE"] == "sqlite":
-        create_table_query = "DROP TABLE IF EXISTS kevintel; CREATE TABLE kevintel (cve_id VARCHAR(25), PRIMARY KEY (cve_id));"
+        create_table_query = "DROP TABLE IF EXISTS kevintel; CREATE TABLE kevintel (vuln_id VARCHAR(45), PRIMARY KEY (vuln_id));"
     elif vulndb_config["TYPE"] == "mariadb":
-        create_table_query = "CREATE OR REPLACE TABLE kevintel (cve_id VARCHAR(25) CHARACTER SET ascii, PRIMARY KEY (cve_id));"
+        create_table_query = "CREATE OR REPLACE TABLE kevintel (vuln_id VARCHAR(45) CHARACTER SET ascii, PRIMARY KEY (vuln_id));"
 
     # get DB connection and create table
     db_conn = get_database_connection(vulndb_config, sqlite_timeout=SQLITE_TIMEOUT)
@@ -49,7 +50,12 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
             return False, []
         kev_data = resp.json()
         for kev in kev_data["kevs"]:
-            db_cursor.execute(insert_query, (kev["cve_id"],))
+            vuln_id = kev["vulnerability_id"]
+            if not vuln_id:
+                continue
+            if vuln_id.split("-", maxsplit=1)[0] not in ("CVE", "GHSA", "EUVD"):
+                continue
+            db_cursor.execute(insert_query, (vuln_id,))
 
         if page >= int(kev_data["pagination"]["total_pages"]):
             break
@@ -63,15 +69,25 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
 def add_extra_vuln_info(vulns: Dict[str, Vulnerability], vuln_db_cursor, config, extra_params):
     # Add KEV info from KEVIntel if configured
     all_cve_ids = extract_all_cve_ids_from_vulns(vulns)
+    all_ghsa_ids = extract_all_ghsa_ids_from_vulns(vulns)
+    all_vuln_ids = all_cve_ids | all_ghsa_ids
 
     try:
-        cve_kev_map = select_from_where_in_to_map(
-            vuln_db_cursor, "cve_id", "cve_id", "kevintel", "cve_id", all_cve_ids
+        vuln_id_kev_map = select_from_where_in_to_map(
+            vuln_db_cursor, "vuln_id", "vuln_id", "kevintel", "vuln_id", all_vuln_ids
         )
         for vuln in vulns.values():
+            is_kev = False
             for cve_id in vuln.get_all_cve_ids():
-                if cve_id in cve_kev_map:
+                if cve_id in vuln_id_kev_map:
                     vuln.add_kev(KEVINTEL_REFERENCE_BASE_URL + f"{cve_id}#overview")
+                    is_kev = True
+            if is_kev:
+                continue
+
+            for ghsa_id in vuln.get_all_ghsa_ids():
+                if ghsa_id in vuln_id_kev_map:
+                    vuln.add_kev(KEVINTEL_REFERENCE_BASE_URL + f"{ghsa_id}#overview")
     except:
         # skip if KEVIntel is not set up
         pass

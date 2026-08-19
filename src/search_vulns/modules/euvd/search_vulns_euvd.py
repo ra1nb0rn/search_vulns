@@ -1,8 +1,8 @@
 import logging
+import time
 from typing import Dict
 
 import requests
-import time
 import ujson
 
 from search_vulns.models.Vulnerability import Vulnerability
@@ -18,12 +18,16 @@ LOGGER = logging.getLogger()
 
 
 def full_update(productdb_config, vulndb_config, module_config, stop_update):
-    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0"
+    }
 
     # download and parse KEV data (try multiple times b/c of recent API errors)
     for i in range(5):
-        time.sleep(i*1)
-        resp = requests.get("https://euvdservices.enisa.europa.eu/api/kev/dump", headers=headers)
+        time.sleep(i * 1)
+        resp = requests.get(
+            "https://euvdservices.enisa.europa.eu/api/kev/dump", headers=headers
+        )
         if resp.status_code == 200:
             break
     if resp.status_code != 200:
@@ -37,8 +41,10 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
 
     # download EUVD <-> CVE mapping (try multiple times b/c of recent API errors)
     for i in range(5):
-        time.sleep((i+1)*1)
-        resp = requests.get("https://euvdservices.enisa.europa.eu/api/dump/cve-euvd-mapping", headers=headers)
+        time.sleep((i + 1) * 1)
+        resp = requests.get(
+            "https://euvdservices.enisa.europa.eu/api/dump/cve-euvd-mapping", headers=headers
+        )
         if resp.status_code == 200:
             break
     if resp.status_code != 200:

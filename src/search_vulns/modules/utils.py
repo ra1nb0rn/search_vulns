@@ -463,6 +463,13 @@ def extract_all_cve_ids_from_vulns(vulns: Dict[str, Vulnerability]):
     return all_cve_ids
 
 
+def extract_all_ghsa_ids_from_vulns(vulns: Dict[str, Vulnerability]):
+    all_ghsa_ids = set()
+    for vuln in vulns.values():
+        all_ghsa_ids |= vuln.get_all_ghsa_ids()
+    return all_ghsa_ids
+
+
 def select_from_where_in_to_map(db_cursor, idx_attr, val_attr, table, where_attr, in_list):
     """Run SQL query in the form of 'SELECT <idx_attr>, <val_attr> FROM <table> WHERE
     <where_attr> IN (<in_list>)' and return a map storing lists of the second select
