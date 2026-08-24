@@ -73,7 +73,16 @@ def postprocess_results(
         if queried_release_branch_idx is not None:
             latest_release = eol_releases[0][2]
             release = eol_releases[queried_release_branch_idx]
-            release_start, release_end = CPEVersion(release[1]), CPEVersion(release[2])
+            release_start, release_end = release[1], release[2]
+            # strip extra info from release data, e.g. in
+            # "13.0.7095.1 Azure Connect pack+GDR" version string for MSSQL
+            if " " not in str(query_version):
+                if " " in release_start:
+                    release_start = release_start[: release_start.find(" ")]
+                if " " in release_end:
+                    release_end = release_end[: release_end.find(" ")]
+            release_start, release_end = CPEVersion(release_start), CPEVersion(release_end)
+
             if not release_end:
                 # skip releases where latest release is unclear, e.g. oracle-database
                 continue
