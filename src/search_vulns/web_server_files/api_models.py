@@ -37,7 +37,7 @@ class SearchVulnsQuery(BaseModel):
     include_single_version_vulns: Literal["true", "false"] = Field(
         "false", alias="include-single-version-vulns"
     )
-    is_good_product_id: Literal["true", "false"] = Field("true", alias="is-good-product-id")
+    is_good_product_id: Literal["true", "false"] = Field("false", alias="is-good-product-id")
     include_patched: Literal["true", "false"] = Field("false", alias="include-patched")
     use_created_product_ids: Literal["true", "false"] = Field(
         "false", alias="use-created-product-ids"
