@@ -234,11 +234,14 @@ def search_vulns(
         # discover break point if queried build was found
         # keep going if queried release is EoL to gather fixed vulns for release
         if queried_build > CPEVersion(build):
-            if not queried_build_is_eol:
-                break
-            elif queried_release > CPEVersion(release):
-                break
-            cur_fixed_cves += last_fixed_cves_str.split(",")
+            # skip this for now, b/c sqlserverbuilds does currently not track
+            # correct end of extended security support
+            # if not queried_build_is_eol:
+            #     break
+            # if queried_release > CPEVersion(release):
+            #     break
+            # cur_fixed_cves += last_fixed_cves_str.split(",")
+            break  # remove when above is uncommented
 
         # append vulns fixed by previous release
         if last_fixed_cves_str:
@@ -263,10 +266,14 @@ def search_vulns(
     cur_cves = set(cur_cves)
     cur_fixed_cves = set(cur_fixed_cves)
     all_seen_cves = set(all_seen_cves)
-    if not queried_build_is_eol:
-        affected_by_cves = cur_cves
-    else:
-        affected_by_cves = all_seen_cves - cur_fixed_cves
+
+    # skip this for now, b/c sqlserverbuilds does currently not track
+    # correct end of extended security support
+    # if not queried_build_is_eol:
+    #     affected_by_cves = cur_cves
+    # else:
+    #     affected_by_cves = all_seen_cves - cur_fixed_cves
+    affected_by_cves = cur_cves  # remove when the above is uncommented
 
     # return vulns to search_vulns core
     vulns = {}
