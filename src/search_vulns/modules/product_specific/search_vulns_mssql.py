@@ -22,7 +22,8 @@ SQL_SERVER_BUILDS_RELEASES_URL = "https://docs.google.com/spreadsheets/d/16Ymdz8
 SQL_SERVER_BUILDS_OVERVIEW_URL = "https://sqlserverbuilds.blogspot.com/"
 MICROSOFT_ADVISORY_BASE_URL = "https://msrc.microsoft.com/update-guide/en-US/vulnerability/"
 MSSQL_QUERY_RE = re.compile(
-    r"(mssql|((microsoft)?\s*sql\s*server))\s*(\d{4})?\s*((\d+\.\d+).\d+\.\d+)", re.IGNORECASE
+    r"((mssql|((microsoft)?\s*sql\s*server))\s*(\d{4})?\s*((\d+\.\d+).\d+\.\d+)(\s+[A-Z0-9]{2,4})?)",
+    re.IGNORECASE,
 )
 MSSQL_CPE_QUERY_RE = re.compile(
     r"(cpe:2\.3:a:microsoft:sql_server:((\d+\.\d+).\d+\.\d+):)", re.IGNORECASE
@@ -127,7 +128,7 @@ def preprocess_query(
     # hijack textual query to match to proper CPE
     text_query_matches = MSSQL_QUERY_RE.findall(query)
     if text_query_matches:
-        build = text_query_matches[0][-2]
+        build = text_query_matches[0][-3]
         cpe = f"cpe:2.3:a:microsoft:sql_server:{build}:*:*:*:*:*:*:*"
         return query.replace(text_query_matches[0][0], ""), {
             "mssql_cpes": [cpe],
