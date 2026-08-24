@@ -196,6 +196,8 @@ def search_vulns(
 
     # check if queried release is EoL
     queried_release_nr = ".".join(queried_build.split(".")[:2])
+    if queried_release_nr.endswith("00"):
+        queried_release_nr = queried_release_nr[:-1]
     queried_build_is_eol = False
     vuln_db_cursor.execute(
         "SELECT mssql_release, eol_date FROM mssql_releases WHERE version = ?",
