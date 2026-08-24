@@ -174,7 +174,10 @@ def full_update(productdb_config, vulndb_config, module_config, stop_update):
         for i, release in enumerate(reversed(eold_entry["releases"])):
             version_start = release["releaseCycle"]
             version_latest = release.get("latest", "")  # e.g. slackware
-            eol_info = release.get("eol", "false")
+            eol_info = release.get("eoes", "false")
+            if eol_info == "false":
+                eol_info = release.get("eol", "false")
+
             db_data = (
                 cpe,
                 i,
