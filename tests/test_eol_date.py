@@ -14,7 +14,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.N_A,
-            "latest": "7.0.2",
+            "latest": "7.1.0",
             "reference": "https://endoflife.date/wordpress",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -25,7 +25,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.EOL,
-            "latest": "7.0.2",
+            "latest": "7.1.0",
             "reference": "https://endoflife.date/wordpress",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -58,7 +58,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.EOL,
-            "latest": "8.3.4",
+            "latest": "8.3.8",
             "reference": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -69,7 +69,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.OUTDATED,
-            "latest": "7.0.37",
+            "latest": "7.0.40",
             "reference": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -80,7 +80,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.OUTDATED,
-            "latest": "15.0.4470.1 CU32+GDR",
+            "latest": "15.0.4480.2",
             "reference": "https://endoflife.date/mssqlserver",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
