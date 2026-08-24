@@ -222,11 +222,11 @@ function createVulnTableRowHtml(idx, vuln) {
             source_badge_color = "warning";
         }
         if (vuln.kev.length > 0) {
-            vuln_flag_html += `<div class="w-full flex flex-row flex-wrap gap-1 justify-end ml-3"><div class="dropdown dropdown-hover dropdown-center exploited-vuln text-base-content"><div class="z-10 inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-exploited text-exploited cursor-help" tabindex="0"><i class="fa-solid fa-skull text-xs text-exploited"></i></div><div tabindex="0" class="dropdown-content z-20 w-54 md:w-74 shadow-xl rounded-box m-0 p-0 bg-base-transparent"><div class="mt-2 p-2 rounded-box bg-base-300 border-1 border-exploited break-normal whitespace-normal">This vulnerability has been exploited in the wild according to:<ul tabindex="0" class="list-disc pl-6 mt-1 break-all text-left text-sm font-light">`
+            vuln_flag_html += `<div class="dropdown dropdown-hover dropdown-center exploited-vuln text-base-content self-center"><div class="z-10 inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-exploited text-exploited cursor-help" tabindex="0"><i class="fa-solid fa-skull text-xs text-exploited"></i></div><div tabindex="0" class="dropdown-content z-20 w-54 md:w-74 shadow-xl rounded-box m-0 p-0 bg-base-transparent"><div class="mt-2 p-2 rounded-box bg-base-300 border-1 border-exploited break-normal whitespace-normal">This vulnerability has been exploited in the wild according to:<ul tabindex="0" class="list-disc pl-6 mt-1 break-all text-left text-sm font-light">`
             vuln.kev.forEach(kev_ref => {
                 vuln_flag_html += `<li class="mt-1"> <a class="link-primary" target="_blank" href="${kev_ref}">${kev_ref}</a></li>`;
             });
-            vuln_flag_html += `</ul></div></div></div></div>`;
+            vuln_flag_html += `</ul></div></div></div>`;
         }
         if (vuln.reported_patched_by.length > 0) {
             vuln_flag_html += `<span class="vuln-flag-icon" data-tooltip-target="tooltip-patched-${idx}" data-tooltip-placement="bottom"><span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border bg-info/15 text-info"><i class="fa-solid fa-shield text-xs"></i></span><div id="tooltip-patched-${idx}" role="tooltip" class="tooltip relative z-10 w-80 p-2 text-sm invisible rounded-lg shadow-sm opacity-0 bg-base-300" style="white-space:pre-wrap">This vulnerability was reported (back)patched for the queried version and environment.<div class="tooltip-arrow" data-popper-arrow></div></div>`;
@@ -236,7 +236,7 @@ function createVulnTableRowHtml(idx, vuln) {
         }
 
         if (vuln_flag_html)
-            vuln_flag_html = `<div class="w-full flex flex-row flex-wrap gap-1 justify-end ml-3">${vuln_flag_html}</div>`;
+            vuln_flag_html = `<div class="w-full flex flex-row items-center gap-1 justify-end ml-3">${vuln_flag_html}</div>`;
 
         // set up badge with tracking references
         trackCount = getVulnTrackCount(vuln);
