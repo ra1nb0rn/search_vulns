@@ -216,36 +216,43 @@ def search_product_ids(
     if not query:
         return ProductIDsResult(), PotProductIDsResult()
 
-    # if CPEs were already provided as product IDs, do not run
-    if current_product_ids.cpe:
-        return ProductIDsResult(), PotProductIDsResult()
-
-    # perform CPE search if needed
+    # only perform search if CPEs were not already provided as product IDs
     cpe, pot_cpes, cpe_search_results = None, [], []
-    if not MATCH_CPE_23_RE.match(query):
-        cpe_search_results = search_cpes(query, db_cursor=product_db_cursor, config=config)
-        if cpe_search_results["cpes"]:
-            cpes = cpe_search_results["cpes"]
-            if cpes:
-                cpe = cpes[0][0]
-        pot_cpes = cpe_search_results.get("pot_cpes", [])
-    else:
-        cpe = query
-        cpe_parts = cpe.split(":")
-        if len(cpe_parts) < 13:
-            cpe = cpe + (13 - len(cpe_parts)) * ":*"
-        pot_cpes = [(cpe, 1)]
+    if not current_product_ids.cpe:
+        if not MATCH_CPE_23_RE.match(query):
+            cpe_search_results = search_cpes(query, db_cursor=product_db_cursor, config=config)
+            if cpe_search_results["cpes"]:
+                cpes = cpe_search_results["cpes"]
+                if cpes:
+                    cpe = cpes[0][0]
+            pot_cpes = cpe_search_results.get("pot_cpes", [])
+        else:
+            cpe = query
+            cpe_parts = cpe.split(":")
+            if len(cpe_parts) < 13:
+                cpe = cpe + (13 - len(cpe_parts)) * ":*"
+            pot_cpes = [(cpe, 1)]
 
     # get equivalent CPEs
     all_product_ids, equivalent_cpes = {}, []
+    init_cpes = current_product_ids.cpe
     if cpe:
-        if is_product_id_query:
-            equivalent_cpes = [cpe]  # only use provided CPE
-        else:
-            equivalent_cpes = get_equivalent_cpes(
+        init_cpes.append(cpe)
+
+    if is_product_id_query:
+        if MATCH_CPE_23_RE.match(query):
+            equivalent_cpes = [query]
+        elif cpe:
+            equivalent_cpes = [cpe]
+        elif current_product_ids.cpe:
+            equivalent_cpes = current_product_ids.cpe[0]
+    else:
+        for cpe in init_cpes:
+            equivalent_cpes += get_equivalent_cpes(
                 cpe, product_db_cursor
             )  # also search and use equivalent CPEs
-        all_product_ids["cpe"] = equivalent_cpes
+        equivalent_cpes = list(set(equivalent_cpes))
+    all_product_ids["cpe"] = equivalent_cpes
 
     if not all_product_ids:
         all_product_ids = {"cpe": []}
