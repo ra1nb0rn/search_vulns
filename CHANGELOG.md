@@ -1,6 +1,25 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.2.5 - 2026-08-24
+### Added
+* Support endoflife.date extended support data
+
+### Changed
+* Properly fix default of is_good_product_id to false
+* Simplify endoflife.date latest version comparison by stripping extraneous info
+* Update cpe_search
+
+### Fixed
+* Fix bug in NEVRA expression parsing in RedHat module
+* Add retries and backoff because of recent EUVD service issues
+* Fix KEVIntel bug by using vulnerability_id instead of cve_id
+* Always find and return equivalent CPEs, even if CPEs are provided already
+* Fix vertical positioning of KEV icon in web app
+* Fix detection of MSSQL query if service pack info is at the end of a query
+* Updated test cases
+
+
 ## v1.2.4 - 2026-07-22
 ### Fixed
 * Fixed bug with new Ubuntu backpatch status in data source
