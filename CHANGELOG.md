@@ -5,6 +5,7 @@ This file keeps track of all notable changes between the different versions of s
 ### Fixed
 * Fix endoflife.date parsing of nested YAML lists (e.g. release aliases), which broke the database build (#50)
 * Fail the release asset workflow if the database build fails
+* Stream-parse VulnCheck NVD++ data to avoid running out of memory during the database build
 
 ## v1.2.5 - 2026-08-24
 ### Added

@@ -35,6 +35,7 @@ dependencies = [
     "tqdm",
     "univers",
     "pydantic",
+    "ijson",
 ]
 
 [project.optional-dependencies]
@@ -64,6 +65,7 @@ all = [
     "tqdm",
     "univers",
     "pydantic",
+    "ijson",
     "Flask",
     "apiflask",
     "gunicorn",
