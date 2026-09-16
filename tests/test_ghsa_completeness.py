@@ -274,6 +274,8 @@ class TestSearches(unittest.TestCase):
             "CVE-2026-41839": "GHSA-4hfh-6x8g-gwpp",
             "CVE-2026-41853": "GHSA-cjpg-rgq5-fr37",
             "CVE-2026-41841": "GHSA-mq64-j8f9-9gcj",
+            "CVE-2026-41841": "GHSA-mq64-j8f9-9gcj",
+            "CVE-2026-41855": "GHSA-x863-p983-p4f7",
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id

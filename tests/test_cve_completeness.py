@@ -313,6 +313,19 @@ class TestSearches(unittest.TestCase):
             "CVE-2026-41838",
             "CVE-2026-41852",
             "CVE-2026-59323",
+            "CVE-2026-59282",
+            "CVE-2026-47884",
+            "CVE-2026-47891",
+            "CVE-2026-59281",
+            "CVE-2026-47886",
+            "CVE-2026-47892",
+            "CVE-2026-59313",
+            "CVE-2026-59280",
+            "CVE-2026-47893",
+            "CVE-2026-59314",
+            "CVE-2026-47888",
+            "CVE-2026-47887",
+            "CVE-2026-59283",
         ]
         result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))
@@ -666,6 +679,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2024-32498",
             "CVE-2026-34881",
             "CVE-2026-77648",
+            "CVE-2026-71198",
         ]
         result_cves = [vuln_id for vuln_id in result.vulns.keys() if vuln_id.startswith("CVE-")]
         self.assertEqual(set(expected_cves), set(result_cves))

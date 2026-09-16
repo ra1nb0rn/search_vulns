@@ -73,6 +73,11 @@ class TestSearches(unittest.TestCase):
             "CVE-2026-12064",
             "CVE-2026-8924",
             "CVE-2026-8286",
+            "CVE-2026-19931",
+            "CVE-2026-18924",
+            "CVE-2026-13608",
+            "CVE-2026-82209",
+            "CVE-2026-80230",
         ]
         expected_backpatched = [
             "CVE-2023-46219",
@@ -103,6 +108,7 @@ class TestSearches(unittest.TestCase):
             "CVE-2025-14819",
             "CVE-2026-7168",
             "CVE-2026-3784",
+            "CVE-2026-80231",
         ]
         result_open, result_backpatched = [], []
 
@@ -169,7 +175,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, include_patched=True)
         expected_version_result = {
             "status": VersionStatus.OUTDATED,
-            "latest": "2.4.62-1",
+            "latest": "2.4.68-1",
             "reference": "https://security-tracker.debian.org/tracker/source-package/apache2",
         }
         self.assertEqual(result.version_status.model_dump(), expected_version_result)
@@ -178,8 +184,8 @@ class TestSearches(unittest.TestCase):
         query = "cpe:2.3:a:apache:log4j:1.2.17-10:*:*:*:*:*:*:debian_11"
         result = search_vulns(query=query, include_patched=True)
         expected_version_result = {
-            "status": VersionStatus.CURRENT,
-            "latest": "1.2.17-10",
+            "status": VersionStatus.OUTDATED,
+            "latest": "1.2.17-11",
             "reference": "https://security-tracker.debian.org/tracker/source-package/apache-log4j1.2",
         }
         self.assertEqual(result.version_status.model_dump(), expected_version_result)
