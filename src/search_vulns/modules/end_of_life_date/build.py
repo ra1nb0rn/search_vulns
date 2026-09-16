@@ -54,6 +54,10 @@ def parse_eold_product_releases(release_info_raw):
                 line = line[1:]
                 line = line.strip()
 
+            # skip YAML list items of nested keys, e.g. "aliases"
+            if ":" not in line:
+                continue
+
             key, val = line.split(":", maxsplit=1)
             key, val = key.strip(), val.strip()
             if len(key) > 1 and key.startswith('"') and key.endswith('"'):

@@ -6,6 +6,7 @@ import shutil
 import zipfile
 from pathlib import Path
 
+import ijson
 import requests
 import ujson
 
@@ -72,9 +73,9 @@ def extract_affects_statements(vuln_data_dir, vulndb_config):
     affects_statements = []
     vuln_data_dir = Path(vuln_data_dir)
     for gz_file in vuln_data_dir.glob("*.json.gz"):
-        with gzip.open(gz_file, "rt", encoding="utf-8") as f:
-            vuln_data = ujson.load(f)
-            for vuln in vuln_data["vulnerabilities"]:
+        # stream vulns one by one, since a single data file can be multiple GBs large
+        with gzip.open(gz_file, "rb") as f:
+            for vuln in ijson.items(f, "vulnerabilities.item"):
                 # first check if more data for current vuln is needed
                 cve = vuln.get("cve", {})
                 if not cve:
