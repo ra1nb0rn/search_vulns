@@ -398,6 +398,8 @@ def postprocess_results(
         latest = None
         for i in range(len(latest_pkg_versions)):
             if debian_release < float(latest_pkg_versions[i][1]):
+                if not latest:
+                    latest = latest_pkg_versions[i]
                 break
             latest = latest_pkg_versions[i]
 
