@@ -1,11 +1,21 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
-## Unreleased
+## v1.2.6 - 2026-09-21
+### Added
+* Added some documentation about search_vulns' MatchReason to result schema, OpenAPI docs and GitHub wiki
+
+### Changed
+* Moved some documentation from README to Wiki
+
 ### Fixed
-* Fix endoflife.date parsing of nested YAML lists (e.g. release aliases), which broke the database build (#50)
-* Fail the release asset workflow if the database build fails
-* Stream-parse VulnCheck NVD++ data to avoid running out of memory during the database build
+* Fix endoflife.date parsing of nested YAML lists (e.g. release aliases), which broke the database build (#50), thanks @filipnyquist
+* Fail the release asset workflow if the database build fails, thanks @filipnyquist
+* Stream-parse VulnCheck NVD++ data to avoid running out of memory during the database build, thanks @filipnyquist
+* Update cpe_search to fix ReDoS vulnerability
+* Updated test cases
+* Add other small fixes
+
 
 ## v1.2.5 - 2026-08-24
 ### Added
