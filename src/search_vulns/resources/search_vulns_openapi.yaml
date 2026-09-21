@@ -103,7 +103,7 @@
           },
           "match_reason": {
             "$ref": "#/components/schemas/SearchVulnsResult.MatchReason",
-            "description": "Reason for the match"
+            "description": "Reason for the match, see https://github.com/ra1nb0rn/search_vulns/wiki/Extended-Schema-Documentation"
           }
         },
         "required": [
@@ -401,7 +401,7 @@
           },
           "match_reason": {
             "$ref": "#/components/schemas/SearchVulnsResult.MatchReason",
-            "description": "Reason for why this vulnerability was matched"
+            "description": "Reason for why this vulnerability was matched, see https://github.com/ra1nb0rn/search_vulns/wiki/Extended-Schema-Documentation"
           },
           "matched_by": {
             "additionalProperties": {
@@ -718,7 +718,7 @@
             "name": "is-good-product-id",
             "required": false,
             "schema": {
-              "default": "true",
+              "default": "false",
               "enum": [
                 "true",
                 "false"
