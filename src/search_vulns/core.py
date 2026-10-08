@@ -22,6 +22,7 @@ MODULE_DIRECTORY = os.path.join(PROJECT_DIR, "modules")
 MODULE_ENTRY_PREFIX = "search_vulns_"
 MODULES = None
 LOAD_MODULES_MUTEX = threading.Lock()
+CREATED_PRODUCT_IDS_THRESHOLD = 0.5
 
 
 # Optional dependency groups used for better error messages when modules
@@ -437,6 +438,7 @@ def check_and_try_sv_rerun_with_created_cpes(
     include_single_version_vulns,
     include_patched,
     use_created_product_ids,
+    created_product_ids_threshold,
     config,
 ):
     """On bad result, rerun with created CPEs if possible"""
@@ -463,7 +465,10 @@ def check_and_try_sv_rerun_with_created_cpes(
         created_cpe = None
         # iterate over potential CPEs, sorted by match score, until a good one is found
         for pot_cpe in sorted(sv_result.pot_product_ids.cpe, key=lambda pc: pc[1]):
-            if cpe_matches_query(pot_cpe[0], query):
+            if (
+                cpe_matches_query(pot_cpe[0], query)
+                and abs(pot_cpe[1]) >= created_product_ids_threshold
+            ):
                 created_cpe = pot_cpe[0]
                 is_good_result = True
                 break

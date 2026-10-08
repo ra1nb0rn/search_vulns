@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from ..core import CREATED_PRODUCT_IDS_THRESHOLD
+
 
 class SoftwareVersionResult(BaseModel):
     version: str = Field(description="Version of search_vulns software")
@@ -41,4 +43,7 @@ class SearchVulnsQuery(BaseModel):
     include_patched: Literal["true", "false"] = Field("false", alias="include-patched")
     use_created_product_ids: Literal["true", "false"] = Field(
         "false", alias="use-created-product-ids"
+    )
+    created_product_ids_threshold: float = Field(
+        CREATED_PRODUCT_IDS_THRESHOLD, alias="created-product-ids-threshold"
     )

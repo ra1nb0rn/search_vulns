@@ -91,13 +91,14 @@ Have a look at [detailed instructions in the Wiki](https://github.com/ra1nb0rn/s
 *search_vulns*'s usage information is shown in the following:
 ```
 usage: search_vulns [-h] [-u] [--full-update] [--full-update-module MODULE_ID [MODULE_ID ...]]
-                    [--full-install] [-a] [-f {json,txt,md,ansi}] [-o OUTPUT] [-q QUERY]
+                    [--full-install] [-a] [-f {txt,md,ansi,json}] [-o OUTPUT] [-q QUERY]
                     [-c CONFIG] [-V] [--list-modules]
                     [--cpe-search-threshold CPE_SEARCH_THRESHOLD]
                     [--ignore-general-product-vulns] [--include-single-version-vulns]
-                    [--use-created-product-ids] [--include-patched] [--api-key API_KEY]
-                    [--api-url API_URL] [--query-file QUERY_FILE] [-i] [--vuln-count VULN_COUNT]
-                    [--md-cols MD_COLS]
+                    [--use-created-product-ids]
+                    [--created-product-ids-threshold CREATED_PRODUCT_IDS_THRESHOLD]
+                    [--include-patched] [--api-key API_KEY] [--api-url API_URL]
+                    [--query-file QUERY_FILE] [-i] [--vuln-count VULN_COUNT] [--md-cols MD_COLS]
 
 Search for known vulnerabilities in software -- Created by Dustin Born (ra1nb0rn)
 
@@ -111,7 +112,7 @@ options:
   --full-install        Fully install search_vulns, including all dependencies (python packages,
                         system packages etc.)
   -a, --artifacts       Print JSON list of artifacts created during full update
-  -f {json,txt,md,ansi}, --format {json,txt,md,ansi}
+  -f {txt,md,ansi,json}, --format {txt,md,ansi,json}
                         Output format: txt, json, ansi, or md (default: ansi (interactive), txt
                         (otherwise))
   -o OUTPUT, --output OUTPUT
@@ -135,6 +136,9 @@ options:
   --use-created-product-ids
                         If no matching product ID exists in the software database, automatically
                         use matching ones created by search_vulns
+  --created-product-ids-threshold CREATED_PRODUCT_IDS_THRESHOLD
+                        Required similarity/match threshold to actually use a created product ID
+                        (default: 0.5)
   --include-patched     Include vulnerabilities reported as (back)patched, e.g. by Debian
                         Security Tracker, in results
   --api-key API_KEY     API key for remote search (overrides SV_API_KEY env var)

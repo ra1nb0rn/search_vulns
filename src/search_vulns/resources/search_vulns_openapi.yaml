@@ -51,8 +51,8 @@
             "description": "Stores successfully matched product IDs"
           },
           "schema_version": {
-            "const": "1.1.0",
-            "default": "1.1.0",
+            "const": "1.1.1",
+            "default": "1.1.1",
             "description": "Schema version of this model",
             "title": "Schema Version",
             "type": "string"
@@ -558,7 +558,7 @@
       "url": "https://github.com/ra1nb0rn/search_vulns/blob/master/LICENSE"
     },
     "title": "search_vulns API",
-    "version": "1.1.0"
+    "version": "1.1.1"
   },
   "openapi": "3.0.3",
   "paths": {
@@ -753,6 +753,16 @@
               ],
               "title": "Use-Created-Product-Ids",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created-product-ids-threshold",
+            "required": false,
+            "schema": {
+              "default": 0.5,
+              "title": "Created-Product-Ids-Threshold",
+              "type": "number"
             }
           }
         ],

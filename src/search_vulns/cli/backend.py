@@ -8,7 +8,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
-from ..core import check_and_try_sv_rerun_with_created_cpes, search_vulns
+from ..core import (
+    CREATED_PRODUCT_IDS_THRESHOLD,
+    check_and_try_sv_rerun_with_created_cpes,
+    search_vulns,
+)
 from ..models.SearchVulnsResult import (
     SearchVulnsResult,
 )
@@ -72,6 +76,7 @@ class LocalBackend:
             kwargs.get("include_single_version_vulns", False),
             kwargs.get("include_patched", False),
             kwargs.get("use_created_product_ids", False),
+            kwargs.get("created_product_ids_threshold", CREATED_PRODUCT_IDS_THRESHOLD),
             cfg,
         )
         return is_good, sv_result
@@ -120,6 +125,7 @@ class ApiBackend:
             "include_single_version_vulns": "include-single-version-vulns",
             "include_patched": "include-patched",
             "use_created_product_ids": "use-created-product-ids",
+            "created_product_ids_threshold": "created-product-ids-threshold",
         }
         for attr, param in flag_map.items():
             val = kwargs.get(attr)

@@ -6,6 +6,7 @@ import os
 import sys
 
 from ..core import (
+    CREATED_PRODUCT_IDS_THRESHOLD,
     DEFAULT_CONFIG_FILE,
     _load_config,
     get_modules,
@@ -128,6 +129,12 @@ def parse_args():
         "--use-created-product-ids",
         action="store_true",
         help="If no matching product ID exists in the software database, automatically use matching ones created by search_vulns",
+    )
+    parser.add_argument(
+        "--created-product-ids-threshold",
+        type=float,
+        default=CREATED_PRODUCT_IDS_THRESHOLD,
+        help="Required similarity/match threshold to actually use a created product ID (default: 0.5)",
     )
     parser.add_argument(
         "--include-patched",
@@ -289,6 +296,7 @@ def main():
         "include_single_version_vulns": args.include_single_version_vulns,
         "include_patched": args.include_patched,
         "use_created_product_ids": args.use_created_product_ids,
+        "created_product_ids_threshold": args.created_product_ids_threshold,
     }
 
     fmt = args.format

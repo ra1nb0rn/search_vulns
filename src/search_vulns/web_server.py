@@ -17,6 +17,7 @@ from cpe_search.database_wrapper_functions import (
 from flask import jsonify, render_template, request, send_from_directory
 
 from .core import (
+    CREATED_PRODUCT_IDS_THRESHOLD,
     PROJECT_DIR,
     _load_config,
     check_and_try_sv_rerun_with_created_cpes,
@@ -283,6 +284,10 @@ def search_vulns(query_data: SearchVulnsQuery):
     )
     include_patched = True if query_data.include_patched == "true" else False
     use_created_product_ids = True if query_data.use_created_product_ids == "true" else False
+    if query_data.created_product_ids_threshold:
+        created_product_ids_threshold = query_data.created_product_ids_threshold
+    else:
+        created_product_ids_threshold = CREATED_PRODUCT_IDS_THRESHOLD
 
     # search for vulns either via previous cpe_search results or user's query
     productids = PRODUCTID_SEARCH_CACHE.get(query.lower(), SearchVulnsResult()).product_ids
@@ -311,6 +316,7 @@ def search_vulns(query_data: SearchVulnsQuery):
             include_single_version_vulns,
             include_patched,
             use_created_product_ids,
+            created_product_ids_threshold,
             config,
         )
 
