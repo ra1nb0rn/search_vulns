@@ -133,9 +133,19 @@ def is_version_outdated():
     """Return True if a newer search_vulns version was published on GitHub"""
 
     current_version = get_version()
-    resp = requests.get(LATEST_RELEASE_URL, allow_redirects=False)
+    try:
+        resp = requests.get(LATEST_RELEASE_URL, allow_redirects=False)
+        latest_release_url = resp.headers.get("location")
+    except requests.RequestException:
+        latest_release_url = None
 
-    latest_release_url = resp.headers.get("location")
+    # GitHub may not return a redirect to the latest release -- e.g. when offline or
+    # when it rate-limits unauthenticated requests (common from CI runners). Without a
+    # Location header we can't determine the latest version, so treat it as "not
+    # outdated" and let the update proceed instead of crashing on None.split().
+    if not latest_release_url:
+        return False
+
     latest_tag = latest_release_url.split("/")[-1]
     latest_version = latest_tag[1:]
     if CPEVersion(latest_version) > CPEVersion(current_version):
