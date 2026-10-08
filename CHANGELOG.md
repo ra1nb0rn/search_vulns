@@ -1,6 +1,18 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.2.7 - 2026-10-08
+### Added
+* Added a CLI argument to specify the minimum similarity threshold when using created CPEs (see below).
+
+### Changed
+* The CLI now uses a minimum similarity threshold when created CPEs should be used automatically for vulnerability search.
+
+### Fixed
+* Fixed an issue with the simple update process if GitHub is down or the user is rate limited (#53), thanks @ocervell
+* Updated test cases.
+
+
 ## v1.2.6 - 2026-09-21
 ### Added
 * Added some documentation about search_vulns' MatchReason to result schema, OpenAPI docs and GitHub wiki
