@@ -127,7 +127,7 @@ def get_version_end_ubuntu(status, note):
     elif status == "ignored":
         if not note or any(
             note.startswith(string)
-            for string in ["only", "code", "superseded", "was not-affected"]
+            for string in ["only", "code", "superseded", "was not-affected", "windows"]
         ):
             version_end = "-1"
         else:
