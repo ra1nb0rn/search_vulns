@@ -342,25 +342,28 @@ def download_file(src, dest, show_progressbar=False):
 
     # Adapted from: https://stackoverflow.com/a/37573701
 
-    response = requests.get(src, stream=True)
-    if response.status_code != 200:
-        raise RuntimeError("Could not download file %s, bad status code" % src)
-    total_size = int(response.headers.get("content-length", 0))
-    received_size = 0
-    block_size = 8192
-    filename = src.split("/")[-1]
+    try:
+        response = requests.get(src, stream=True, timeout=60)
+        if response.status_code != 200:
+            raise RuntimeError("Could not download file %s, bad status code" % src)
+        total_size = int(response.headers.get("content-length", 0))
+        received_size = 0
+        block_size = 8192
+        filename = src.split("/")[-1]
 
-    with tqdm(
-        total=total_size, unit="B", unit_scale=True, desc=filename, disable=not show_progressbar
-    ) as progress_bar:
-        with open(dest, "wb") as file:
-            for data in response.iter_content(block_size):
-                progress_bar.update(len(data))
-                file.write(data)
-                received_size += len(data)
+        with tqdm(
+            total=total_size, unit="B", unit_scale=True, desc=filename, disable=not show_progressbar
+        ) as progress_bar:
+            with open(dest, "wb") as file:
+                for data in response.iter_content(block_size):
+                    progress_bar.update(len(data))
+                    file.write(data)
+                    received_size += len(data)
 
-    if total_size != 0 and received_size != total_size:
-        raise RuntimeError("Could not download file %s" % src)
+        if total_size != 0 and received_size != total_size:
+            raise RuntimeError("Could not download file %s" % src)
+    except requests.exceptions.Timeout:
+        raise RuntimeError("Could not download file %s, timed out" % src)
 
     return True
 
