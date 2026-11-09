@@ -337,12 +337,12 @@ def get_versionless_cpes_of_nvd_cves(cve_ids, vulndb_cursor):
     return list(all_nvd_cpes)
 
 
-def download_file(src, dest, show_progressbar=False):
+def download_file(src, dest, show_progressbar=False, timeout=120):
     """Download file from src to dest and optionally show a progress bar."""
 
     # Adapted from: https://stackoverflow.com/a/37573701
 
-    response = requests.get(src, stream=True)
+    response = requests.get(src, stream=True, timeout=timeout)
     if response.status_code != 200:
         raise RuntimeError("Could not download file %s, bad status code" % src)
     total_size = int(response.headers.get("content-length", 0))
