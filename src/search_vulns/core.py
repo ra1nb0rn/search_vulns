@@ -2,7 +2,7 @@ import importlib.util
 import json
 import os
 import threading
-from typing import Dict, Tuple
+from typing import Dict, Set, Tuple
 
 from cpe_search.cpe_search import cpe_matches_query
 
@@ -104,8 +104,30 @@ def merge_module_vulns(
     """Deduplicate vulnerabilities from different sources and combine aliases"""
 
     merged_vulns: Dict[str, Vulnerability] = {}
-    merge_order = modules_data_preference
+    by_id: Dict[str, str] = {}
+    by_alias: Dict[str, str] = {}
+    order: Dict[str, int] = {}
+
+    merge_order = list(modules_data_preference)
     merge_order += sorted(list(set(all_module_vulns.keys()) - set(modules_data_preference)))
+
+    def index_vuln(key: str, vuln: Vulnerability) -> None:
+        by_id[vuln.id] = key
+        for alias in vuln.aliases:
+            existing = by_alias.get(alias)
+            if existing is None or order[key] < order[existing]:
+                by_alias[alias] = key
+
+    def find_candidates(vuln: Vulnerability) -> Set[str]:
+        candidates: Set[str] = set()
+        if vuln.id in by_id:
+            candidates.add(by_id[vuln.id])
+        if vuln.id in by_alias:
+            candidates.add(by_alias[vuln.id])
+        for alias in vuln.aliases:
+            if alias in by_id:
+                candidates.add(by_id[alias])
+        return candidates
 
     # go over every module and its vulns
     for module_id in merge_order:
@@ -117,14 +139,15 @@ def merge_module_vulns(
             continue
 
         for vuln_id, vuln in vulns.items():
-            processed = False
-            for merged_vuln_id, merged_vuln in merged_vulns.items():
-                if vuln.is_same_vulnerability_as(merged_vuln):
-                    merged_vulns[merged_vuln_id].merge_with(vuln)
-                    processed = True
-                    break
-            if not processed:
+            candidates = find_candidates(vuln)
+            if candidates:
+                merged_vuln_id = min(candidates, key=lambda candidate: order[candidate])
+                merged_vulns[merged_vuln_id].merge_with(vuln)
+                index_vuln(merged_vuln_id, merged_vulns[merged_vuln_id])
+            else:
                 merged_vulns[vuln_id] = vuln
+                order[vuln_id] = len(order)
+                index_vuln(vuln_id, vuln)
 
     return merged_vulns
 
