@@ -55,6 +55,7 @@ class TestSearches(unittest.TestCase):
                     "GHSA-q2c6-c6pm-g3gh": "https://github.com/advisories/GHSA-q2c6-c6pm-g3gh"
                 },
             },
+            "CVE-2026-106445": "GHSA-p8wg-vrv2-v86f",
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
@@ -294,9 +295,7 @@ class TestSearches(unittest.TestCase):
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             if vuln_id not in expected_vulns:
-                                if alias not in expected_vulns:
-                                    print(alias)
-                                # self.assertIn(alias, expected_vulns)
+                                self.assertIn(alias, expected_vulns)
                             else:
                                 self.assertTrue(alias == expected_vulns[vuln_id])
                             actual_ghsa_vulns.append(alias)
@@ -468,6 +467,14 @@ class TestSearches(unittest.TestCase):
                     "CVE-2026-102672": "https://nvd.nist.gov/vuln/detail/CVE-2026-102672",
                 },
             },
+            "CVE-2026-115570": "GHSA-jr5w-w6x2-84p9",
+            "CVE-2026-113797": "GHSA-98mx-cjp9-gchm",
+            "CVE-2026-114124": "GHSA-h3v5-h239-pg29",
+            "CVE-2026-113796": "GHSA-2p8c-gr87-2676",
+            "CVE-2026-113800": "GHSA-fw47-9c62-h3vw",
+            "CVE-2026-114121": "GHSA-997q-gvvc-jwmx",
+            "CVE-2026-114122": "GHSA-3qxv-5xgr-q7w9",
+            "CVE-2026-113798": "GHSA-x562-297c-g43g",
         }
         expected_ghsa_vulns = [
             expected_vulns[vuln_id] if vuln_id.startswith("CVE") else vuln_id
@@ -484,8 +491,6 @@ class TestSearches(unittest.TestCase):
                     for alias in vuln.aliases:
                         if alias.startswith("GHSA-"):
                             if vuln_id not in expected_vulns:
-                                # if alias not in expected_vulns:
-                                #     print(alias)
                                 self.assertIn(alias, expected_vulns)
                             else:
                                 self.assertTrue(alias == expected_vulns[vuln_id])

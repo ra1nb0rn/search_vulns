@@ -168,6 +168,27 @@ class TestSearches(unittest.TestCase):
                 "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
                 "cisa_kev": True,
             },
+            "CVE-2026-87902": {
+                "published": "2026-09-22 17:17:28",
+                "cvss_ver": "3.1",
+                "cvss": "8.1",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                "cisa_kev": True,
+            },
+            "CVE-2026-119977": {
+                "published": "2026-10-31 06:16:34",
+                "cvss_ver": "3.1",
+                "cvss": "8.1",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                "cisa_kev": True,
+            },
+            "CVE-2026-114570": {
+                "published": "2026-10-22 06:17:14",
+                "cvss_ver": "3.1",
+                "cvss": "4.9",
+                "cvss_vec": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:L/I:L/A:N",
+                "cisa_kev": False,
+            },
         }
 
         for vuln_id, vuln in result.vulns.items():

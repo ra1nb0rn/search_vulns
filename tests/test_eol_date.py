@@ -14,7 +14,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.N_A,
-            "latest": "7.1.3",
+            "latest": "7.1.5",
             "reference": "https://endoflife.date/wordpress",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -24,8 +24,8 @@ class TestSearches(unittest.TestCase):
         query = "cpe:2.3:a:wordpress:wordpress:5.7.2:*:*:*:*:*:*:*"
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
-            "status": VersionStatus.EOL,
-            "latest": "7.1.3",
+            "status": VersionStatus.OUTDATED,
+            "latest": "5.7.22",
             "reference": "https://endoflife.date/wordpress",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -36,7 +36,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.N_A,
-            "latest": "4.0.0",
+            "latest": "4.1.0",
             "reference": "https://endoflife.date/jquery",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -47,7 +47,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.EOL,
-            "latest": "4.0.0",
+            "latest": "4.1.0",
             "reference": "https://endoflife.date/jquery",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -58,7 +58,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.EOL,
-            "latest": "9.0.2",
+            "latest": "9.0.8",
             "reference": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -69,7 +69,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.OUTDATED,
-            "latest": "7.0.43",
+            "latest": "7.0.48",
             "reference": "https://endoflife.date/mongodb",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)
@@ -80,7 +80,7 @@ class TestSearches(unittest.TestCase):
         result = search_vulns(query=query, is_product_id_query=True)
         expected_result = {
             "status": VersionStatus.OUTDATED,
-            "latest": "15.0.4490.9",
+            "latest": "15.0.4510.2",
             "reference": "https://endoflife.date/mssqlserver",
         }
         self.assertEqual(result.version_status.model_dump(), expected_result)

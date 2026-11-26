@@ -33,6 +33,17 @@ class TestSearches(unittest.TestCase):
             "CVE-2026-60005",
             "CVE-2026-56434",
             "CVE-2026-42533",
+            "CVE-2026-97629",
+            "CVE-2026-123633",
+            "CVE-2026-123634",
+            "CVE-2026-15176",
+            "CVE-2026-113425",
+            "CVE-2026-118899",
+            "CVE-2026-97205",
+            "CVE-2026-123007",
+            "CVE-2026-123640",
+            "CVE-2026-125283",
+            "CVE-2026-132779",
         ]
         expected_backpatched = ["CVE-2023-44487"]
         result_open, result_backpatched = [], []
@@ -78,6 +89,18 @@ class TestSearches(unittest.TestCase):
             "CVE-2026-13608",
             "CVE-2026-82209",
             "CVE-2026-80230",
+            "CVE-2026-92388",
+            "CVE-2026-92389",
+            "CVE-2026-86409",
+            "CVE-2026-87866",
+            "CVE-2026-107928",
+            "CVE-2026-87865",
+            "CVE-2026-94266",
+            "CVE-2026-87864",
+            "CVE-2026-86410",
+            "CVE-2026-92390",
+            "CVE-2026-86414",
+            "CVE-2026-92391",
         ]
         expected_backpatched = [
             "CVE-2023-46219",
