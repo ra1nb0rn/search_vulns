@@ -19,7 +19,7 @@ fi
 mkdir -p $OUTPUT_DIR
 
 echo "[+] Exporting table and index schema..."
-sqlite3 "$SQLITE_DB" <<EOF > "$SCHEMA_TABLES_FILE"
+sqlite3 "$SQLITE_DB" <<EOF | sed -E 's/\)[[:space:]]*WITHOUT[[:space:]]+ROWID[[:space:]]*;/);/I' > "$SCHEMA_TABLES_FILE"
 SELECT sql || ';' FROM sqlite_master 
 WHERE type='table' AND name NOT LIKE 'sqlite_%' AND sql NOT NULL
 UNION ALL
