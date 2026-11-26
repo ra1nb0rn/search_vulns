@@ -1,6 +1,18 @@
 # Changelog
 This file keeps track of all notable changes between the different versions of search_vulns.
 
+## v1.2.8 - 2026-11-26
+### Changed
+* Make merging of module vulnerabilities faster, thanks @lmsecure
+
+### Fixed
+* Fixed Ubuntu backpatch status if reason is "ignored" with note "windows only".
+* Added socket timeout when downloading file.
+* Removed KEVIntel from public database build, since it does not allow personal accounts anymore.
+* Fixed bug in SQLite to MariaDB conversion script.
+* Updated test cases.
+
+
 ## v1.2.7 - 2026-10-08
 ### Added
 * Added a CLI argument to specify the minimum similarity threshold when using created CPEs (see below).
